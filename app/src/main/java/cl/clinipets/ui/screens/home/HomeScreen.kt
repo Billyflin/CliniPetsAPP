@@ -3,6 +3,8 @@ package cl.clinipets.ui.screens.home
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,33 +16,40 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
-import cl.clinipets.navigation.ClinipetsDestination
-import cl.clinipets.ui.theme.*
-import kotlinx.coroutines.launch
-
-
-
+import cl.clinipets.navigation.Routes
+import cl.clinipets.ui.components.BottomNavItem
+import cl.clinipets.ui.components.FloatingBottomNavBar
+import cl.clinipets.ui.theme.LocalExtendedColors
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HomeScreen(
-    navController: NavController,
+    navigateTo: (Routes) -> Unit,
+    selectedNavIndex: Int,
+    onNavIndexChanged: (Int) -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    val scope = rememberCoroutineScope()
+    val extColors = LocalExtendedColors.current
     var fabMenuExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             LargeTopAppBar(
                 title = {
@@ -48,60 +57,62 @@ fun HomeScreen(
                         Text(
                             "¡Hola! 👋",
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = extColors.pink.color
                         )
                         Text(
                             "Bienvenido a Clinipets",
                             style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { }) {
-                        Icon(Icons.Filled.Pets, contentDescription = null)
+                    Surface(
+                        onClick = { },
+                        shape = RoundedCornerShape(16.dp),
+                        color = extColors.pink.colorContainer,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Filled.Pets,
+                                contentDescription = null,
+                                tint = extColors.pink.onColorContainer
+                            )
+                        }
                     }
                 },
                 actions = {
-                    IconButton(onClick = { }) {
-                        Icon(Icons.Outlined.Notifications, contentDescription = "Notificaciones")
+                    Surface(
+                        onClick = { },
+                        shape = RoundedCornerShape(16.dp),
+                        color = extColors.lavander.colorContainer,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            BadgedBox(
+                                badge = {
+                                    Badge(
+                                        containerColor = MaterialTheme.colorScheme.error
+                                    ) { Text("3") }
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Notifications,
+                                    contentDescription = "Notificaciones",
+                                    tint = extColors.lavander.onColorContainer
+                                )
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
                 ),
                 scrollBehavior = scrollBehavior
             )
-        },
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-            ) {
-                val navigationItems = listOf(
-                    NavigationItem("Inicio", Icons.Filled.Home, Icons.Outlined.Home, ClinipetsDestination.Home),
-                    NavigationItem("Citas", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth, ClinipetsDestination.Appointments),
-                    NavigationItem("Mascotas", Icons.Filled.Pets, Icons.Outlined.Pets, ClinipetsDestination.Pets),
-                    NavigationItem("Perfil", Icons.Filled.Person, Icons.Outlined.Person, ClinipetsDestination.Profile)
-                )
-
-                navigationItems.forEach { item ->
-                    NavigationBarItem(
-                        selected = false, // Actualizar con la ruta actual
-                        onClick = {
-
-                        },
-                        icon = {
-                            Icon(
-                                if (false) item.selectedIcon else item.unselectedIcon,
-                                contentDescription = item.label
-                            )
-                        },
-                        label = { Text(item.label) }
-                    )
-                }
-            }
         }
     ) { paddingValues ->
         Box(
@@ -111,61 +122,61 @@ fun HomeScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 16.dp,
+                    bottom = 100.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Quick Actions
+                // Hero Card
                 item {
-                    QuickActionsSection()
+                    HeroCard()
                 }
 
-                // Next Appointment
+                // Connected Button Group
+                item {
+                    Text(
+                        "¿Qué necesitas hoy?",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                    ConnectedServiceButtons()
+                }
+
+                // Próxima cita
                 if (uiState.nextAppointment != null) {
                     item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer
-                            )
-                        ) {
-                        }
+                        NextAppointmentCard(uiState.nextAppointment!!)
                     }
                 }
 
-                // Pets Section
+                // Mascotas
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Tus Mascotas",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        TextButton(
-                            onClick = {  }
-                        ) {
-                            Text("Ver todas")
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
+                    SectionHeader(
+                        title = "Tus Mascotas",
+                        actionText = "Ver todas",
+                        onActionClick = { navigateTo(Routes.PetsRoute) }
+                    )
                 }
 
+                item {
+                    PetsRow(
+                        pets = uiState.pets,
+                        onPetClick = { petId ->
+                            navigateTo(Routes.PetDetailRoute(petId))
+                        }
+                    )
+                }
 
-
-                // Services Section
+                // Servicios
                 item {
                     Text(
                         "Servicios Destacados",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
@@ -175,52 +186,279 @@ fun HomeScreen(
                 }
             }
 
-            // Floating Action Button Menu
-            FloatingActionButtonMenu(
+            // Bottom Navigation Flotante
+            FloatingBottomNavBar(
+                items = listOf(
+                    BottomNavItem("Inicio", Icons.Filled.Home, Icons.Outlined.Home),
+                    BottomNavItem("Citas", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth, 2),
+                    BottomNavItem("Mascotas", Icons.Filled.Pets, Icons.Outlined.Pets),
+                    BottomNavItem("Perfil", Icons.Filled.Person, Icons.Outlined.Person)
+                ),
+                selectedIndex = selectedNavIndex,
+                onItemSelected = { index ->
+                    onNavIndexChanged(index)
+                    when (index) {
+                        0 -> navigateTo(Routes.HomeRoute)
+                        1 -> navigateTo(Routes.AppointmentsRoute)
+                        2 -> navigateTo(Routes.PetsRoute)
+                        3 -> navigateTo(Routes.ProfileRoute)
+                    }
+                },
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+
+            // FAB con menú
+            AnimatedVisibility(
+                visible = !fabMenuExpanded,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut(),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(16.dp),
-                expanded = fabMenuExpanded,
-                button = {
-                    LargeFloatingActionButton(
-                        onClick = { fabMenuExpanded = !fabMenuExpanded },
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ) {
-                        AnimatedContent(
-                            targetState = fabMenuExpanded,
-                            transitionSpec = {
-                                fadeIn() + scaleIn() togetherWith fadeOut() + scaleOut()
-                            }
-                        ) { expanded ->
-                            Icon(
-                                if (expanded) Icons.Filled.Close else Icons.Filled.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(36.dp)
-                            )
+                    .padding(end = 24.dp, bottom = 110.dp)
+            ) {
+                ExtendedFloatingActionButton(
+                    onClick = { fabMenuExpanded = true },
+                    containerColor = extColors.mint.color,
+                    contentColor = extColors.mint.onColor,
+                    modifier = Modifier.shadow(
+                        elevation = 8.dp,
+                        shape = RoundedCornerShape(28.dp)
+                    )
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Nueva Cita")
+                }
+            }
+
+            // FAB Menu expandido
+            AnimatedVisibility(
+                visible = fabMenuExpanded,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut()
+            ) {
+                FabMenu(
+                    onDismiss = { fabMenuExpanded = false },
+                    onItemClick = { action ->
+                        fabMenuExpanded = false
+                        when (action) {
+                            "cita" -> navigateTo(Routes.NewAppointmentRoute())
+                            "mascota" -> navigateTo(Routes.PetsRoute)
+                            "emergencia" -> { /* Handle emergency */ }
                         }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 24.dp, bottom = 110.dp)
+                )
+            }
+        }
+    }
+}
+
+// Actualiza PetsRow para incluir onPetClick
+@Composable
+fun PetsRow(
+    pets: List<cl.clinipets.data.model.Pet>,
+    onPetClick: (String) -> Unit
+) {
+    val extColors = LocalExtendedColors.current
+    val colors = listOf(
+        extColors.pink.colorContainer,
+        extColors.lavander.colorContainer,
+        extColors.peach.colorContainer,
+        extColors.mint.colorContainer
+    )
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        pets.take(3).forEachIndexed { index, pet ->
+            Card(
+                onClick = { onPetClick(pet.id) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = colors[index % colors.size]
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            when (pet.species) {
+                                cl.clinipets.data.model.PetSpecies.DOG -> "🐕"
+                                cl.clinipets.data.model.PetSpecies.CAT -> "🐈"
+                                else -> "🐾"
+                            },
+                            style = MaterialTheme.typography.headlineMedium
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        pet.name,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+    }
+}
+
+// El resto de los componentes (HeroCard, ConnectedServiceButtons, etc.) permanecen igual...
+@Composable
+fun HeroCard() {
+    val extColors = LocalExtendedColors.current
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.Transparent
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            extColors.pink.colorContainer,
+                            extColors.lavander.colorContainer
+                        )
+                    )
+                )
+                .padding(24.dp)
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "La salud de tus",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = extColors.pink.onColorContainer
+                        )
+                        Text(
+                            "mascotas primero 💝",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = extColors.pink.onColorContainer
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Agenda tu próxima visita",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = extColors.pink.onColorContainer.copy(alpha = 0.8f)
+                        )
+                    }
+
+                    // Decoración animada
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(
+                                        extColors.lavander.color.copy(alpha = 0.3f),
+                                        extColors.lavander.color.copy(alpha = 0.1f)
+                                    )
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("🐾", style = MaterialTheme.typography.displaySmall)
                     }
                 }
-            ) {
-                val menuItems = listOf(
-                    Triple(Icons.Filled.CalendarMonth, "Nueva Cita", MaterialTheme.colorScheme.primaryContainer),
-                    Triple(Icons.Filled.Pets, "Agregar Mascota", MaterialTheme.colorScheme.secondaryContainer),
-                    Triple(Icons.Filled.Emergency, "Emergencia", MaterialTheme.colorScheme.errorContainer)
-                )
+            }
+        }
+    }
+}
 
-                menuItems.forEach { (icon, label, color) ->
-                    FloatingActionButtonMenuItem(
-                        onClick = {
-                            fabMenuExpanded = false
-                            when (label) {
-                                "Nueva Cita" -> {}
-                                "Agregar Mascota" -> {}
-                                "Emergencia" -> { /* Handle emergency */ }
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun ConnectedServiceButtons() {
+    val extColors = LocalExtendedColors.current
+    val options = listOf("Consulta", "Vacunas", "Urgencia")
+    val unCheckedIcons = listOf(
+        Icons.Outlined.MedicalServices,
+        Icons.Outlined.Vaccines,
+        Icons.Outlined.Emergency
+    )
+    val checkedIcons = listOf(
+        Icons.Filled.MedicalServices,
+        Icons.Filled.Vaccines,
+        Icons.Filled.Emergency
+    )
+    val colors = listOf(
+        extColors.mint.colorContainer,
+        extColors.peach.colorContainer,
+        extColors.pink.colorContainer
+    )
+    var selectedIndex by remember { mutableIntStateOf(0) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+    ) {
+        options.forEachIndexed { index, label ->
+            Surface(
+                onClick = { selectedIndex = index },
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { role = Role.RadioButton },
+                shape = when (index) {
+                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes().shape
+                    options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes().shape
+                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes().shape
+                },
+                color = if (selectedIndex == index) colors[index] else MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = if (selectedIndex == index)
+                        colors[index]
+                    else MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        if (selectedIndex == index) checkedIcons[index] else unCheckedIcons[index],
+                        contentDescription = label,
+                        modifier = Modifier.size(20.dp),
+                        tint = if (selectedIndex == index)
+                            when (index) {
+                                0 -> extColors.mint.onColorContainer
+                                1 -> extColors.peach.onColorContainer
+                                2 -> extColors.pink.onColorContainer
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant
                             }
-                        },
-                        containerColor = color,
-                        icon = { Icon(icon, contentDescription = null) },
-                        text = { Text(label) }
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        label,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (selectedIndex == index) FontWeight.SemiBold else FontWeight.Normal
                     )
                 }
             }
@@ -229,61 +467,112 @@ fun HomeScreen(
 }
 
 @Composable
-fun QuickActionsSection() {
-    Row(
+fun NextAppointmentCard(appointment: cl.clinipets.data.model.Appointment) {
+    val extColors = LocalExtendedColors.current
+
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = extColors.mint.colorContainer
+        )
     ) {
-        QuickActionChip(
-            icon = Icons.Outlined.Vaccines,
-            text = "Vacunas",
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.weight(1f)
-        )
-        QuickActionChip(
-            icon = Icons.Outlined.MedicalServices,
-            text = "Consulta",
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            modifier = Modifier.weight(1f)
-        )
-        QuickActionChip(
-            icon = Icons.Outlined.Phone,
-            text = "Contacto",
-            color = MaterialTheme.colorScheme.tertiaryContainer,
-            modifier = Modifier.weight(1f)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Próxima cita",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = extColors.mint.onColorContainer.copy(alpha = 0.7f)
+                )
+                Text(
+                    appointment.petName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = extColors.mint.onColorContainer
+                )
+                Text(
+                    appointment.serviceType.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = extColors.mint.onColorContainer.copy(alpha = 0.8f)
+                )
+            }
+
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = extColors.mint.color,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Filled.CalendarMonth,
+                        contentDescription = null,
+                        tint = extColors.mint.onColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
-fun QuickActionChip(
-    icon: ImageVector,
-    text: String,
-    color: androidx.compose.ui.graphics.Color,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = color,
-        onClick = { }
+fun PetsRow(pets: List<cl.clinipets.data.model.Pet>) {
+    val extColors = LocalExtendedColors.current
+    val colors = listOf(
+        extColors.pink.colorContainer,
+        extColors.lavander.colorContainer,
+        extColors.peach.colorContainer,
+        extColors.mint.colorContainer
+    )
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                modifier = Modifier.size(28.dp)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Medium
-            )
+        pets.take(3).forEachIndexed { index, pet ->
+            Card(
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = colors[index % colors.size]
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            when (pet.species) {
+                                cl.clinipets.data.model.PetSpecies.DOG -> "🐕"
+                                cl.clinipets.data.model.PetSpecies.CAT -> "🐈"
+                                else -> "🐾"
+                            },
+                            style = MaterialTheme.typography.headlineMedium
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        pet.name,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
         }
     }
 }
@@ -291,13 +580,14 @@ fun QuickActionChip(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ServicesGrid() {
+    val extColors = LocalExtendedColors.current
     val services = listOf(
-        Triple(Icons.Filled.Vaccines, "Vacunación", Pink100),
-        Triple(Icons.Filled.MedicalServices, "Consulta General", Mint100),
-        Triple(Icons.Filled.Healing, "Cirugías", Lavender100),
-        Triple(Icons.Filled.Spa, "Baño y Peluquería", Peach100),
-        Triple(Icons.Filled.Home, "Servicio a Domicilio", Pink100),
-        Triple(Icons.Filled.Science, "Laboratorio", Mint100)
+        Triple(Icons.Filled.Vaccines, "Vacunación", extColors.pink.colorContainer),
+        Triple(Icons.Filled.MedicalServices, "Consulta", extColors.mint.colorContainer),
+        Triple(Icons.Filled.Healing, "Cirugías", extColors.lavander.colorContainer),
+        Triple(Icons.Filled.Spa, "Peluquería", extColors.peach.colorContainer),
+        Triple(Icons.Filled.Home, "A Domicilio", extColors.pink.colorContainer),
+        Triple(Icons.Filled.Science, "Laboratorio", extColors.mint.colorContainer)
     )
 
     FlowRow(
@@ -317,16 +607,103 @@ fun ServicesGrid() {
                     )
                 },
                 colors = AssistChipDefaults.assistChipColors(
-                    containerColor = color
+                    containerColor = color,
+                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    leadingIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
         }
     }
 }
 
-data class NavigationItem(
-    val label: String,
-    val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector,
-    val destination: ClinipetsDestination
-)
+@Composable
+fun SectionHeader(
+    title: String,
+    actionText: String? = null,
+    onActionClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+        if (actionText != null && onActionClick != null) {
+            TextButton(onClick = onActionClick) {
+                Text(actionText)
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FabMenu(
+    onDismiss: () -> Unit,
+    onItemClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val extColors = LocalExtendedColors.current
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalAlignment = Alignment.End
+    ) {
+        // Opciones del menú
+        listOf(
+            Triple("emergencia", Icons.Filled.Emergency, extColors.pink),
+            Triple("mascota", Icons.Filled.Pets, extColors.lavander),
+            Triple("cita", Icons.Filled.CalendarMonth, extColors.mint)
+        ).forEach { (action, icon, colorFamily) ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End
+            ) {
+                Surface(
+                    onClick = { onItemClick(action) },
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 4.dp
+                ) {
+                    Text(
+                        when (action) {
+                            "emergencia" -> "Emergencia"
+                            "mascota" -> "Nueva Mascota"
+                            "cita" -> "Agendar Cita"
+                            else -> ""
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                SmallFloatingActionButton(
+                    onClick = { onItemClick(action) },
+                    containerColor = colorFamily.colorContainer,
+                    contentColor = colorFamily.onColorContainer
+                ) {
+                    Icon(icon, contentDescription = null)
+                }
+            }
+        }
+
+        // Botón de cerrar
+        Spacer(modifier = Modifier.height(4.dp))
+        FloatingActionButton(
+            onClick = onDismiss,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        ) {
+            Icon(Icons.Filled.Close, contentDescription = "Cerrar")
+        }
+    }
+}

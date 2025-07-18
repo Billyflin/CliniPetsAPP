@@ -1,33 +1,25 @@
-// navigation/ClinipetsDestinations.kt
+// navigation/ClinipetsDestination.kt
 package cl.clinipets.navigation
 
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
-sealed interface Routes {
+sealed interface Routes : NavKey {
     @Serializable
-    data object HomeRoute : NavKey, Routes
-}
-
-
-sealed interface ClinipetsDestination :
-    Routes,
-    NavKey {
-    @Serializable
-    data object Home : ClinipetsDestination
+    data object HomeRoute : Routes
 
     @Serializable
-    data object Appointments : ClinipetsDestination
+    data object AppointmentsRoute : Routes
 
     @Serializable
-    data object Pets : ClinipetsDestination
+    data object PetsRoute : Routes
 
     @Serializable
-    data object Profile : ClinipetsDestination
+    data object ProfileRoute : Routes
 
     @Serializable
-    data class PetDetail(val petId: String) : ClinipetsDestination
+    data class PetDetailRoute(val petId: String) : Routes
 
     @Serializable
-    data class NewAppointment(val petId: String? = null) : ClinipetsDestination
+    data class NewAppointmentRoute(val petId: String? = null) : Routes
 }

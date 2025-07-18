@@ -6,7 +6,10 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
@@ -416,45 +419,89 @@ data class ColorFamily(
     val colorContainer: Color,
     val onColorContainer: Color
 )
-/* ---------- DETECCIÓN DE EXPRESSIVE ---------- */
+
+val LocalExtendedColors = staticCompositionLocalOf { extendedLight }
+
+/* ---------- CONTRAST SELECTOR ---------- */
+enum class Contrast { Standard, Medium, High }
+
+/* ---------- EXPRESSIVE CHECK ---------- */
 private val HAS_EXPRESSIVE: Boolean = runCatching {
     Class.forName("androidx.compose.material3.MaterialExpressiveKt")
 }.isSuccess
 
-val unspecified_scheme = ColorFamily(
-    Color.Unspecified, Color.Unspecified, Color.Unspecified, Color.Unspecified
-)
+/* ---------- MAIN THEME ---------- */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ClinipetsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
-    content: @Composable () -> Unit
+    contrast: Contrast = Contrast.Standard,
+    content: @Composable () -> Unit,
 ) {
+    /* ----- Baseline Material color scheme ----- */
+    val baseScheme = remember(darkTheme, contrast) {
+        when (darkTheme) {
+            true -> when (contrast) {
+                Contrast.Standard -> darkScheme
+                Contrast.Medium   -> mediumContrastDarkColorScheme
+                Contrast.High     -> highContrastDarkColorScheme
+            }
+
+            false -> when (contrast) {
+                Contrast.Standard -> lightScheme
+                Contrast.Medium   -> mediumContrastLightColorScheme
+                Contrast.High     -> highContrastLightColorScheme
+            }
+        }
+    }
+
+    /* ----- Dynamic override if requested and available (only STANDARD) ----- */
     val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        dynamicColor &&
+                contrast == Contrast.Standard &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val ctx = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
         }
 
-        darkTheme -> darkScheme
-        else -> lightScheme
+        else -> baseScheme
     }
 
-    if (HAS_EXPRESSIVE) {
-        MaterialExpressiveTheme(
-            colorScheme = colorScheme,
-            typography = Typography(),
-            shapes = Shapes(),
-            motionScheme = MotionScheme.expressive(),
-            content = content
-        )
-    } else {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = Typography(),
-            shapes = Shapes(),
-            content = content
-        )
+    /* ----- Extended color families ----- */
+    val extended = remember(darkTheme, contrast) {
+        when (darkTheme) {
+            true -> when (contrast) {
+                Contrast.Standard -> extendedDark
+                Contrast.Medium   -> extendedDarkMediumContrast
+                Contrast.High     -> extendedDarkHighContrast
+            }
+
+            false -> when (contrast) {
+                Contrast.Standard -> extendedLight
+                Contrast.Medium   -> extendedLightMediumContrast
+                Contrast.High     -> extendedLightHighContrast
+            }
+        }
+    }
+
+    /* ----- Apply theme ----- */
+    CompositionLocalProvider(LocalExtendedColors provides extended) {
+        if (HAS_EXPRESSIVE) {
+            MaterialExpressiveTheme(
+                colorScheme = colorScheme,
+                typography = Typography(),
+                shapes = Shapes(),
+                motionScheme = MotionScheme.expressive(),
+                content = content,
+            )
+        } else {
+            MaterialTheme(
+                colorScheme = colorScheme,
+                typography = Typography(),
+                shapes = Shapes(),
+                content = content,
+            )
+        }
     }
 }
