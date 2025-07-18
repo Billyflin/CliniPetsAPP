@@ -1,26 +1,78 @@
 // ui/screens/home/HomeScreen.kt
 package cl.clinipets.ui.screens.home
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Emergency
+import androidx.compose.material.icons.filled.Healing
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.Spa
+import androidx.compose.material.icons.filled.Vaccines
+import androidx.compose.material.icons.outlined.Emergency
+import androidx.compose.material.icons.outlined.MedicalServices
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Vaccines
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -30,7 +82,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.clinipets.navigation.Routes
-import cl.clinipets.ui.components.BottomNavItem
 import cl.clinipets.ui.components.FloatingBottomNavBar
 import cl.clinipets.ui.theme.LocalExtendedColors
 
@@ -113,7 +164,9 @@ fun HomeScreen(
                 ),
                 scrollBehavior = scrollBehavior
             )
-        }
+        },
+
+
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -186,26 +239,7 @@ fun HomeScreen(
                 }
             }
 
-            // Bottom Navigation Flotante
-            FloatingBottomNavBar(
-                items = listOf(
-                    BottomNavItem("Inicio", Icons.Filled.Home, Icons.Outlined.Home),
-                    BottomNavItem("Citas", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth, 2),
-                    BottomNavItem("Mascotas", Icons.Filled.Pets, Icons.Outlined.Pets),
-                    BottomNavItem("Perfil", Icons.Filled.Person, Icons.Outlined.Person)
-                ),
-                selectedIndex = selectedNavIndex,
-                onItemSelected = { index ->
-                    onNavIndexChanged(index)
-                    when (index) {
-                        0 -> navigateTo(Routes.HomeRoute)
-                        1 -> navigateTo(Routes.AppointmentsRoute)
-                        2 -> navigateTo(Routes.PetsRoute)
-                        3 -> navigateTo(Routes.ProfileRoute)
-                    }
-                },
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
+
 
             // FAB con menú
             AnimatedVisibility(

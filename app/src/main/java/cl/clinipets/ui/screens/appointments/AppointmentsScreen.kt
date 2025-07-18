@@ -10,7 +10,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.clinipets.navigation.Routes
-import cl.clinipets.ui.components.BaseScreen
 
 @Composable
 fun AppointmentsScreen(
@@ -21,26 +20,4 @@ fun AppointmentsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    BaseScreen(
-        title = "Mis Citas",
-        navigateTo = navigateTo,
-        selectedNavIndex = selectedNavIndex,
-        onNavIndexChanged = onNavIndexChanged
-    ) { contentPadding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = contentPadding,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Contenido de la pantalla de citas
-            item {
-                Text(
-                    "Próximas Citas",
-                    style = MaterialTheme.typography.titleLarge
-                )
-            }
-
-            // Aquí irían las citas...
-        }
-    }
 }
