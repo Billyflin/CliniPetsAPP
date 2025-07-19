@@ -58,6 +58,7 @@ fun AppNavigation() {
                 onNavigateToPets = { navController.navigate("pets") },
                 onNavigateToAppointments = { navController.navigate("appointments") },
                 onNavigateToProfile = { navController.navigate("profile") },
+                onNavigateToVetSchedule = { navController.navigate("vet_schedule") },
                 onSignOut = {
                     authViewModel.signOut()
                 }

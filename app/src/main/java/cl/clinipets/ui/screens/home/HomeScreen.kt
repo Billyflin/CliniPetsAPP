@@ -16,6 +16,7 @@ fun HomeScreen(
     onNavigateToPets: () -> Unit,
     onNavigateToAppointments: () -> Unit,
     onNavigateToProfile: () -> Unit,
+    onNavigateToVetSchedule: () -> Unit,
     onSignOut: () -> Unit,
     viewModel: UserViewModel = hiltViewModel()
 ) {
@@ -25,6 +26,7 @@ fun HomeScreen(
         Button(onClick = onNavigateToPets) { Text("Mascotas (${userState.petsCount})") }
         Button(onClick = onNavigateToAppointments) { Text("Citas (${userState.appointmentsCount})") }
         Button(onClick = onNavigateToProfile) { Text("Perfil") }
+        Button(onClick = onNavigateToVetSchedule) { Text("Agenda Veterinaria") }
         OutlinedButton(onClick = onSignOut) { Text("Cerrar Sesión") }
     }
 }

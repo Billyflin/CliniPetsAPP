@@ -46,7 +46,7 @@ class VetScheduleViewModel @Inject constructor() : ViewModel() {
                     val dayData = schedule[day.toString()] as? Map<String, Any>
                     daySchedules[day] = if (dayData != null) {
                         DaySchedule(
-                            isActive = dayData["isActive"] as? Boolean ?: false,
+                            isActive = dayData["isActive"] as? Boolean == true,
                             startTime = dayData["startTime"] as? String ?: "09:00",
                             endTime = dayData["endTime"] as? String ?: "18:00"
                         )

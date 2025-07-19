@@ -62,7 +62,7 @@ fun VetScheduleScreen(
                     ) {
                         Text(dayName)
                         Switch(
-                            checked = scheduleState.schedule[dayNumber]?.isActive ?: false,
+                            checked = scheduleState.schedule[dayNumber]?.isActive == true,
                             onCheckedChange = { isActive ->
                                 viewModel.toggleDay(dayNumber, isActive)
                             }

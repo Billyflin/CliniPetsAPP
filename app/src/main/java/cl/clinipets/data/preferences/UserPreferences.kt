@@ -3,7 +3,11 @@ package cl.clinipets.data.preferences
 
 import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import cl.clinipets.ui.theme.Contrast
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -41,7 +45,7 @@ class UserPreferences @Inject constructor(
             else throw exception
         }
         .map { preferences ->
-            preferences[Keys.IS_DARK_MODE] ?: false
+            preferences[Keys.IS_DARK_MODE] == true
         }
 
     val isDynamicColor: Flow<Boolean> = dataStore.data
@@ -50,7 +54,7 @@ class UserPreferences @Inject constructor(
             else throw exception
         }
         .map { preferences ->
-            preferences[Keys.IS_DYNAMIC_COLOR] ?: true
+            preferences[Keys.IS_DYNAMIC_COLOR] != false
         }
 
     val contrast: Flow<Contrast> = dataStore.data
@@ -69,7 +73,7 @@ class UserPreferences @Inject constructor(
             else throw exception
         }
         .map { preferences ->
-            preferences[Keys.HAS_COMPLETED_ONBOARDING] ?: false
+            preferences[Keys.HAS_COMPLETED_ONBOARDING] == true
         }
 
     // User data
