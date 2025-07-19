@@ -1,17 +1,14 @@
-// ui/screens/auth/LoginScreen.kt
 package cl.clinipets.ui.screens.auth
 
 import android.app.Activity
 import android.util.Log
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,51 +28,40 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Facebook
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Pin
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
@@ -111,16 +97,12 @@ fun LoginScreen(
     // Credential Manager
     val credentialManager = remember { CredentialManager.create(context) }
 
-    // State
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    // State for phone login
     var phoneNumber by remember { mutableStateOf("") }
     var verificationCode by remember { mutableStateOf("") }
-    var selectedTab by remember { mutableIntStateOf(0) }
-    var passwordVisible by remember { mutableStateOf(false) }
-    var showForgotPasswordDialog by remember { mutableStateOf(false) }
+    var showPhoneLogin by remember { mutableStateOf(false) }
 
-
+    // Handle sign in result
     fun handleSignIn(result: GetCredentialResponse) {
         val credential = result.credential
 
@@ -144,7 +126,6 @@ fun LoginScreen(
                     }
                 }
             }
-
             else -> {
                 Log.e(TAG, "Unexpected type of credential")
                 scope.launch {
@@ -154,7 +135,7 @@ fun LoginScreen(
         }
     }
 
-    // Google Sign In with Credential Manager
+    // Google Sign In
     fun signInWithGoogle() {
         scope.launch {
             try {
@@ -181,6 +162,14 @@ fun LoginScreen(
         }
     }
 
+    // Facebook Sign In (placeholder - necesitarás configurar el SDK de Facebook)
+    fun signInWithFacebook() {
+        scope.launch {
+            snackbarHostState.showSnackbar("Facebook login próximamente")
+            // TODO: Implementar Facebook Login SDK
+        }
+    }
+
     // Effects
     LaunchedEffect(uiState.isSignInSuccessful) {
         if (uiState.isSignInSuccessful) {
@@ -192,16 +181,6 @@ fun LoginScreen(
         uiState.error?.let { error ->
             snackbarHostState.showSnackbar(error)
             viewModel.clearError()
-        }
-    }
-
-    LaunchedEffect(uiState.passwordResetSent) {
-        if (uiState.passwordResetSent) {
-            uiState.passwordResetMessage?.let { message ->
-                snackbarHostState.showSnackbar(message)
-                viewModel.clearPasswordResetMessage()
-                showForgotPasswordDialog = false
-            }
         }
     }
 
@@ -253,108 +232,118 @@ fun LoginScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(48.dp))
 
-                // Tab Row
-                TabRow(
-                    selectedTabIndex = selectedTab,
-                    containerColor = Color.Transparent
-                ) {
-                    Tab(
-                        selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 },
-                        text = { Text("Email") }
-                    )
-                    Tab(
-                        selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
-                        text = { Text("Teléfono") }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Content based on selected tab
-                AnimatedContent(
-                    targetState = selectedTab,
-                    transitionSpec = {
-                        fadeIn() + slideInHorizontally() togetherWith
-                                fadeOut() + slideOutHorizontally()
-                    },
-                    label = "LoginTabContent"
-                ) { tab ->
-                    when (tab) {
-                        0 -> EmailLoginContent(
-                            email = email,
-                            onEmailChange = { email = it },
-                            password = password,
-                            onPasswordChange = { password = it },
-                            passwordVisible = passwordVisible,
-                            onPasswordVisibilityChange = { passwordVisible = it },
-                            onLogin = {
-                                focusManager.clearFocus()
-                                viewModel.signInWithEmail(email, password)
-                            },
-                            onForgotPassword = { showForgotPasswordDialog = true },
-                            isLoading = uiState.isLoading
+                // Social Login Buttons
+                if (!showPhoneLogin) {
+                    // Google Sign In Button
+                    Button(
+                        onClick = { signInWithGoogle() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        enabled = !uiState.isLoading,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp)
                         )
-
-                        1 -> PhoneLoginContent(
-                            phoneNumber = phoneNumber,
-                            onPhoneNumberChange = { phoneNumber = it },
-                            verificationCode = verificationCode,
-                            onVerificationCodeChange = { verificationCode = it },
-                            phoneVerificationStep = uiState.phoneVerificationStep,
-                            onSendCode = {
-                                focusManager.clearFocus()
-                                viewModel.sendPhoneVerification(
-                                    "+56$phoneNumber",
-                                    context as Activity
-                                )
-                            },
-                            onVerifyCode = {
-                                focusManager.clearFocus()
-                                viewModel.verifyPhoneCode(verificationCode)
-                            },
-                            isLoading = uiState.isLoading
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Continuar con Google",
+                            style = MaterialTheme.typography.labelLarge
                         )
                     }
-                }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // Divider with text
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    HorizontalDivider(modifier = Modifier.weight(1f))
-                    Text(
-                        "  o continúa con  ",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    // Facebook Sign In Button
+                    Button(
+                        onClick = { signInWithFacebook() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        enabled = !uiState.isLoading,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF1877F2),
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Facebook,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Continuar con Facebook",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Phone Sign In Button
+                    Button(
+                        onClick = { showPhoneLogin = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        enabled = !uiState.isLoading,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = extColors.mint.color,
+                            contentColor = extColors.mint.onColor
+                        ),
+                        shape = RoundedCornerShape(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Phone,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Continuar con Teléfono",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                } else {
+                    // Phone Login Form
+                    PhoneLoginContent(
+                        phoneNumber = phoneNumber,
+                        onPhoneNumberChange = { phoneNumber = it },
+                        verificationCode = verificationCode,
+                        onVerificationCodeChange = { verificationCode = it },
+                        phoneVerificationStep = uiState.phoneVerificationStep,
+                        onSendCode = {
+                            focusManager.clearFocus()
+                            viewModel.sendPhoneVerification(
+                                "+56$phoneNumber",
+                                context as Activity
+                            )
+                        },
+                        onVerifyCode = {
+                            focusManager.clearFocus()
+                            viewModel.verifyPhoneCode(verificationCode)
+                        },
+                        onBack = {
+                            showPhoneLogin = false
+                            phoneNumber = ""
+                            verificationCode = ""
+                        },
+                        isLoading = uiState.isLoading
                     )
-                    HorizontalDivider(modifier = Modifier.weight(1f))
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Google Sign In Button with Credential Manager
-                OutlinedButton(
-                    onClick = { signInWithGoogle() },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isLoading
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AccountCircle,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Continuar con Google")
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.weight(1f))
 
                 // Register link
                 Row(
@@ -362,7 +351,7 @@ fun LoginScreen(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        "¿No tienes cuenta? ",
+                        "¿Primera vez en Clinipets? ",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     TextButton(
@@ -370,7 +359,7 @@ fun LoginScreen(
                         contentPadding = PaddingValues(horizontal = 4.dp)
                     ) {
                         Text(
-                            "Regístrate",
+                            "Crear cuenta",
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -391,132 +380,6 @@ fun LoginScreen(
         }
     }
 }
-@Composable
-private fun EmailLoginContent(
-    email: String,
-    onEmailChange: (String) -> Unit,
-    password: String,
-    onPasswordChange: (String) -> Unit,
-    passwordVisible: Boolean,
-    onPasswordVisibilityChange: (Boolean) -> Unit,
-    onLogin: () -> Unit,
-    onForgotPassword: () -> Unit,
-    isLoading: Boolean
-) {
-    val focusManager = LocalFocusManager.current
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        OutlinedTextField(
-            value = email,
-            onValueChange = onEmailChange,
-            label = { Text("Email") },
-            leadingIcon = {
-                Icon(Icons.Default.Email, contentDescription = null)
-            },
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Email,
-                imeAction = ImeAction.Next
-            ),
-            keyboardActions = KeyboardActions(
-                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-            ),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = onPasswordChange,
-            label = { Text("Contraseña") },
-            leadingIcon = {
-                Icon(Icons.Default.Lock, contentDescription = null)
-            },
-            trailingIcon = {
-                IconButton(onClick = { onPasswordVisibilityChange(!passwordVisible) }) {
-                    Icon(
-                        if (passwordVisible) Icons.Default.VisibilityOff
-                        else Icons.Default.Visibility,
-                        contentDescription = if (passwordVisible) "Ocultar contraseña"
-                        else "Mostrar contraseña"
-                    )
-                }
-            },
-            visualTransformation = if (passwordVisible) VisualTransformation.None
-            else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password,
-                imeAction = ImeAction.Done
-            ),
-            keyboardActions = KeyboardActions(
-                onDone = { onLogin() }
-            ),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        TextButton(
-            onClick = onForgotPassword,
-            modifier = Modifier.align(Alignment.End)
-        ) {
-            Text("¿Olvidaste tu contraseña?")
-        }
-
-        Button(
-            onClick = onLogin,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = email.isNotBlank() && password.isNotBlank() && !isLoading
-        ) {
-            Text("Iniciar Sesión")
-        }
-    }
-}
-
-@Composable
-private fun ForgotPasswordDialog(
-    onDismiss: () -> Unit,
-    onSendReset: (String) -> Unit
-) {
-    var email by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Restablecer contraseña") },
-        text = {
-            Column {
-                Text("Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña.")
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text("Email") },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Email,
-                        imeAction = ImeAction.Done
-                    ),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onSendReset(email) },
-                enabled = email.isNotBlank()
-            ) {
-                Text("Enviar")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        }
-    )
-}
-
 
 @Composable
 private fun PhoneLoginContent(
@@ -527,94 +390,147 @@ private fun PhoneLoginContent(
     phoneVerificationStep: PhoneVerificationStep,
     onSendCode: () -> Unit,
     onVerifyCode: () -> Unit,
+    onBack: () -> Unit,
     isLoading: Boolean
 ) {
+    val extColors = LocalExtendedColors.current
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        AnimatedVisibility(
-            visible = phoneVerificationStep == PhoneVerificationStep.NONE,
-            exit = fadeOut() + slideOutVertically()
+        // Back button
+        TextButton(
+            onClick = onBack,
+            modifier = Modifier.align(Alignment.Start)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedTextField(
-                    value = phoneNumber,
-                    onValueChange = onPhoneNumberChange,
-                    label = { Text("Número de teléfono") },
-                    leadingIcon = {
-                        Icon(Icons.Default.Phone, contentDescription = null)
-                    },
-                    prefix = { Text("+56 ") }, // Chile code
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Phone,
-                        imeAction = ImeAction.Done
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = { onSendCode() }
-                    ),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Button(
-                    onClick = onSendCode,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = phoneNumber.length >= 9 && !isLoading
-                ) {
-                    Text("Enviar código")
-                }
-            }
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Volver",
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Volver")
         }
 
-        AnimatedVisibility(
-            visible = phoneVerificationStep == PhoneVerificationStep.CODE_SENT,
-            enter = fadeIn() + slideInVertically()
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(
-                    "Ingresa el código de verificación enviado a +56 $phoneNumber",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
+        AnimatedContent(
+            targetState = phoneVerificationStep,
+            transitionSpec = {
+                fadeIn() + slideInHorizontally() togetherWith
+                        fadeOut() + slideOutHorizontally()
+            },
+            label = "PhoneVerification"
+        ) { step ->
+            when (step) {
+                PhoneVerificationStep.NONE -> {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Text(
+                            "Ingresa tu número de teléfono",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
 
-                OutlinedTextField(
-                    value = verificationCode,
-                    onValueChange = { if (it.length <= 6) onVerificationCodeChange(it) },
-                    label = { Text("Código de verificación") },
-                    leadingIcon = {
-                        Icon(Icons.Default.Pin, contentDescription = null)
-                    },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Done
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = { onVerifyCode() }
-                    ),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                        OutlinedTextField(
+                            value = phoneNumber,
+                            onValueChange = { if (it.length <= 9) onPhoneNumberChange(it) },
+                            label = { Text("Número de teléfono") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Phone, contentDescription = null)
+                            },
+                            prefix = { Text("+56 ") },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Phone,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = { if (phoneNumber.length >= 9) onSendCode() }
+                            ),
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(
-                        onClick = { /* TODO: Implement resend */ },
-                        enabled = !isLoading
-                    ) {
-                        Text("Reenviar código")
+                        Button(
+                            onClick = onSendCode,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            enabled = phoneNumber.length >= 9 && !isLoading,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = extColors.mint.color,
+                                contentColor = extColors.mint.onColor
+                            ),
+                            shape = RoundedCornerShape(28.dp)
+                        ) {
+                            Text("Enviar código")
+                        }
                     }
+                }
 
-                    Button(
-                        onClick = onVerifyCode,
-                        enabled = verificationCode.length == 6 && !isLoading
-                    ) {
-                        Text("Verificar")
+                PhoneVerificationStep.CODE_SENT -> {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Text(
+                            "Código de verificación",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Text(
+                            "Ingresa el código de 6 dígitos enviado a\n+56 $phoneNumber",
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = verificationCode,
+                            onValueChange = { if (it.length <= 6) onVerificationCodeChange(it) },
+                            label = { Text("Código de verificación") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Pin, contentDescription = null)
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = { if (verificationCode.length == 6) onVerifyCode() }
+                            ),
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(
+                                onClick = { /* TODO: Implement resend */ },
+                                enabled = !isLoading
+                            ) {
+                                Text("Reenviar código")
+                            }
+
+                            Button(
+                                onClick = onVerifyCode,
+                                enabled = verificationCode.length == 6 && !isLoading,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = extColors.mint.color,
+                                    contentColor = extColors.mint.onColor
+                                ),
+                                shape = RoundedCornerShape(28.dp)
+                            ) {
+                                Text("Verificar")
+                            }
+                        }
                     }
+                }
+
+                PhoneVerificationStep.VERIFIED -> {
+                    // Este estado se maneja automáticamente
                 }
             }
         }

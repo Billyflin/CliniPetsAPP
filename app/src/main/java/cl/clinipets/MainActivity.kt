@@ -1,4 +1,3 @@
-// MainActivity.kt (CORREGIDO)
 package cl.clinipets
 
 import android.os.Bundle
@@ -9,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -43,6 +43,15 @@ fun ClinipetsApp(
 ) {
     val appState by appViewModel.appState.collectAsStateWithLifecycle()
     val navigationState = rememberNavigationState()
+
+    // Observar cambios de autenticación
+    LaunchedEffect(appState.isAuthenticated) {
+        if (!appState.isAuthenticated && navigationState.navController.currentDestination?.route != Route.Login::class.qualifiedName) {
+            navigationState.navController.navigate(Route.Login) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
 
     ClinipetsTheme(
         darkTheme = appState.isDarkMode,
@@ -83,11 +92,11 @@ fun ClinipetsNavHost(
         Route.Appointments::class.qualifiedName,
         Route.Pets::class.qualifiedName,
         Route.Profile::class.qualifiedName
-    )
+    ) && isAuthenticated
 
     Scaffold(
         bottomBar = {
-            if (shouldShowBottomBar && isAuthenticated) {
+            if (shouldShowBottomBar) {
                 ClinipetsBottomBar(
                     navigationState = navigationState
                 )
@@ -100,13 +109,7 @@ fun ClinipetsNavHost(
             onAuthStateChanged = onAuthStateChanged,
             modifier = Modifier
                 .fillMaxSize()
-                // Aplica solo el padding inferior si hay bottom bar
-                // o cualquier otro padding que necesites
                 .padding(bottom = paddingValues.calculateBottomPadding())
-            // Si quieres que el contenido vaya bajo la barra de estado,
-            // no apliques paddingValues.calculateTopPadding() aquí.
-            // Si tus pantallas individuales necesitan un padding superior,
-            // lo aplicas dentro de cada pantalla.
         )
     }
 }
