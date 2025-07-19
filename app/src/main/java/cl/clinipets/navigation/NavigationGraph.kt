@@ -2,8 +2,8 @@
 package cl.clinipets.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -24,7 +24,7 @@ fun NavigationGraph(
     navController: NavHostController,
     startDestination: Route,
     onAuthStateChanged: (Boolean) -> Unit,
-    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier
+    modifier: Modifier = Modifier
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -50,6 +50,17 @@ fun NavigationGraph(
                 onNavigateToHome = {
                     navController.navigate(Route.Home) {
                         popUpTo(Route.Splash) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // Onboarding Screen
+        composable<Route.Onboarding> {
+            OnboardingScreen(
+                onComplete = {
+                    navController.navigate(Route.Login) {
+                        popUpTo(Route.Onboarding) { inclusive = true }
                     }
                 }
             )
@@ -113,7 +124,7 @@ fun NavigationGraph(
                     navController.navigate(Route.PetDetail(petId))
                 },
                 onNavigateToNewPet = {
-                    // Navigate to new pet screen
+                    navController.navigate(Route.NewPet)
                 }
             )
         }
@@ -141,6 +152,23 @@ fun NavigationGraph(
                     navController.navigate(Route.NewAppointment(petDetail.petId))
                 }
             )
+        }
+
+        // New Pet Screen (TODO: Implement)
+        composable<Route.NewPet> {
+            // TODO: Implement NewPetScreen
+        }
+
+        // New Appointment Screen (TODO: Implement)
+        composable<Route.NewAppointment> { backStackEntry ->
+            val newAppointment: Route.NewAppointment = backStackEntry.toRoute()
+            // TODO: Implement NewAppointmentScreen with petId = newAppointment.petId
+        }
+
+        // Appointment Detail Screen (TODO: Implement)
+        composable<Route.AppointmentDetail> { backStackEntry ->
+            val appointmentDetail: Route.AppointmentDetail = backStackEntry.toRoute()
+            // TODO: Implement AppointmentDetailScreen with appointmentId = appointmentDetail.appointmentId
         }
     }
 }

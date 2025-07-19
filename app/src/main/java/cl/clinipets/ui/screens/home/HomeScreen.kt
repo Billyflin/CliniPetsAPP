@@ -81,16 +81,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import cl.clinipets.navigation.Routes
-import cl.clinipets.ui.components.FloatingBottomNavBar
+import cl.clinipets.navigation.Route
 import cl.clinipets.ui.theme.LocalExtendedColors
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HomeScreen(
-    navigateTo: (Routes) -> Unit,
-    selectedNavIndex: Int,
-    onNavIndexChanged: (Int) -> Unit,
+    onNavigateToPetDetail: (String) -> Unit,
+    onNavigateToNewAppointment: (String?) -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -211,7 +209,7 @@ fun HomeScreen(
                     SectionHeader(
                         title = "Tus Mascotas",
                         actionText = "Ver todas",
-                        onActionClick = { navigateTo(Routes.PetsRoute) }
+
                     )
                 }
 
@@ -219,7 +217,7 @@ fun HomeScreen(
                     PetsRow(
                         pets = uiState.pets,
                         onPetClick = { petId ->
-                            navigateTo(Routes.PetDetailRoute(petId))
+                            onNavigateToPetDetail(petId)
                         }
                     )
                 }
@@ -276,8 +274,8 @@ fun HomeScreen(
                     onItemClick = { action ->
                         fabMenuExpanded = false
                         when (action) {
-                            "cita" -> navigateTo(Routes.NewAppointmentRoute())
-                            "mascota" -> navigateTo(Routes.PetsRoute)
+                            "cita" -> onNavigateToNewAppointment
+                            "mascota" -> onNavigateToPetDetail
                             "emergencia" -> { /* Handle emergency */ }
                         }
                     },
