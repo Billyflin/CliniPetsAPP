@@ -1,174 +1,103 @@
-// navigation/NavigationGraph.kt (CORREGIDO)
+// navigation/AppNavigation.kt
 package cl.clinipets.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.toRoute
+import androidx.navigation.compose.rememberNavController
+import cl.clinipets.ui.screens.HomeScreen
+import cl.clinipets.ui.screens.LoginScreen
+import cl.clinipets.ui.screens.ProfileScreen
+import cl.clinipets.ui.screens.RegisterScreen
+import cl.clinipets.ui.screens.appointments.AddAppointmentScreen
 import cl.clinipets.ui.screens.appointments.AppointmentsScreen
-import cl.clinipets.ui.screens.auth.LoginScreen
-import cl.clinipets.ui.screens.auth.RegisterScreen
-import cl.clinipets.ui.screens.auth.SplashScreen
-import cl.clinipets.ui.screens.home.HomeScreen
-import cl.clinipets.ui.screens.onboarding.OnboardingScreen
+import cl.clinipets.ui.screens.pets.AddPetScreen
 import cl.clinipets.ui.screens.pets.PetDetailScreen
 import cl.clinipets.ui.screens.pets.PetsScreen
-import cl.clinipets.ui.screens.profile.ProfileScreen
 
 @Composable
-fun NavigationGraph(
-    navController: NavHostController,
-    startDestination: Route,
-    onAuthStateChanged: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+fun AppNavigation() {
+    val navController = rememberNavController()
 
     NavHost(
         navController = navController,
-        startDestination = startDestination,
-        modifier = modifier
+        startDestination = "login"
     ) {
-        // Splash Screen
-        composable<Route.Splash> {
-            SplashScreen(
-                onNavigateToOnboarding = {
-                    navController.navigate(Route.Onboarding) {
-                        popUpTo(Route.Splash) { inclusive = true }
-                    }
-                },
-                onNavigateToLogin = {
-                    navController.navigate(Route.Login) {
-                        popUpTo(Route.Splash) { inclusive = true }
-                    }
-                },
-                onNavigateToHome = {
-                    navController.navigate(Route.Home) {
-                        popUpTo(Route.Splash) { inclusive = true }
-                    }
-                }
-            )
-        }
-
-        // Onboarding Screen
-        composable<Route.Onboarding> {
-            OnboardingScreen(
-                onComplete = {
-                    navController.navigate(Route.Login) {
-                        popUpTo(Route.Onboarding) { inclusive = true }
-                    }
-                }
-            )
-        }
-
-        // Auth Screens
-        composable<Route.Login> {
+        composable("login") {
             LoginScreen(
-                onLoginSuccess = {
-                    onAuthStateChanged(true)
-                    navController.navigate(Route.Home) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                },
-                onNavigateToRegister = {
-                    navController.navigate(Route.Register)
-                }
+                onLoginSuccess = { navController.navigate("home") },
+                onNavigateToRegister = { navController.navigate("register") }
             )
         }
 
-        composable<Route.Register> {
+        composable("register") {
             RegisterScreen(
-                onRegisterSuccess = {
-                    onAuthStateChanged(true)
-                    navController.navigate(Route.Home) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                },
-                onNavigateBack = {
-                    navController.navigateUp()
-                }
+                onRegisterSuccess = { navController.navigate("home") },
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
-        // Main App Screens
-        composable<Route.Home> {
+        composable("home") {
             HomeScreen(
-                onNavigateToPetDetail = { petId ->
-                    navController.navigate(Route.PetDetail(petId))
-                },
-                onNavigateToNewAppointment = { petId ->
-                    navController.navigate(Route.NewAppointment(petId))
-                }
-            )
-        }
-
-        composable<Route.Appointments> {
-            AppointmentsScreen(
-                onNavigateToDetail = { appointmentId ->
-                    navController.navigate(Route.AppointmentDetail(appointmentId))
-                },
-                onNavigateToNewAppointment = {
-                    navController.navigate(Route.NewAppointment())
-                }
-            )
-        }
-
-        composable<Route.Pets> {
-            PetsScreen(
-                onNavigateToPetDetail = { petId ->
-                    navController.navigate(Route.PetDetail(petId))
-                },
-                onNavigateToNewPet = {
-                    navController.navigate(Route.NewPet)
-                }
-            )
-        }
-
-        composable<Route.Profile> {
-            ProfileScreen(
+                onNavigateToPets = { navController.navigate("pets") },
+                onNavigateToAppointments = { navController.navigate("appointments") },
+                onNavigateToProfile = { navController.navigate("profile") },
                 onSignOut = {
-                    onAuthStateChanged(false)
-                    navController.navigate(Route.Login) {
+                    navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
                     }
                 }
             )
         }
 
-        // Detail Screens
-        composable<Route.PetDetail> { backStackEntry ->
-            val petDetail: Route.PetDetail = backStackEntry.toRoute()
-            PetDetailScreen(
-                petId = petDetail.petId,
-                onNavigateBack = {
-                    navController.navigateUp()
-                },
-                onNavigateToNewAppointment = {
-                    navController.navigate(Route.NewAppointment(petDetail.petId))
+        composable("pets") {
+            PetsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToAddPet = { navController.navigate("add_pet") },
+                onNavigateToPetDetail = { petId ->
+                    navController.navigate("pet_detail/$petId")
                 }
             )
         }
 
-        // New Pet Screen (TODO: Implement)
-        composable<Route.NewPet> {
-            // TODO: Implement NewPetScreen
+        composable("add_pet") {
+            AddPetScreen(
+                onPetAdded = { navController.popBackStack() },
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
-        // New Appointment Screen (TODO: Implement)
-        composable<Route.NewAppointment> { backStackEntry ->
-            val newAppointment: Route.NewAppointment = backStackEntry.toRoute()
-            // TODO: Implement NewAppointmentScreen with petId = newAppointment.petId
+        composable("pet_detail/{petId}") { backStackEntry ->
+            val petId = backStackEntry.arguments?.getString("petId") ?: ""
+            PetDetailScreen(
+                petId = petId,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
-        // Appointment Detail Screen (TODO: Implement)
-        composable<Route.AppointmentDetail> { backStackEntry ->
-            val appointmentDetail: Route.AppointmentDetail = backStackEntry.toRoute()
-            // TODO: Implement AppointmentDetailScreen with appointmentId = appointmentDetail.appointmentId
+        composable("appointments") {
+            AppointmentsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToAddAppointment = { navController.navigate("add_appointment") }
+            )
+        }
+
+        composable("add_appointment") {
+            AddAppointmentScreen(
+                onAppointmentAdded = { navController.popBackStack() },
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("profile") {
+            ProfileScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onSignOut = {
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }
