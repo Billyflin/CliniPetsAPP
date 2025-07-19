@@ -16,8 +16,8 @@ android {
 
     defaultConfig {
         applicationId = "cl.clinipets"
-        minSdk = 36
-        targetSdk = 36
+        minSdk = 32
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -74,7 +74,7 @@ dependencies {
     implementation(libs.firebase.perf)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.navigation.compose)
-    implementation ("androidx.datastore:datastore-preferences:1.1.7")
+    implementation(libs.androidx.datastore.preferences)
 
 
     // Hilt Navigation Compose

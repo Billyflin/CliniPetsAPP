@@ -11,6 +11,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -99,7 +100,21 @@ fun ClinipetsNavHost(
             onAuthStateChanged = onAuthStateChanged,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                // Aplica solo el padding inferior si hay bottom bar
+                // o cualquier otro padding que necesites
+                .padding(bottom = paddingValues.calculateBottomPadding())
+            // Si quieres que el contenido vaya bajo la barra de estado,
+            // no apliques paddingValues.calculateTopPadding() aquí.
+            // Si tus pantallas individuales necesitan un padding superior,
+            // lo aplicas dentro de cada pantalla.
         )
+    }
+}
+
+@Preview
+@Composable
+fun ClinipetsAppPreview() {
+    ClinipetsTheme {
+        ClinipetsApp()
     }
 }

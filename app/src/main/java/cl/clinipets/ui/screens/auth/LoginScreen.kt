@@ -3,18 +3,68 @@ package cl.clinipets.ui.screens.auth
 
 import android.app.Activity
 import android.util.Log
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Pin
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -22,7 +72,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.*
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
@@ -32,6 +85,7 @@ import androidx.credentials.GetCredentialResponse
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import cl.clinipets.R
 import cl.clinipets.ui.theme.LocalExtendedColors
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -64,6 +118,41 @@ fun LoginScreen(
     var verificationCode by remember { mutableStateOf("") }
     var selectedTab by remember { mutableIntStateOf(0) }
     var passwordVisible by remember { mutableStateOf(false) }
+    var showForgotPasswordDialog by remember { mutableStateOf(false) }
+
+
+    fun handleSignIn(result: GetCredentialResponse) {
+        val credential = result.credential
+
+        when (credential) {
+            is CustomCredential -> {
+                if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                    try {
+                        val googleIdTokenCredential = GoogleIdTokenCredential
+                            .createFrom(credential.data)
+                        viewModel.signInWithGoogle(googleIdTokenCredential.idToken)
+                    } catch (e: GoogleIdTokenParsingException) {
+                        Log.e(TAG, "Received an invalid google id token response", e)
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Error al procesar la respuesta de Google")
+                        }
+                    }
+                } else {
+                    Log.e(TAG, "Unexpected type of credential")
+                    scope.launch {
+                        snackbarHostState.showSnackbar("Tipo de credencial inesperado")
+                    }
+                }
+            }
+
+            else -> {
+                Log.e(TAG, "Unexpected type of credential")
+                scope.launch {
+                    snackbarHostState.showSnackbar("Tipo de credencial inesperado")
+                }
+            }
+        }
+    }
 
     // Google Sign In with Credential Manager
     fun signInWithGoogle() {
@@ -92,38 +181,6 @@ fun LoginScreen(
         }
     }
 
-    fun handleSignIn(result: GetCredentialResponse) {
-        val credential = result.credential
-
-        when (credential) {
-            is CustomCredential -> {
-                if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                    try {
-                        val googleIdTokenCredential = GoogleIdTokenCredential
-                            .createFrom(credential.data)
-                        viewModel.signInWithGoogle(googleIdTokenCredential.idToken)
-                    } catch (e: GoogleIdTokenParsingException) {
-                        Log.e(TAG, "Received an invalid google id token response", e)
-                        scope.launch {
-                            snackbarHostState.showSnackbar("Error al procesar la respuesta de Google")
-                        }
-                    }
-                } else {
-                    Log.e(TAG, "Unexpected type of credential")
-                    scope.launch {
-                        snackbarHostState.showSnackbar("Tipo de credencial inesperado")
-                    }
-                }
-            }
-            else -> {
-                Log.e(TAG, "Unexpected type of credential")
-                scope.launch {
-                    snackbarHostState.showSnackbar("Tipo de credencial inesperado")
-                }
-            }
-        }
-    }
-
     // Effects
     LaunchedEffect(uiState.isSignInSuccessful) {
         if (uiState.isSignInSuccessful) {
@@ -135,6 +192,16 @@ fun LoginScreen(
         uiState.error?.let { error ->
             snackbarHostState.showSnackbar(error)
             viewModel.clearError()
+        }
+    }
+
+    LaunchedEffect(uiState.passwordResetSent) {
+        if (uiState.passwordResetSent) {
+            uiState.passwordResetMessage?.let { message ->
+                snackbarHostState.showSnackbar(message)
+                viewModel.clearPasswordResetMessage()
+                showForgotPasswordDialog = false
+            }
         }
     }
 
@@ -228,8 +295,10 @@ fun LoginScreen(
                                 focusManager.clearFocus()
                                 viewModel.signInWithEmail(email, password)
                             },
+                            onForgotPassword = { showForgotPasswordDialog = true },
                             isLoading = uiState.isLoading
                         )
+
                         1 -> PhoneLoginContent(
                             phoneNumber = phoneNumber,
                             onPhoneNumberChange = { phoneNumber = it },
@@ -239,7 +308,7 @@ fun LoginScreen(
                             onSendCode = {
                                 focusManager.clearFocus()
                                 viewModel.sendPhoneVerification(
-                                    "+56$phoneNumber", // Agregar código de país
+                                    "+56$phoneNumber",
                                     context as Activity
                                 )
                             },
@@ -322,7 +391,6 @@ fun LoginScreen(
         }
     }
 }
-
 @Composable
 private fun EmailLoginContent(
     email: String,
@@ -332,6 +400,7 @@ private fun EmailLoginContent(
     passwordVisible: Boolean,
     onPasswordVisibilityChange: (Boolean) -> Unit,
     onLogin: () -> Unit,
+    onForgotPassword: () -> Unit,
     isLoading: Boolean
 ) {
     val focusManager = LocalFocusManager.current
@@ -389,7 +458,7 @@ private fun EmailLoginContent(
         )
 
         TextButton(
-            onClick = { /* TODO: Implement forgot password */ },
+            onClick = onForgotPassword,
             modifier = Modifier.align(Alignment.End)
         ) {
             Text("¿Olvidaste tu contraseña?")
@@ -404,6 +473,50 @@ private fun EmailLoginContent(
         }
     }
 }
+
+@Composable
+private fun ForgotPasswordDialog(
+    onDismiss: () -> Unit,
+    onSendReset: (String) -> Unit
+) {
+    var email by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Restablecer contraseña") },
+        text = {
+            Column {
+                Text("Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña.")
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Done
+                    ),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSendReset(email) },
+                enabled = email.isNotBlank()
+            ) {
+                Text("Enviar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
 
 @Composable
 private fun PhoneLoginContent(

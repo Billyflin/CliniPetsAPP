@@ -1,8 +1,13 @@
-
 // domain/auth/AuthRepository.kt
 package cl.clinipets.domain.auth
 
-import com.google.firebase.auth.*
+import com.google.firebase.auth.AuthResult
+import com.google.firebase.auth.EmailAuthProvider
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.PhoneAuthCredential
+import com.google.firebase.auth.userProfileChangeRequest
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -103,20 +108,39 @@ class AuthRepository @Inject constructor(
     }
 
     // Unlink Provider
-    suspend fun unlinkProvider(providerId: String): Result<FirebaseUser> {
+    suspend fun unlinkProvider(providerId: String): Result<AuthResult> {
         return try {
             val result = currentUser?.unlink(providerId)?.await()
             result?.let { Result.success(it) } ?: Result.failure(Exception("No user logged in"))
         } catch (e: Exception) {
             Result.failure(e)
-        } as Result<FirebaseUser>
+        }
     }
 
-    // Password reset
+    // Password reset - NUEVA FUNCIÓN
     suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
         return try {
             auth.sendPasswordResetEmail(email).await()
             Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Update user profile
+    suspend fun updateUserProfile(
+        displayName: String? = null,
+        photoUrl: String? = null
+    ): Result<Unit> {
+        return try {
+            currentUser?.let { user ->
+                val profileUpdates = userProfileChangeRequest {
+                    displayName?.let { this.displayName = it }
+                    photoUrl?.let { this.photoUri = android.net.Uri.parse(it) }
+                }
+                user.updateProfile(profileUpdates).await()
+                Result.success(Unit)
+            } ?: Result.failure(Exception("No user logged in"))
         } catch (e: Exception) {
             Result.failure(e)
         }
