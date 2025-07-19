@@ -4,6 +4,7 @@ package cl.clinipets.ui.viewmodels
 import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cl.clinipets.data.preferences.UserPreferences
 import com.google.firebase.FirebaseException
 import com.google.firebase.auth.FacebookAuthProvider
 import com.google.firebase.auth.FirebaseAuth
@@ -24,7 +25,9 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @HiltViewModel
-class AuthViewModel @Inject constructor() : ViewModel() {
+class AuthViewModel @Inject constructor(
+    private val userPreferences: UserPreferences
+) : ViewModel() {
     private val auth: FirebaseAuth = Firebase.auth
     private val firestore = Firebase.firestore
 
@@ -36,6 +39,33 @@ class AuthViewModel @Inject constructor() : ViewModel() {
 
     init {
         checkAuthStatus()
+        observeAuthChanges()
+    }
+
+    private fun observeAuthChanges() {
+        auth.addAuthStateListener { firebaseAuth ->
+            val user = firebaseAuth.currentUser
+            _authState.value = _authState.value.copy(
+                isAuthenticated = user != null,
+                userId = user?.uid,
+                userEmail = user?.email,
+                userPhone = user?.phoneNumber
+            )
+
+            // Actualizar preferencias cuando cambia el estado de auth
+            viewModelScope.launch {
+                if (user != null) {
+                    userPreferences.updateUserData(
+                        userId = user.uid,
+                        email = user.email,
+                        displayName = user.displayName,
+                        photoUrl = user.photoUrl?.toString()
+                    )
+                } else {
+                    userPreferences.clearUserData()
+                }
+            }
+        }
     }
 
     private fun checkAuthStatus() {
@@ -61,9 +91,10 @@ class AuthViewModel @Inject constructor() : ViewModel() {
                     createOrUpdateUserInFirestore(user)
                 }
 
-                checkAuthStatus()
-                _authState.value =
-                    _authState.value.copy(isLoading = false, isLoginSuccessful = true)
+                _authState.value = _authState.value.copy(
+                    isLoading = false,
+                    isLoginSuccessful = true
+                )
             } catch (e: Exception) {
                 _authState.value = _authState.value.copy(
                     isLoading = false,
@@ -86,9 +117,10 @@ class AuthViewModel @Inject constructor() : ViewModel() {
                     createOrUpdateUserInFirestore(user)
                 }
 
-                checkAuthStatus()
-                _authState.value =
-                    _authState.value.copy(isLoading = false, isLoginSuccessful = true)
+                _authState.value = _authState.value.copy(
+                    isLoading = false,
+                    isLoginSuccessful = true
+                )
             } catch (e: Exception) {
                 _authState.value = _authState.value.copy(
                     isLoading = false,
@@ -101,8 +133,9 @@ class AuthViewModel @Inject constructor() : ViewModel() {
     // Phone Authentication - Step 1: Send code
     fun sendPhoneVerification(phoneNumber: String, activity: Activity) {
         if (!phoneNumber.startsWith("+")) {
-            _authState.value =
-                _authState.value.copy(error = "El número debe incluir código de país (ej: +56)")
+            _authState.value = _authState.value.copy(
+                error = "El número debe incluir código de país (ej: +56912345678)"
+            )
             return
         }
 
@@ -149,7 +182,9 @@ class AuthViewModel @Inject constructor() : ViewModel() {
     fun verifyPhoneCode(code: String) {
         val verId = verificationId
         if (verId == null) {
-            _authState.value = _authState.value.copy(error = "Error: No hay verificación pendiente")
+            _authState.value = _authState.value.copy(
+                error = "Error: No hay verificación pendiente"
+            )
             return
         }
 
@@ -170,7 +205,6 @@ class AuthViewModel @Inject constructor() : ViewModel() {
                     createOrUpdateUserInFirestore(user)
                 }
 
-                checkAuthStatus()
                 _authState.value = _authState.value.copy(
                     isLoading = false,
                     isLoginSuccessful = true,
@@ -205,13 +239,18 @@ class AuthViewModel @Inject constructor() : ViewModel() {
     }
 
     fun signOut() {
-        auth.signOut()
-        checkAuthStatus()
-        _authState.value = _authState.value.copy(phoneVerificationStep = PhoneVerificationStep.NONE)
+        viewModelScope.launch {
+            auth.signOut()
+            _authState.value = AuthState() // Reset state
+        }
     }
 
     fun clearError() {
         _authState.value = _authState.value.copy(error = null)
+    }
+
+    fun resetLoginState() {
+        _authState.value = _authState.value.copy(isLoginSuccessful = false)
     }
 }
 

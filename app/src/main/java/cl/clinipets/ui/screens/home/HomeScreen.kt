@@ -1,5 +1,5 @@
 // ui/screens/HomeScreen.kt
-package cl.clinipets.ui.screens
+package cl.clinipets.ui.screens.home
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Button

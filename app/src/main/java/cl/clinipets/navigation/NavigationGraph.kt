@@ -2,38 +2,52 @@
 package cl.clinipets.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import cl.clinipets.ui.screens.HomeScreen
 import cl.clinipets.ui.screens.LoginScreen
 import cl.clinipets.ui.screens.ProfileScreen
-import cl.clinipets.ui.screens.RegisterScreen
 import cl.clinipets.ui.screens.appointments.AddAppointmentScreen
 import cl.clinipets.ui.screens.appointments.AppointmentsScreen
+import cl.clinipets.ui.screens.home.HomeScreen
 import cl.clinipets.ui.screens.pets.AddPetScreen
 import cl.clinipets.ui.screens.pets.PetDetailScreen
 import cl.clinipets.ui.screens.pets.PetsScreen
+import cl.clinipets.ui.viewmodels.AuthViewModel
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val authViewModel: AuthViewModel = hiltViewModel()
+    val authState by authViewModel.authState.collectAsState()
+
+    // Determinar destino inicial basado en estado de autenticación
+    val startDestination = if (authState.isAuthenticated) "home" else "login"
+
+    // Observar cambios en autenticación
+    LaunchedEffect(authState.isAuthenticated) {
+        if (!authState.isAuthenticated) {
+            navController.navigate("login") {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
 
     NavHost(
         navController = navController,
-        startDestination = "login"
+        startDestination = startDestination
     ) {
         composable("login") {
             LoginScreen(
-                onLoginSuccess = { navController.navigate("home") },
-                onNavigateToRegister = { navController.navigate("register") }
-            )
-        }
-
-        composable("register") {
-            RegisterScreen(
-                onRegisterSuccess = { navController.navigate("home") },
-                onNavigateBack = { navController.popBackStack() }
+                onLoginSuccess = {
+                    navController.navigate("home") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -43,9 +57,7 @@ fun AppNavigation() {
                 onNavigateToAppointments = { navController.navigate("appointments") },
                 onNavigateToProfile = { navController.navigate("profile") },
                 onSignOut = {
-                    navController.navigate("login") {
-                        popUpTo(0) { inclusive = true }
-                    }
+                    authViewModel.signOut()
                 }
             )
         }
@@ -93,9 +105,7 @@ fun AppNavigation() {
             ProfileScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onSignOut = {
-                    navController.navigate("login") {
-                        popUpTo(0) { inclusive = true }
-                    }
+                    // Navegación manejada por LaunchedEffect arriba
                 }
             )
         }
