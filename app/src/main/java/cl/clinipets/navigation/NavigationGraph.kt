@@ -1,10 +1,13 @@
-// navigation/NavigationGraph.kt
+// navigation/NavigationGraph.kt (CORREGIDO)
 package cl.clinipets.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.toRoute
 import cl.clinipets.ui.screens.appointments.AppointmentsScreen
 import cl.clinipets.ui.screens.auth.LoginScreen
@@ -15,62 +18,21 @@ import cl.clinipets.ui.screens.onboarding.OnboardingScreen
 import cl.clinipets.ui.screens.pets.PetDetailScreen
 import cl.clinipets.ui.screens.pets.PetsScreen
 import cl.clinipets.ui.screens.profile.ProfileScreen
-import kotlinx.serialization.Serializable
-
-// Define all routes using type-safe navigation
-sealed interface Route {
-    // Auth routes
-    @Serializable
-    data object Splash : Route
-
-    @Serializable
-    data object Onboarding : Route
-
-    @Serializable
-    data object Login : Route
-
-    @Serializable
-    data object Register : Route
-
-    // Main app routes
-    @Serializable
-    data object Home : Route
-
-    @Serializable
-    data object Appointments : Route
-
-    @Serializable
-    data object Pets : Route
-
-    @Serializable
-    data object Profile : Route
-
-    // Detail routes with parameters
-    @Serializable
-    data class PetDetail(val petId: String) : Route
-
-    @Serializable
-    data class AppointmentDetail(val appointmentId: String) : Route
-
-    @Serializable
-    data class NewAppointment(val petId: String? = null) : Route
-}
-
-// Define navigation graphs
-sealed class NavGraph(val route: String) {
-    data object Auth : NavGraph("auth_graph")
-    data object Main : NavGraph("main_graph")
-}
 
 @Composable
 fun NavigationGraph(
     navController: NavHostController,
     startDestination: Route,
-    onAuthStateChanged: (Boolean) -> Unit
+    onAuthStateChanged: (Boolean) -> Unit,
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier
 ) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = startDestination,
+        modifier = modifier
     ) {
         // Splash Screen
         composable<Route.Splash> {
@@ -88,17 +50,6 @@ fun NavigationGraph(
                 onNavigateToHome = {
                     navController.navigate(Route.Home) {
                         popUpTo(Route.Splash) { inclusive = true }
-                    }
-                }
-            )
-        }
-
-        // Onboarding
-        composable<Route.Onboarding> {
-            OnboardingScreen(
-                onComplete = {
-                    navController.navigate(Route.Login) {
-                        popUpTo(Route.Onboarding) { inclusive = true }
                     }
                 }
             )
@@ -190,16 +141,6 @@ fun NavigationGraph(
                     navController.navigate(Route.NewAppointment(petDetail.petId))
                 }
             )
-        }
-
-        composable<Route.AppointmentDetail> { backStackEntry ->
-            val appointmentDetail: Route.AppointmentDetail = backStackEntry.toRoute()
-            // AppointmentDetailScreen implementation
-        }
-
-        composable<Route.NewAppointment> { backStackEntry ->
-            val newAppointment: Route.NewAppointment = backStackEntry.toRoute()
-            // NewAppointmentScreen implementation
         }
     }
 }

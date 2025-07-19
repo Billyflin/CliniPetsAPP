@@ -1,4 +1,4 @@
-// MainActivity.kt
+// MainActivity.kt (CORREGIDO)
 package cl.clinipets
 
 import android.os.Bundle
@@ -7,17 +7,19 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.compose.currentBackStackEntryAsState
 import cl.clinipets.navigation.NavigationGraph
 import cl.clinipets.navigation.NavigationState
 import cl.clinipets.navigation.Route
 import cl.clinipets.navigation.rememberNavigationState
 import cl.clinipets.ui.AppViewModel
+import cl.clinipets.ui.components.ClinipetsBottomBar
 import cl.clinipets.ui.theme.ClinipetsTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -57,7 +59,6 @@ fun ClinipetsApp(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClinipetsNavHost(
     navigationState: NavigationState,
@@ -65,7 +66,10 @@ fun ClinipetsNavHost(
     hasCompletedOnboarding: Boolean,
     onAuthStateChanged: (Boolean) -> Unit
 ) {
-    // Determine start destination based on app state
+    val navBackStackEntry by navigationState.navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    // Determine start destination
     val startDestination = when {
         !hasCompletedOnboarding -> Route.Splash
         !isAuthenticated -> Route.Login
@@ -73,7 +77,7 @@ fun ClinipetsNavHost(
     }
 
     // Check if current route should show bottom bar
-    val shouldShowBottomBar = navigationState.currentRoute in listOf(
+    val shouldShowBottomBar = currentRoute in listOf(
         Route.Home::class.qualifiedName,
         Route.Appointments::class.qualifiedName,
         Route.Pets::class.qualifiedName,
@@ -82,7 +86,7 @@ fun ClinipetsNavHost(
 
     Scaffold(
         bottomBar = {
-            if (shouldShowBottomBar) {
+            if (shouldShowBottomBar && isAuthenticated) {
                 ClinipetsBottomBar(
                     navigationState = navigationState
                 )
@@ -99,4 +103,3 @@ fun ClinipetsNavHost(
         )
     }
 }
-
