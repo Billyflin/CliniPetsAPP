@@ -1,11 +1,8 @@
 // ui/screens/auth/LoginScreen.kt
 package cl.clinipets.ui.screens.auth
 
-
 import android.app.Activity
 import android.util.Log
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -21,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
@@ -75,7 +73,6 @@ fun LoginScreen(
                     .setFilterByAuthorizedAccounts(false)
                     .setServerClientId(context.getString(R.string.default_web_client_id))
                     .setAutoSelectEnabled(true)
-                    .setNonce(null) // You can add a nonce for extra security
                     .build()
 
                 val request = GetCredentialRequest.Builder()
@@ -90,12 +87,7 @@ fun LoginScreen(
                 handleSignIn(result)
             } catch (e: GetCredentialException) {
                 Log.e(TAG, "Error getting credential", e)
-                snackbarHostState.showSnackbar(
-                    when (e) {
-                        is GetCredentialException -> "Error al iniciar sesión con Google"
-                        else -> "Error desconocido"
-                    }
-                )
+                snackbarHostState.showSnackbar("Error al iniciar sesión con Google")
             }
         }
     }
@@ -197,7 +189,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 // Tab Row
-                PrimaryTabRow(
+                TabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = Color.Transparent
                 ) {
@@ -247,7 +239,7 @@ fun LoginScreen(
                             onSendCode = {
                                 focusManager.clearFocus()
                                 viewModel.sendPhoneVerification(
-                                    phoneNumber,
+                                    "+56$phoneNumber", // Agregar código de país
                                     context as Activity
                                 )
                             },
@@ -330,7 +322,6 @@ fun LoginScreen(
         }
     }
 }
-
 
 @Composable
 private fun EmailLoginContent(
