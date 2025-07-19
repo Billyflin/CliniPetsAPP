@@ -229,6 +229,7 @@ class AuthViewModel @Inject constructor(
                     "email" to user.email,
                     "phone" to user.phoneNumber,
                     "photoUrl" to user.photoUrl?.toString(),
+                    "isVet" to false, // Por defecto no es veterinario
                     "createdAt" to System.currentTimeMillis()
                 )
                 firestore.collection("users").document(user.uid).set(userData).await()

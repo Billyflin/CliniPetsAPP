@@ -42,6 +42,8 @@ class UserViewModel @Inject constructor() : ViewModel() {
                 val userName = userDoc.getString("name") ?: "Usuario"
                 val userEmail = auth.currentUser?.email ?: ""
                 val memberSince = userDoc.getLong("createdAt") ?: System.currentTimeMillis()
+                val isVet = userDoc.getBoolean("isVet") == true
+
 
                 // Contar mascotas
                 val petsCount = firestore.collection("users")
@@ -68,7 +70,9 @@ class UserViewModel @Inject constructor() : ViewModel() {
                         )
                     ),
                     petsCount = petsCount,
-                    appointmentsCount = appointmentsCount
+                    appointmentsCount = appointmentsCount,
+                    isVet = isVet
+
                 )
             } catch (e: Exception) {
                 _userState.value = _userState.value.copy(
@@ -85,5 +89,6 @@ data class UserState(
     val memberSince: String = "",
     val petsCount: Int = 0,
     val appointmentsCount: Int = 0,
-    val error: String? = null
+    val error: String? = null,
+    val isVet: Boolean = false
 )

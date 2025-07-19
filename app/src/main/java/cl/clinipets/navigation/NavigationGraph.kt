@@ -17,6 +17,8 @@ import cl.clinipets.ui.screens.home.HomeScreen
 import cl.clinipets.ui.screens.pets.AddPetScreen
 import cl.clinipets.ui.screens.pets.PetDetailScreen
 import cl.clinipets.ui.screens.pets.PetsScreen
+import cl.clinipets.ui.screens.profile.SettingsScreen
+import cl.clinipets.ui.screens.vet.VetScheduleScreen
 import cl.clinipets.ui.viewmodels.AuthViewModel
 
 @Composable
@@ -101,6 +103,14 @@ fun AppNavigation() {
             )
         }
 
+        composable("settings") {
+            SettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToVetSchedule = { navController.navigate("vet_schedule") }
+            )
+        }
+
+
         composable("profile") {
             ProfileScreen(
                 onNavigateBack = { navController.popBackStack() },
@@ -109,5 +119,13 @@ fun AppNavigation() {
                 }
             )
         }
+
+
+        composable("vet_schedule") {
+            VetScheduleScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
     }
 }
