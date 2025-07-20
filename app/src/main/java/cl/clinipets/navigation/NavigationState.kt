@@ -1,4 +1,3 @@
-
 // navigation/NavigationState.kt
 package cl.clinipets.navigation
 

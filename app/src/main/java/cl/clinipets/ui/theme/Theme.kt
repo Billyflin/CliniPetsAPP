@@ -4,7 +4,16 @@ package cl.clinipets.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -444,14 +453,14 @@ fun ClinipetsTheme(
         when (darkTheme) {
             true -> when (contrast) {
                 Contrast.Standard -> darkScheme
-                Contrast.Medium   -> mediumContrastDarkColorScheme
-                Contrast.High     -> highContrastDarkColorScheme
+                Contrast.Medium -> mediumContrastDarkColorScheme
+                Contrast.High -> highContrastDarkColorScheme
             }
 
             false -> when (contrast) {
                 Contrast.Standard -> lightScheme
-                Contrast.Medium   -> mediumContrastLightColorScheme
-                Contrast.High     -> highContrastLightColorScheme
+                Contrast.Medium -> mediumContrastLightColorScheme
+                Contrast.High -> highContrastLightColorScheme
             }
         }
     }
@@ -473,14 +482,14 @@ fun ClinipetsTheme(
         when (darkTheme) {
             true -> when (contrast) {
                 Contrast.Standard -> extendedDark
-                Contrast.Medium   -> extendedDarkMediumContrast
-                Contrast.High     -> extendedDarkHighContrast
+                Contrast.Medium -> extendedDarkMediumContrast
+                Contrast.High -> extendedDarkHighContrast
             }
 
             false -> when (contrast) {
                 Contrast.Standard -> extendedLight
-                Contrast.Medium   -> extendedLightMediumContrast
-                Contrast.High     -> extendedLightHighContrast
+                Contrast.Medium -> extendedLightMediumContrast
+                Contrast.High -> extendedLightHighContrast
             }
         }
     }

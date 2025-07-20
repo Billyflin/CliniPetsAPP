@@ -34,9 +34,9 @@ fun AppointmentsScreen(
                 Text("Estado: ${appointment.status}")
                 if (appointment.status == "SCHEDULED") {
                     TextButton(onClick = { viewModel.cancelAppointment(appointment.id) }) { Text("Cancelar") }
+                }
             }
         }
-    }
 
         Button(onClick = onNavigateBack) { Text("Volver") }
     }

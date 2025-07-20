@@ -322,7 +322,6 @@ val peachContainerDarkHighContrast = Color(0xFFF2B86D)
 val onPeachContainerDarkHighContrast = Color(0xFF140900)
 
 
-
 // Colores neutros
 val Gray50 = Color(0xFFF9FAFB)
 val Gray100 = Color(0xFFF3F4F6)

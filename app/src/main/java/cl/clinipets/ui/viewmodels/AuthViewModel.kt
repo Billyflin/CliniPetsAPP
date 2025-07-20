@@ -88,7 +88,7 @@ class AuthViewModel @Inject constructor(
                 val result = auth.signInWithCredential(credential).await()
 
                 result.user?.let { user ->
-                    createOrUpdateUserInFirestore(user)
+                    createOrUpdateUserInFirestore(user, "google")
                 }
 
                 _authState.value = _authState.value.copy(
@@ -114,7 +114,7 @@ class AuthViewModel @Inject constructor(
                 val result = auth.signInWithCredential(credential).await()
 
                 result.user?.let { user ->
-                    createOrUpdateUserInFirestore(user)
+                    createOrUpdateUserInFirestore(user, "facebook")
                 }
 
                 _authState.value = _authState.value.copy(
@@ -202,7 +202,7 @@ class AuthViewModel @Inject constructor(
                 val result = auth.signInWithCredential(credential).await()
 
                 result.user?.let { user ->
-                    createOrUpdateUserInFirestore(user)
+                    createOrUpdateUserInFirestore(user, "phone")
                 }
 
                 _authState.value = _authState.value.copy(
@@ -219,7 +219,7 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    private suspend fun createOrUpdateUserInFirestore(user: FirebaseUser) {
+    private suspend fun createOrUpdateUserInFirestore(user: FirebaseUser, provider: String) {
         try {
             val userDoc = firestore.collection("users").document(user.uid).get().await()
 
@@ -229,19 +229,32 @@ class AuthViewModel @Inject constructor(
                     "email" to user.email,
                     "phone" to user.phoneNumber,
                     "photoUrl" to user.photoUrl?.toString(),
-                    "isVet" to false, // Por defecto no es veterinario
-                    "createdAt" to System.currentTimeMillis()
+                    "provider" to provider,
+                    "isVet" to false,
+                    "createdAt" to System.currentTimeMillis(),
+                    "lastLogin" to System.currentTimeMillis()
                 )
                 firestore.collection("users").document(user.uid).set(userData).await()
+            } else {
+                // Actualizar último login
+                firestore.collection("users").document(user.uid)
+                    .update(
+                        mapOf(
+                            "lastLogin" to System.currentTimeMillis(),
+                            "lastProvider" to provider
+                        )
+                    ).await()
             }
         } catch (e: Exception) {
-            // Log error but don't fail the sign in
+            // Log error pero no fallar el inicio de sesión
         }
     }
 
     fun signOut() {
         viewModelScope.launch {
             auth.signOut()
+            // También cerrar sesión de Facebook si es necesario
+            com.facebook.login.LoginManager.getInstance().logOut()
             _authState.value = AuthState() // Reset state
         }
     }
@@ -250,8 +263,21 @@ class AuthViewModel @Inject constructor(
         _authState.value = _authState.value.copy(error = null)
     }
 
+    fun setError(message: String) {
+        _authState.value = _authState.value.copy(error = message)
+    }
+
     fun resetLoginState() {
         _authState.value = _authState.value.copy(isLoginSuccessful = false)
+    }
+
+    fun resetPhoneVerification() {
+        _authState.value = _authState.value.copy(
+            phoneVerificationStep = PhoneVerificationStep.NONE,
+            error = null
+        )
+        verificationId = null
+        resendToken = null
     }
 }
 
