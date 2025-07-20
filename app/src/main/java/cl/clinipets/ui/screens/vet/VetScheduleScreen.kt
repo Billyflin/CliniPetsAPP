@@ -1,3 +1,817 @@
+// ui/screens/vet/VetScreens.kt
+package cl.clinipets.ui.screens.vet
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import cl.clinipets.data.model.Appointment
+import cl.clinipets.data.model.AppointmentStatus
+import cl.clinipets.data.model.MedicalConsultation
+import cl.clinipets.data.model.Medication
+import cl.clinipets.data.model.PaymentMethod
+import cl.clinipets.data.model.Pet
+import cl.clinipets.data.model.Vaccine
+import cl.clinipets.data.model.VeterinaryService
+import cl.clinipets.ui.viewmodels.AppointmentsViewModel
+import cl.clinipets.ui.viewmodels.VetViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+// ====================== DASHBOARD VETERINARIO ======================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun VetDashboardScreen(
+    onNavigateBack: () -> Unit,
+    onNavigateToConsultation: (String) -> Unit,
+    onNavigateToInventory: () -> Unit,
+    onNavigateToSchedule: () -> Unit,
+    onNavigateToReports: () -> Unit,
+    viewModel: VetViewModel = hiltViewModel()
+) {
+    val vetState by viewModel.vetState.collectAsState()
+
+    if (!vetState.isVeterinarian) {
+        NoVetAccessScreen(onNavigateBack)
+        return
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Panel Veterinario") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* TODO: Notificaciones */ }) {
+
+                        Icon(Icons.Default.Notifications, contentDescription = "Notificaciones")
+
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Resumen del día
+            item {
+                Card {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Hoy, ${
+                                SimpleDateFormat(
+                                    "EEEE d 'de' MMMM",
+                                    Locale("es")
+                                ).format(Date())
+                            }",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            StatCard(
+                                value = vetState.todayAppointments.size.toString(),
+                                label = "Citas hoy",
+                                icon = Icons.Default.CalendarMonth
+                            )
+                            StatCard(
+                                value = vetState.todayAppointments.count {
+                                    it.first.status == AppointmentStatus.COMPLETED
+                                }.toString(),
+                                label = "Completadas",
+                                icon = Icons.Default.CheckCircle
+                            )
+                            StatCard(
+                                value = vetState.todayAppointments.count {
+                                    it.first.status == AppointmentStatus.SCHEDULED
+                                }.toString(),
+                                label = "Pendientes",
+                                icon = Icons.Default.Schedule
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Accesos rápidos
+            item {
+                Text(
+                    text = "Accesos rápidos",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    QuickActionCard(
+                        title = "Inventario",
+                        subtitle = "${vetState.inventorySummary?.lowStockCount ?: 0} items bajo stock",
+                        icon = Icons.Default.Inventory,
+                        onClick = onNavigateToInventory,
+                        modifier = Modifier.weight(1f)
+                    )
+                    QuickActionCard(
+                        title = "Mi Horario",
+                        subtitle = "Configurar disponibilidad",
+                        icon = Icons.Default.AccessTime,
+                        onClick = onNavigateToSchedule,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    QuickActionCard(
+                        title = "Reportes",
+                        subtitle = "Ver estadísticas",
+                        icon = Icons.Default.Assessment,
+                        onClick = onNavigateToReports,
+                        modifier = Modifier.weight(1f)
+                    )
+                    QuickActionCard(
+                        title = "Servicios",
+                        subtitle = "Gestionar precios",
+                        icon = Icons.Default.MedicalServices,
+                        onClick = { /* TODO */ },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            // Citas del día
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Citas de hoy",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    TextButton(onClick = { /* TODO: Ver todas */ }) {
+                        Text("Ver todas")
+                    }
+                }
+            }
+
+            if (vetState.todayAppointments.isEmpty()) {
+                item {
+                    Card {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No hay citas programadas para hoy",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            } else {
+                items(vetState.todayAppointments) { (appointment, pet) ->
+                    VetAppointmentCard(
+                        appointment = appointment,
+                        pet = pet,
+                        onClick = {
+                            if (appointment.status == AppointmentStatus.SCHEDULED) {
+                                onNavigateToConsultation(appointment.id)
+                            } else if (appointment.consultationId != null) {
+                                onNavigateToConsultation(appointment.consultationId)
+                            }
+                        }
+                    )
+                }
+            }
+
+            // Alertas de inventario
+            if (vetState.lowStockMedications.isNotEmpty() || vetState.lowStockVaccines.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "Alertas de inventario",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Items con stock bajo",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            vetState.lowStockMedications.take(3).forEach { medication ->
+                                Text("• ${medication.name}: ${medication.stock} unidades")
+                            }
+                            if (vetState.lowStockMedications.size > 3) {
+                                Text("... y ${vetState.lowStockMedications.size - 3} más")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoVetAccessScreen(onNavigateBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Lock,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.error
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Acceso restringido",
+            style = MaterialTheme.typography.titleLarge
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Esta sección es solo para veterinarios",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(onClick = onNavigateBack) {
+            Text("Volver")
+        }
+    }
+}
+
+@Composable
+private fun StatCard(
+    value: String,
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QuickActionCard(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(32.dp)
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun AppointmentStatusBadge(status: AppointmentStatus) {
+    val (color, text) = when (status) {
+        AppointmentStatus.SCHEDULED -> MaterialTheme.colorScheme.primary to "Agendada"
+        AppointmentStatus.IN_PROGRESS -> MaterialTheme.colorScheme.secondary to "En curso"
+        AppointmentStatus.COMPLETED -> MaterialTheme.colorScheme.tertiary to "Completada"
+        else -> MaterialTheme.colorScheme.surfaceVariant to status.name
+    }
+
+    Surface(
+        color = color.copy(alpha = 0.2f),
+        shape = MaterialTheme.shapes.small
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+        )
+    }
+}
+
+// ====================== CONSULTA MÉDICA ======================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MedicalConsultationScreen(
+    appointmentId: String,
+    onConsultationFinished: () -> Unit,
+    onNavigateBack: () -> Unit,
+    viewModel: VetViewModel = hiltViewModel(),
+    appointmentsViewModel: AppointmentsViewModel = hiltViewModel()
+) {
+    val vetState by viewModel.vetState.collectAsState()
+    val appointmentsState by appointmentsViewModel.appointmentsState.collectAsState()
+    var currentTab by remember { mutableStateOf(0) }
+
+    // Datos clínicos
+    var weight by remember { mutableStateOf("") }
+    var temperature by remember { mutableStateOf("") }
+    var heartRate by remember { mutableStateOf("") }
+    var respiratoryRate by remember { mutableStateOf("") }
+    var symptoms by remember { mutableStateOf("") }
+    var clinicalExam by remember { mutableStateOf("") }
+    var diagnosis by remember { mutableStateOf("") }
+    var treatment by remember { mutableStateOf("") }
+    var observations by remember { mutableStateOf("") }
+    var recommendations by remember { mutableStateOf("") }
+
+    // Estado de la consulta
+    var consultationStarted by remember { mutableStateOf(false) }
+    var showFinishDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(appointmentId) {
+        if (!consultationStarted) {
+            appointmentsViewModel.startConsultation(appointmentId)
+            consultationStarted = true
+        }
+    }
+
+    LaunchedEffect(appointmentsState.isConsultationFinished) {
+        if (appointmentsState.isConsultationFinished) {
+            appointmentsViewModel.clearState()
+            onConsultationFinished()
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Consulta médica") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.Close, contentDescription = "Cerrar")
+                    }
+                },
+                actions = {
+                    TextButton(
+                        onClick = { showFinishDialog = true },
+                        enabled = appointmentsState.activeConsultationId != null
+                    ) {
+                        Text("Finalizar")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Tabs
+            TabRow(selectedTabIndex = currentTab) {
+                Tab(
+                    selected = currentTab == 0,
+                    onClick = { currentTab = 0 },
+                    text = { Text("Datos clínicos") }
+                )
+                Tab(
+                    selected = currentTab == 1,
+                    onClick = { currentTab = 1 },
+                    text = { Text("Servicios") }
+                )
+                Tab(
+                    selected = currentTab == 2,
+                    onClick = { currentTab = 2 },
+                    text = { Text("Medicamentos") }
+                )
+                Tab(
+                    selected = currentTab == 3,
+                    onClick = { currentTab = 3 },
+                    text = { Text("Facturación") }
+                )
+            }
+
+            when (currentTab) {
+                0 -> ClinicalDataTab(
+                    weight = weight,
+                    onWeightChange = { weight = it },
+                    temperature = temperature,
+                    onTemperatureChange = { temperature = it },
+                    heartRate = heartRate,
+                    onHeartRateChange = { heartRate = it },
+                    respiratoryRate = respiratoryRate,
+                    onRespiratoryRateChange = { respiratoryRate = it },
+                    symptoms = symptoms,
+                    onSymptomsChange = { symptoms = it },
+                    clinicalExam = clinicalExam,
+                    onClinicalExamChange = { clinicalExam = it },
+                    diagnosis = diagnosis,
+                    onDiagnosisChange = { diagnosis = it },
+                    treatment = treatment,
+                    onTreatmentChange = { treatment = it },
+                    observations = observations,
+                    onObservationsChange = { observations = it },
+                    recommendations = recommendations,
+                    onRecommendationsChange = { recommendations = it },
+                    onSave = {
+                        appointmentsState.activeConsultationId?.let { consultationId ->
+                            appointmentsViewModel.updateConsultation(
+                                consultationId = consultationId,
+                                weight = weight.toFloatOrNull(),
+                                temperature = temperature.toFloatOrNull(),
+                                heartRate = heartRate.toIntOrNull(),
+                                respiratoryRate = respiratoryRate.toIntOrNull(),
+                                symptoms = symptoms,
+                                clinicalExam = clinicalExam,
+                                diagnosis = diagnosis,
+                                treatment = treatment,
+                                observations = observations,
+                                recommendations = recommendations,
+                                nextCheckupDays = null,
+                                nextCheckupReason = null
+                            )
+                        }
+                    }
+                )
+
+                1 -> ServicesTab(
+                    consultation = appointmentsState.selectedConsultation,
+                    availableServices = vetState.services,
+                    onAddService = { serviceId, price ->
+                        appointmentsState.activeConsultationId?.let { consultationId ->
+                            appointmentsViewModel.addServiceToConsultation(
+                                consultationId,
+                                serviceId,
+                                price
+                            )
+                        }
+                    }
+                )
+
+                2 -> MedicationsTab(
+                    consultation = appointmentsState.selectedConsultation,
+                    availableMedications = vetState.medications,
+                    onAddMedication = { medicationId, dose, frequency, duration, route, quantity, unitPrice ->
+                        appointmentsState.activeConsultationId?.let { consultationId ->
+                            appointmentsViewModel.addMedicationToConsultation(
+                                consultationId,
+                                medicationId,
+                                dose,
+                                frequency,
+                                duration,
+                                route,
+                                quantity,
+                                unitPrice
+                            )
+                        }
+                    }
+                )
+
+                3 -> BillingTab(
+                    consultation = appointmentsState.selectedConsultation,
+                    onFinishConsultation = { discount, discountReason, paymentMethod, amountPaid ->
+                        appointmentsState.activeConsultationId?.let { consultationId ->
+                            appointmentsViewModel.finishConsultation(
+                                consultationId, discount, discountReason, paymentMethod, amountPaid
+                            )
+                        }
+                    }
+                )
+            }
+        }
+
+        if (showFinishDialog) {
+            AlertDialog(
+                onDismissRequest = { showFinishDialog = false },
+                title = { Text("Finalizar consulta") },
+                text = { Text("¿Estás seguro de finalizar la consulta? Asegúrate de haber guardado todos los datos y procesado el pago.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showFinishDialog = false
+                            currentTab = 3 // Ir a facturación
+                        }
+                    ) {
+                        Text("Ir a facturación")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showFinishDialog = false }) {
+                        Text("Cancelar")
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ClinicalDataTab(
+    weight: String,
+    onWeightChange: (String) -> Unit,
+    temperature: String,
+    onTemperatureChange: (String) -> Unit,
+    heartRate: String,
+    onHeartRateChange: (String) -> Unit,
+    respiratoryRate: String,
+    onRespiratoryRateChange: (String) -> Unit,
+    symptoms: String,
+    onSymptomsChange: (String) -> Unit,
+    clinicalExam: String,
+    onClinicalExamChange: (String) -> Unit,
+    diagnosis: String,
+    onDiagnosisChange: (String) -> Unit,
+    treatment: String,
+    onTreatmentChange: (String) -> Unit,
+    observations: String,
+    onObservationsChange: (String) -> Unit,
+    recommendations: String,
+    onRecommendationsChange: (String) -> Unit,
+    onSave: () -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Signos vitales
+        item {
+            Card {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Signos vitales",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = weight,
+                            onValueChange = onWeightChange,
+                            label = { Text("Peso (kg)") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = temperature,
+                            onValueChange = onTemperatureChange,
+                            label = { Text("Temp (°C)") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = heartRate,
+                            onValueChange = onHeartRateChange,
+                            label = { Text("FC (lpm)") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = respiratoryRate,
+                            onValueChange = onRespiratoryRateChange,
+                            label = { Text("FR (rpm)") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Anamnesis
+        item {
+            OutlinedTextField(
+                value = symptoms,
+                onValueChange = onSymptomsChange,
+                label = { Text("Síntomas / Motivo de consulta") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3
+            )
+        }
+
+        // Examen clínico
+        item {
+            OutlinedTextField(
+                value = clinicalExam,
+                onValueChange = onClinicalExamChange,
+                label = { Text("Examen físico") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3
+            )
+        }
+
+        // Diagnóstico
+        item {
+            OutlinedTextField(
+                value = diagnosis,
+                onValueChange = onDiagnosisChange,
+                label = { Text("Diagnóstico") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 2
+            )
+        }
+
+        // Tratamiento
+        item {
+            OutlinedTextField(
+                value = treatment,
+                onValueChange = onTreatmentChange,
+                label = { Text("Plan de tratamiento") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3
+            )
+        }
+
+        // Observaciones
+        item {
+            OutlinedTextField(
+                value = observations,
+                onValueChange = onObservationsChange,
+                label = { Text("Observaciones") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 2
+            )
+        }
+
+        // Recomendaciones
+        item {
+            OutlinedTextField(
+                value = recommendations,
+                onValueChange = onRecommendationsChange,
+                label = { Text("Recomendaciones para el propietario") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 2
+            )
+        }
+
+        // Botón guardar
+        item {
+            Button(
+                onClick = onSave,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Save, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Guardar datos clínicos")
+            }
+        }
+    }
+}
+
 @Composable
 private fun AddServiceDialog(
     availableServices: List<VeterinaryService>,
@@ -245,9 +1059,11 @@ fun InventoryScreen(
                         )
                     }
                 )
+
                 1 -> VaccinesInventoryTab(
                     vaccines = vetState.vaccines
                 )
+
                 2 -> LowStockTab(
                     medications = vetState.lowStockMedications,
                     vaccines = vetState.lowStockVaccines
@@ -364,13 +1180,19 @@ private fun MedicationInventoryCard(
                     style = MaterialTheme.typography.bodySmall
                 )
                 medication.expirationDate?.let { expDate ->
-                    val daysUntilExpiration = ((expDate - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)).toInt()
+                    val daysUntilExpiration =
+                        ((expDate - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)).toInt()
                     Text(
                         text = when {
                             daysUntilExpiration < 0 -> "VENCIDO"
                             daysUntilExpiration <= 30 -> "Vence en $daysUntilExpiration días"
                             daysUntilExpiration <= 90 -> "Vence en ${daysUntilExpiration / 30} meses"
-                            else -> "Vence: ${SimpleDateFormat("MM/yyyy", Locale.getDefault()).format(Date(expDate))}"
+                            else -> "Vence: ${
+                                SimpleDateFormat(
+                                    "MM/yyyy",
+                                    Locale.getDefault()
+                                ).format(Date(expDate))
+                            }"
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = when {
@@ -727,30 +1549,6 @@ private fun UpdateStockDialog(
         }
     )
 }
-modifier = Modifier
-.fillMaxWidth()
-.padding(16.dp),
-verticalArrangement = Arrangement.spacedBy(4.dp)
-) {
-    Icon(
-        imageVector = icon,
-        contentDescription = null,
-        tint = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.size(32.dp)
-    )
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.Bold
-    )
-    Text(
-        text = subtitle,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-}
-}
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -820,382 +1618,9 @@ private fun VetAppointmentCard(
     }
 }
 
-@Composable
-private fun AppointmentStatusBadge(status: AppointmentStatus) {
-    val (color, text) = when (status) {
-        AppointmentStatus.SCHEDULED -> MaterialTheme.colorScheme.primary to "Agendada"
-        AppointmentStatus.IN_PROGRESS -> MaterialTheme.colorScheme.secondary to "En curso"
-        AppointmentStatus.COMPLETED -> MaterialTheme.colorScheme.tertiary to "Completada"
-        else -> MaterialTheme.colorScheme.surfaceVariant to status.name
-    }
-
-    Surface(
-        color = color.copy(alpha = 0.2f),
-        shape = MaterialTheme.shapes.small
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = color,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-        )
-    }
-}
 
 // ====================== CONSULTA MÉDICA ======================
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MedicalConsultationScreen(
-    appointmentId: String,
-    onConsultationFinished: () -> Unit,
-    onNavigateBack: () -> Unit,
-    viewModel: VetViewModel = hiltViewModel(),
-    appointmentsViewModel: cl.clinipets.ui.viewmodels.AppointmentsViewModel = hiltViewModel()
-) {
-    val vetState by viewModel.vetState.collectAsState()
-    val appointmentsState by appointmentsViewModel.appointmentsState.collectAsState()
-    var currentTab by remember { mutableStateOf(0) }
-
-    // Datos clínicos
-    var weight by remember { mutableStateOf("") }
-    var temperature by remember { mutableStateOf("") }
-    var heartRate by remember { mutableStateOf("") }
-    var respiratoryRate by remember { mutableStateOf("") }
-    var symptoms by remember { mutableStateOf("") }
-    var clinicalExam by remember { mutableStateOf("") }
-    var diagnosis by remember { mutableStateOf("") }
-    var treatment by remember { mutableStateOf("") }
-    var observations by remember { mutableStateOf("") }
-    var recommendations by remember { mutableStateOf("") }
-
-    // Estado de la consulta
-    var consultationStarted by remember { mutableStateOf(false) }
-    var showFinishDialog by remember { mutableStateOf(false) }
-
-    LaunchedEffect(appointmentId) {
-        if (!consultationStarted) {
-            appointmentsViewModel.startConsultation(appointmentId)
-            consultationStarted = true
-        }
-    }
-
-    LaunchedEffect(appointmentsState.isConsultationFinished) {
-        if (appointmentsState.isConsultationFinished) {
-            appointmentsViewModel.clearState()
-            onConsultationFinished()
-        }
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Consulta médica") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.Close, contentDescription = "Cerrar")
-                    }
-                },
-                actions = {
-                    TextButton(
-                        onClick = { showFinishDialog = true },
-                        enabled = appointmentsState.activeConsultationId != null
-                    ) {
-                        Text("Finalizar")
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Tabs
-            TabRow(selectedTabIndex = currentTab) {
-                Tab(
-                    selected = currentTab == 0,
-                    onClick = { currentTab = 0 },
-                    text = { Text("Datos clínicos") }
-                )
-                Tab(
-                    selected = currentTab == 1,
-                    onClick = { currentTab = 1 },
-                    text = { Text("Servicios") }
-                )
-                Tab(
-                    selected = currentTab == 2,
-                    onClick = { currentTab = 2 },
-                    text = { Text("Medicamentos") }
-                )
-                Tab(
-                    selected = currentTab == 3,
-                    onClick = { currentTab = 3 },
-                    text = { Text("Facturación") }
-                )
-            }
-
-            when (currentTab) {
-                0 -> ClinicalDataTab(
-                    weight = weight,
-                    onWeightChange = { weight = it },
-                    temperature = temperature,
-                    onTemperatureChange = { temperature = it },
-                    heartRate = heartRate,
-                    onHeartRateChange = { heartRate = it },
-                    respiratoryRate = respiratoryRate,
-                    onRespiratoryRateChange = { respiratoryRate = it },
-                    symptoms = symptoms,
-                    onSymptomsChange = { symptoms = it },
-                    clinicalExam = clinicalExam,
-                    onClinicalExamChange = { clinicalExam = it },
-                    diagnosis = diagnosis,
-                    onDiagnosisChange = { diagnosis = it },
-                    treatment = treatment,
-                    onTreatmentChange = { treatment = it },
-                    observations = observations,
-                    onObservationsChange = { observations = it },
-                    recommendations = recommendations,
-                    onRecommendationsChange = { recommendations = it },
-                    onSave = {
-                        appointmentsState.activeConsultationId?.let { consultationId ->
-                            appointmentsViewModel.updateConsultation(
-                                consultationId = consultationId,
-                                weight = weight.toFloatOrNull(),
-                                temperature = temperature.toFloatOrNull(),
-                                heartRate = heartRate.toIntOrNull(),
-                                respiratoryRate = respiratoryRate.toIntOrNull(),
-                                symptoms = symptoms,
-                                clinicalExam = clinicalExam,
-                                diagnosis = diagnosis,
-                                treatment = treatment,
-                                observations = observations,
-                                recommendations = recommendations,
-                                nextCheckupDays = null,
-                                nextCheckupReason = null
-                            )
-                        }
-                    }
-                )
-                1 -> ServicesTab(
-                    consultation = appointmentsState.selectedConsultation,
-                    availableServices = vetState.services,
-                    onAddService = { serviceId, price ->
-                        appointmentsState.activeConsultationId?.let { consultationId ->
-                            appointmentsViewModel.addServiceToConsultation(consultationId, serviceId, price)
-                        }
-                    }
-                )
-                2 -> MedicationsTab(
-                    consultation = appointmentsState.selectedConsultation,
-                    availableMedications = vetState.medications,
-                    onAddMedication = { medicationId, dose, frequency, duration, route, quantity, unitPrice ->
-                        appointmentsState.activeConsultationId?.let { consultationId ->
-                            appointmentsViewModel.addMedicationToConsultation(
-                                consultationId, medicationId, dose, frequency, duration, route, quantity, unitPrice
-                            )
-                        }
-                    }
-                )
-                3 -> BillingTab(
-                    consultation = appointmentsState.selectedConsultation,
-                    onFinishConsultation = { discount, discountReason, paymentMethod, amountPaid ->
-                        appointmentsState.activeConsultationId?.let { consultationId ->
-                            appointmentsViewModel.finishConsultation(
-                                consultationId, discount, discountReason, paymentMethod, amountPaid
-                            )
-                        }
-                    }
-                )
-            }
-        }
-
-        if (showFinishDialog) {
-            AlertDialog(
-                onDismissRequest = { showFinishDialog = false },
-                title = { Text("Finalizar consulta") },
-                text = { Text("¿Estás seguro de finalizar la consulta? Asegúrate de haber guardado todos los datos y procesado el pago.") },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showFinishDialog = false
-                            currentTab = 3 // Ir a facturación
-                        }
-                    ) {
-                        Text("Ir a facturación")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showFinishDialog = false }) {
-                        Text("Cancelar")
-                    }
-                }
-            )
-        }
-    }
-}
-
-@Composable
-private fun ClinicalDataTab(
-    weight: String,
-    onWeightChange: (String) -> Unit,
-    temperature: String,
-    onTemperatureChange: (String) -> Unit,
-    heartRate: String,
-    onHeartRateChange: (String) -> Unit,
-    respiratoryRate: String,
-    onRespiratoryRateChange: (String) -> Unit,
-    symptoms: String,
-    onSymptomsChange: (String) -> Unit,
-    clinicalExam: String,
-    onClinicalExamChange: (String) -> Unit,
-    diagnosis: String,
-    onDiagnosisChange: (String) -> Unit,
-    treatment: String,
-    onTreatmentChange: (String) -> Unit,
-    observations: String,
-    onObservationsChange: (String) -> Unit,
-    recommendations: String,
-    onRecommendationsChange: (String) -> Unit,
-    onSave: () -> Unit
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Signos vitales
-        item {
-            Card {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Signos vitales",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = weight,
-                            onValueChange = onWeightChange,
-                            label = { Text("Peso (kg)") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = temperature,
-                            onValueChange = onTemperatureChange,
-                            label = { Text("Temp (°C)") },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = heartRate,
-                            onValueChange = onHeartRateChange,
-                            label = { Text("FC (lpm)") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = respiratoryRate,
-                            onValueChange = onRespiratoryRateChange,
-                            label = { Text("FR (rpm)") },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-        }
-
-        // Anamnesis
-        item {
-            OutlinedTextField(
-                value = symptoms,
-                onValueChange = onSymptomsChange,
-                label = { Text("Síntomas / Motivo de consulta") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3
-            )
-        }
-
-        // Examen clínico
-        item {
-            OutlinedTextField(
-                value = clinicalExam,
-                onValueChange = onClinicalExamChange,
-                label = { Text("Examen físico") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3
-            )
-        }
-
-        // Diagnóstico
-        item {
-            OutlinedTextField(
-                value = diagnosis,
-                onValueChange = onDiagnosisChange,
-                label = { Text("Diagnóstico") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2
-            )
-        }
-
-        // Tratamiento
-        item {
-            OutlinedTextField(
-                value = treatment,
-                onValueChange = onTreatmentChange,
-                label = { Text("Plan de tratamiento") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3
-            )
-        }
-
-        // Observaciones
-        item {
-            OutlinedTextField(
-                value = observations,
-                onValueChange = onObservationsChange,
-                label = { Text("Observaciones") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2
-            )
-        }
-
-        // Recomendaciones
-        item {
-            OutlinedTextField(
-                value = recommendations,
-                onValueChange = onRecommendationsChange,
-                label = { Text("Recomendaciones para el propietario") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2
-            )
-        }
-
-        // Botón guardar
-        item {
-            Button(
-                onClick = onSave,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Save, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Guardar datos clínicos")
-            }
-        }
-    }
-}
 
 @Composable
 private fun ServicesTab(
@@ -1664,343 +2089,3 @@ private fun BillingTab(
         )
     }
 }
-
-@Composable
-private fun AddServiceDialog(
-    availableServices// ui/screens/vet/VetDashboardScreen.kt
-    package cl.clinipets.ui.screens.vet
-
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import cl.clinipets.data.model.*
-import cl.clinipets.ui.viewmodels.VetViewModel
-import java.text.SimpleDateFormat
-import java.util.*
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun VetDashboardScreen(
-    onNavigateBack: () -> Unit,
-    onNavigateToConsultation: (String) -> Unit,
-    onNavigateToInventory: () -> Unit,
-    onNavigateToSchedule: () -> Unit,
-    onNavigateToReports: () -> Unit,
-    viewModel: VetViewModel = hiltViewModel()
-) {
-    val vetState by viewModel.vetState.collectAsState()
-
-    if (!vetState.isVeterinarian) {
-        NoVetAccessScreen(onNavigateBack)
-        return
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Panel Veterinario") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* TODO: Notificaciones */ }) {
-                        Badge(
-                            badge = {
-                                Text("3")
-                            }
-                        ) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Notificaciones")
-                        }
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Resumen del día
-            item {
-                Card {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Hoy, ${SimpleDateFormat("EEEE d 'de' MMMM", Locale("es")).format(Date())}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            StatCard(
-                                value = vetState.todayAppointments.size.toString(),
-                                label = "Citas hoy",
-                                icon = Icons.Default.CalendarMonth
-                            )
-                            StatCard(
-                                value = vetState.todayAppointments.count {
-                                    it.first.status == AppointmentStatus.COMPLETED
-                                }.toString(),
-                                label = "Completadas",
-                                icon = Icons.Default.CheckCircle
-                            )
-                            StatCard(
-                                value = vetState.todayAppointments.count {
-                                    it.first.status == AppointmentStatus.SCHEDULED
-                                }.toString(),
-                                label = "Pendientes",
-                                icon = Icons.Default.Schedule
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Accesos rápidos
-            item {
-                Text(
-                    text = "Accesos rápidos",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    QuickActionCard(
-                        title = "Inventario",
-                        subtitle = "${vetState.inventorySummary?.lowStockCount ?: 0} items bajo stock",
-                        icon = Icons.Default.Inventory,
-                        onClick = onNavigateToInventory,
-                        modifier = Modifier.weight(1f)
-                    )
-                    QuickActionCard(
-                        title = "Mi Horario",
-                        subtitle = "Configurar disponibilidad",
-                        icon = Icons.Default.AccessTime,
-                        onClick = onNavigateToSchedule,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    QuickActionCard(
-                        title = "Reportes",
-                        subtitle = "Ver estadísticas",
-                        icon = Icons.Default.Assessment,
-                        onClick = onNavigateToReports,
-                        modifier = Modifier.weight(1f)
-                    )
-                    QuickActionCard(
-                        title = "Servicios",
-                        subtitle = "Gestionar precios",
-                        icon = Icons.Default.MedicalServices,
-                        onClick = { /* TODO */ },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            // Citas del día
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Citas de hoy",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    TextButton(onClick = { /* TODO: Ver todas */ }) {
-                        Text("Ver todas")
-                    }
-                }
-            }
-
-            if (vetState.todayAppointments.isEmpty()) {
-                item {
-                    Card {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "No hay citas programadas para hoy",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            } else {
-                items(vetState.todayAppointments) { (appointment, pet) ->
-                    VetAppointmentCard(
-                        appointment = appointment,
-                        pet = pet,
-                        onClick = {
-                            if (appointment.status == AppointmentStatus.SCHEDULED) {
-                                // Iniciar consulta
-                                onNavigateToConsultation(appointment.id)
-                            } else if (appointment.consultationId != null) {
-                                // Ver consulta existente
-                                onNavigateToConsultation(appointment.consultationId)
-                            }
-                        }
-                    )
-                }
-            }
-
-            // Alertas de inventario
-            if (vetState.lowStockMedications.isNotEmpty() || vetState.lowStockVaccines.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "Alertas de inventario",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.Warning,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Items con stock bajo",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            vetState.lowStockMedications.take(3).forEach { medication ->
-                                Text("• ${medication.name}: ${medication.stock} unidades")
-                            }
-                            if (vetState.lowStockMedications.size > 3) {
-                                Text("... y ${vetState.lowStockMedications.size - 3} más")
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun NoVetAccessScreen(onNavigateBack: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.Lock,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.error
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Acceso restringido",
-            style = MaterialTheme.typography.titleLarge
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Esta sección es solo para veterinarios",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onNavigateBack) {
-            Text("Volver")
-        }
-    }
-}
-
-@Composable
-private fun StatCard(
-    value: String,
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun QuickActionCard(
-    title: String,
-    subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        onClick = onClick,
-        modifier = modifier
-    ) {
-        Column

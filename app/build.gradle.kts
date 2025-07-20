@@ -76,7 +76,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
 
-    implementation("com.facebook.android:facebook-login:16.2.0")
+    implementation("com.facebook.android:facebook-login:18.0.3")
 
 
     // Hilt Navigation Compose
