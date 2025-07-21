@@ -11,18 +11,14 @@ data class User(
     val name: String = "",
     val phone: String? = null,
     val photoUrl: String? = null,
-    val role: UserRole = UserRole.CLIENT,
+    val provider: String? = "email",
+    val lastProvider: String? = null,
+    val isVet: Boolean = false,
     val isActive: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),
     val lastLogin: Long = System.currentTimeMillis()
 )
 
-@Serializable
-enum class UserRole {
-    CLIENT,        // Dueño de mascota
-    VETERINARIAN,  // Veterinario
-    ADMIN         // Administrador
-}
 
 // ====================== MASCOTAS ======================
 
@@ -36,11 +32,11 @@ data class Pet(
     val birthDate: Long? = null,  // Para calcular edad automáticamente
     val weight: Float = 0f,
     val sex: PetSex = PetSex.MALE,
-    val isNeutered: Boolean = false,
     val microchipId: String? = null,
     val photoUrl: String? = null,
     val notes: String = "",
-    val isActive: Boolean = true,
+    val active: Boolean = true,
+    val neutered: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )
 

@@ -3,7 +3,14 @@ package cl.clinipets.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cl.clinipets.data.model.*
+import cl.clinipets.data.model.MedicalConsultation
+import cl.clinipets.data.model.MedicalHistory
+import cl.clinipets.data.model.MedicalHistoryEntry
+import cl.clinipets.data.model.Pet
+import cl.clinipets.data.model.PetSex
+import cl.clinipets.data.model.PetSpecies
+import cl.clinipets.data.model.SurgeryRecord
+import cl.clinipets.data.model.VaccinationRecord
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
@@ -39,7 +46,7 @@ class PetsViewModel @Inject constructor() : ViewModel() {
 
                 val snapshot = firestore.collection("pets")
                     .whereEqualTo("ownerId", userId)
-                    .whereEqualTo("isActive", true)
+                    .whereEqualTo("active", true)
                     .get()
                     .await()
 
@@ -98,7 +105,7 @@ class PetsViewModel @Inject constructor() : ViewModel() {
         birthDate: Long?,
         weight: Float,
         sex: PetSex,
-        isNeutered: Boolean,
+        neutered: Boolean,
         microchipId: String?,
         notes: String
     ) {
@@ -121,7 +128,7 @@ class PetsViewModel @Inject constructor() : ViewModel() {
                     birthDate = birthDate,
                     weight = weight,
                     sex = sex,
-                    isNeutered = isNeutered,
+                    neutered = neutered,
                     microchipId = microchipId,
                     notes = notes,
                     createdAt = System.currentTimeMillis()
@@ -154,7 +161,7 @@ class PetsViewModel @Inject constructor() : ViewModel() {
         birthDate: Long?,
         weight: Float,
         sex: PetSex,
-        isNeutered: Boolean,
+        neutered: Boolean,
         microchipId: String?,
         notes: String
     ) {
@@ -169,7 +176,7 @@ class PetsViewModel @Inject constructor() : ViewModel() {
                     "birthDate" to birthDate,
                     "weight" to weight,
                     "sex" to sex.name,
-                    "isNeutered" to isNeutered,
+                    "neutered" to neutered,
                     "microchipId" to microchipId,
                     "notes" to notes
                 )
@@ -202,7 +209,7 @@ class PetsViewModel @Inject constructor() : ViewModel() {
                 // Soft delete - solo marcar como inactivo
                 firestore.collection("pets")
                     .document(petId)
-                    .update("isActive", false)
+                    .update("active", false)
                     .await()
 
                 _petsState.value = _petsState.value.copy(

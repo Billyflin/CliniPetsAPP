@@ -3,7 +3,17 @@ package cl.clinipets.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cl.clinipets.data.model.*
+import cl.clinipets.data.model.Appointment
+import cl.clinipets.data.model.InventoryItemType
+import cl.clinipets.data.model.InventoryMovement
+import cl.clinipets.data.model.MedicalConsultation
+import cl.clinipets.data.model.Medication
+import cl.clinipets.data.model.MedicationCategory
+import cl.clinipets.data.model.MovementType
+import cl.clinipets.data.model.Pet
+import cl.clinipets.data.model.ServiceCategory
+import cl.clinipets.data.model.Vaccine
+import cl.clinipets.data.model.VeterinaryService
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
@@ -15,7 +25,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -39,16 +51,18 @@ class VetViewModel @Inject constructor() : ViewModel() {
                     .document(userId)
                     .get()
                     .await()
-
-                val role = UserRole.valueOf(userDoc.getString("role") ?: "CLIENT")
-                _vetState.value = _vetState.value.copy(
-                    isVeterinarian = role == UserRole.VETERINARIAN,
-                    currentVetId = if (role == UserRole.VETERINARIAN) userId else null
-                )
-
-                if (role == UserRole.VETERINARIAN) {
+                val isVet = userDoc.getBoolean("isVet") ?: false
+                if (isVet) {
+                    _vetState.value = _vetState.value.copy(
+                        isVeterinarian = true,
+                        currentVetId = userId
+                    )
                     loadVetData()
+                } else {
+                    _vetState.value = _vetState.value.copy(isVeterinarian = false)
                 }
+
+
             } catch (e: Exception) {
                 _vetState.value = _vetState.value.copy(isVeterinarian = false)
             }

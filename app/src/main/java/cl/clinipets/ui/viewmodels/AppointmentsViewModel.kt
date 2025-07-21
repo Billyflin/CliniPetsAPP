@@ -1,9 +1,27 @@
 // ui/viewmodels/AppointmentsViewModel.kt
 package cl.clinipets.ui.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cl.clinipets.data.model.*
+import cl.clinipets.data.model.Appointment
+import cl.clinipets.data.model.AppointmentStatus
+import cl.clinipets.data.model.InventoryItemType
+import cl.clinipets.data.model.InventoryMovement
+import cl.clinipets.data.model.MedicalConsultation
+import cl.clinipets.data.model.Medication
+import cl.clinipets.data.model.MedicationUsed
+import cl.clinipets.data.model.MovementType
+import cl.clinipets.data.model.PaymentMethod
+import cl.clinipets.data.model.PaymentStatus
+import cl.clinipets.data.model.Pet
+import cl.clinipets.data.model.ServiceCategory
+import cl.clinipets.data.model.ServiceProvided
+import cl.clinipets.data.model.User
+import cl.clinipets.data.model.VaccinationRecord
+import cl.clinipets.data.model.Vaccine
+import cl.clinipets.data.model.VaccineApplied
+import cl.clinipets.data.model.VeterinaryService
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
@@ -15,7 +33,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -84,7 +103,7 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
             try {
                 val snapshot = firestore.collection("pets")
                     .whereEqualTo("ownerId", userId)
-                    .whereEqualTo("isActive", true)
+                    .whereEqualTo("active", true)
                     .get()
                     .await()
 
@@ -105,11 +124,10 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
         viewModelScope.launch {
             try {
                 val snapshot = firestore.collection("users")
-                    .whereEqualTo("role", UserRole.VETERINARIAN.name)
-                    .whereEqualTo("isActive", true)
+                    .whereEqualTo("isVet", true)
                     .get()
                     .await()
-
+                Log.d("Veterinarians", "Veterinarians loaded: ${snapshot.documents.size}")
                 val vets = snapshot.documents.mapNotNull { doc ->
                     doc.toObject<User>()?.copy(id = doc.id)
                 }
