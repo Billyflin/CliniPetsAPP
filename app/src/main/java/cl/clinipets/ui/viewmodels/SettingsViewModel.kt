@@ -36,17 +36,12 @@ class SettingsViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                // Cargar rol del usuario desde Firestore
                 val userDoc = firestore.collection("users")
                     .document(userId)
                     .get()
                     .await()
 
-                val userRole = userDoc.getString("role") ?: "CLIENT"
 
-                _settingsState.value = _settingsState.value.copy(
-                    userRole = userRole
-                )
             } catch (e: Exception) {
                 // Error handling
             }

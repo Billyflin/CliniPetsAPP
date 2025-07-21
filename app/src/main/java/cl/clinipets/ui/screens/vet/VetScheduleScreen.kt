@@ -2089,3 +2089,9 @@ private fun BillingTab(
         )
     }
 }
+
+
+@Composable
+fun VetScheduleScreen() {
+
+}

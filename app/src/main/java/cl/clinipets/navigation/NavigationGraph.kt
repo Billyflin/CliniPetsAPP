@@ -21,6 +21,7 @@ import cl.clinipets.ui.screens.profile.SettingsScreen
 import cl.clinipets.ui.screens.vet.InventoryScreen
 import cl.clinipets.ui.screens.vet.MedicalConsultationScreen
 import cl.clinipets.ui.screens.vet.VetDashboardScreen
+import cl.clinipets.ui.screens.vet.VetScheduleScreen
 import cl.clinipets.ui.viewmodels.AuthViewModel
 
 @Composable
@@ -149,7 +150,6 @@ fun AppNavigation() {
         composable("settings") {
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToVetSchedule = { navController.navigate("vet_schedule") }
             )
         }
 
@@ -185,15 +185,9 @@ fun AppNavigation() {
         }
 
         composable("vet_schedule") {
-            VetDashboardScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToConsultation = { appointmentId ->
-                    navController.navigate("medical_consultation/$appointmentId")
-                },
-                onNavigateToInventory = { navController.navigate("inventory") },
+            VetScheduleScreen(
 
-                onNavigateToSchedule = { navController.navigate("vet_schedule") },
-                onNavigateToReports = { navController.navigate("vet_reports") }
+
             )
         }
 

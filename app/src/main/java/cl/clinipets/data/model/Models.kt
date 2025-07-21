@@ -11,7 +11,7 @@ data class User(
     val name: String = "",
     val phone: String? = null,
     val photoUrl: String? = null,
-    val provider: String? = "email",
+    val provider: String? = "google",
     val lastProvider: String? = null,
     val isVet: Boolean = false,
     val isActive: Boolean = true,

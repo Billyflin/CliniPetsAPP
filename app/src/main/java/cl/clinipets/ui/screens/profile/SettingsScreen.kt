@@ -28,7 +28,6 @@ import cl.clinipets.ui.viewmodels.SettingsViewModel
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToVetSchedule: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settingsState by viewModel.settingsState.collectAsState()
@@ -108,21 +107,6 @@ fun SettingsScreen(
                         valueRange = 1f..48f,
                         steps = 47
                     )
-                }
-            }
-        }
-
-        // Información del veterinario (si aplica)
-        if (settingsState.userRole == "VETERINARIAN") {
-            Card {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Información profesional", style = MaterialTheme.typography.titleMedium)
-                    Button(
-                        onClick = onNavigateToVetSchedule,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Configurar horarios de atención")
-                    }
                 }
             }
         }
