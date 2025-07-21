@@ -1,4 +1,4 @@
-// ui/viewmodels/VetViewModel.kt
+// ui/viewmodels/VetViewModel.kt (VERSIÓN SIMPLIFICADA)
 package cl.clinipets.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
@@ -8,10 +8,8 @@ import cl.clinipets.data.model.InventoryItemType
 import cl.clinipets.data.model.InventoryMovement
 import cl.clinipets.data.model.MedicalConsultation
 import cl.clinipets.data.model.Medication
-import cl.clinipets.data.model.MedicationCategory
 import cl.clinipets.data.model.MovementType
 import cl.clinipets.data.model.Pet
-import cl.clinipets.data.model.ServiceCategory
 import cl.clinipets.data.model.Vaccine
 import cl.clinipets.data.model.VeterinaryService
 import com.google.firebase.auth.ktx.auth
@@ -25,7 +23,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
@@ -61,8 +58,6 @@ class VetViewModel @Inject constructor() : ViewModel() {
                 } else {
                     _vetState.value = _vetState.value.copy(isVeterinarian = false)
                 }
-
-
             } catch (e: Exception) {
                 _vetState.value = _vetState.value.copy(isVeterinarian = false)
             }
@@ -76,8 +71,6 @@ class VetViewModel @Inject constructor() : ViewModel() {
         loadLowStockItems()
         loadRecentConsultations()
     }
-
-    // ====================== AGENDA DEL VETERINARIO ======================
 
     fun loadTodayAppointments() {
         val vetId = _vetState.value.currentVetId ?: return
@@ -97,7 +90,6 @@ class VetViewModel @Inject constructor() : ViewModel() {
                     doc.toObject<Appointment>()?.copy(id = doc.id)
                 }
 
-                // Cargar información adicional de mascotas
                 val appointmentsWithPetInfo = appointments.map { appointment ->
                     val petDoc = firestore.collection("pets")
                         .document(appointment.petId)
@@ -181,12 +173,9 @@ class VetViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    // ====================== INVENTARIO ======================
-
     fun loadInventorySummary() {
         viewModelScope.launch {
             try {
-                // Cargar medicamentos
                 val medicationsSnapshot = firestore.collection("medications")
                     .whereEqualTo("isActive", true)
                     .get()
@@ -196,7 +185,6 @@ class VetViewModel @Inject constructor() : ViewModel() {
                     doc.toObject<Medication>()?.copy(id = doc.id)
                 }
 
-                // Cargar vacunas
                 val vaccinesSnapshot = firestore.collection("vaccines")
                     .whereEqualTo("isActive", true)
                     .get()
@@ -261,77 +249,6 @@ class VetViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    fun addMedication(
-        name: String,
-        activeIngredient: String,
-        presentation: String,
-        laboratory: String,
-        category: MedicationCategory,
-        unitPrice: Double,
-        purchasePrice: Double,
-        stock: Int,
-        minStock: Int,
-        expirationDate: Long?,
-        batch: String,
-        isControlled: Boolean
-    ) {
-        viewModelScope.launch {
-            try {
-                _vetState.value = _vetState.value.copy(isLoading = true)
-
-                val medication = Medication(
-                    name = name,
-                    activeIngredient = activeIngredient,
-                    presentation = presentation,
-                    laboratory = laboratory,
-                    category = category,
-                    unitPrice = unitPrice,
-                    purchasePrice = purchasePrice,
-                    stock = stock,
-                    minStock = minStock,
-                    expirationDate = expirationDate,
-                    batch = batch,
-                    isControlled = isControlled,
-                    isActive = true,
-                    lastUpdated = System.currentTimeMillis()
-                )
-
-                val docRef = firestore.collection("medications")
-                    .add(medication)
-                    .await()
-
-                // Registrar movimiento de inventario
-                val movement = InventoryMovement(
-                    itemId = docRef.id,
-                    itemType = InventoryItemType.MEDICATION,
-                    movementType = MovementType.IN,
-                    quantity = stock,
-                    unitPrice = purchasePrice,
-                    totalPrice = purchasePrice * stock,
-                    reason = "Ingreso inicial",
-                    performedBy = auth.currentUser?.uid ?: "",
-                    timestamp = System.currentTimeMillis()
-                )
-
-                firestore.collection("inventory_movements")
-                    .add(movement)
-                    .await()
-
-                _vetState.value = _vetState.value.copy(
-                    isLoading = false,
-                    isMedicationAdded = true
-                )
-
-                loadInventorySummary()
-            } catch (e: Exception) {
-                _vetState.value = _vetState.value.copy(
-                    isLoading = false,
-                    error = "Error al agregar medicamento: ${e.message}"
-                )
-            }
-        }
-    }
-
     fun updateMedicationStock(medicationId: String, newStock: Int, reason: String) {
         viewModelScope.launch {
             try {
@@ -347,7 +264,6 @@ class VetViewModel @Inject constructor() : ViewModel() {
                         "lastUpdated" to System.currentTimeMillis()
                     ))
 
-                    // Registrar movimiento
                     val movement = InventoryMovement(
                         itemId = medicationId,
                         itemType = InventoryItemType.MEDICATION,
@@ -388,8 +304,6 @@ class VetViewModel @Inject constructor() : ViewModel() {
         )
     }
 
-    // ====================== SERVICIOS ======================
-
     fun loadServices() {
         viewModelScope.launch {
             try {
@@ -414,41 +328,6 @@ class VetViewModel @Inject constructor() : ViewModel() {
             }
         }
     }
-
-    fun addService(
-        name: String,
-        category: ServiceCategory,
-        description: String,
-        basePrice: Double,
-        estimatedDuration: Int,
-        requiresAppointment: Boolean
-    ) {
-        viewModelScope.launch {
-            try {
-                val service = VeterinaryService(
-                    name = name,
-                    category = category,
-                    description = description,
-                    basePrice = basePrice,
-                    estimatedDuration = estimatedDuration,
-                    requiresAppointment = requiresAppointment,
-                    isActive = true
-                )
-
-                firestore.collection("services")
-                    .add(service)
-                    .await()
-
-                loadServices()
-            } catch (e: Exception) {
-                _vetState.value = _vetState.value.copy(
-                    error = "Error al agregar servicio: ${e.message}"
-                )
-            }
-        }
-    }
-
-    // ====================== CONSULTAS Y REPORTES ======================
 
     fun loadRecentConsultations() {
         val vetId = _vetState.value.currentVetId ?: return
@@ -478,194 +357,6 @@ class VetViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    fun generateDailyReport(date: Date) {
-        val vetId = _vetState.value.currentVetId ?: return
-
-        viewModelScope.launch {
-            try {
-                val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(date)
-
-                // Cargar consultas del día
-                val consultationsSnapshot = firestore.collection("consultations")
-                    .whereEqualTo("veterinarianId", vetId)
-                    .whereGreaterThanOrEqualTo("startTime", getStartOfDay(date))
-                    .whereLessThan("startTime", getEndOfDay(date))
-                    .get()
-                    .await()
-
-                val consultations = consultationsSnapshot.documents.mapNotNull { doc ->
-                    doc.toObject<MedicalConsultation>()?.copy(id = doc.id)
-                }
-
-                // Calcular estadísticas
-                val totalConsultations = consultations.size
-                val totalRevenue = consultations.sumOf { it.total }
-                val totalPaid = consultations.sumOf { it.amountPaid }
-                val pendingPayments = totalRevenue - totalPaid
-
-                val servicesSummary = consultations
-                    .flatMap { it.services }
-                    .groupingBy { it.category }
-                    .eachCount()
-
-                val medicationsSummary = consultations
-                    .flatMap { it.medications }
-                    .groupingBy { it.name }
-                    .eachCount()
-
-                val dailyReport = DailyReport(
-                    date = date,
-                    veterinarianId = vetId,
-                    totalConsultations = totalConsultations,
-                    totalRevenue = totalRevenue,
-                    totalPaid = totalPaid,
-                    pendingPayments = pendingPayments,
-                    servicesByCategory = servicesSummary,
-                    topMedications = medicationsSummary.toList()
-                        .sortedByDescending { it.second }
-                        .take(10),
-                    consultations = consultations
-                )
-
-                _vetState.value = _vetState.value.copy(
-                    currentDailyReport = dailyReport
-                )
-            } catch (e: Exception) {
-                _vetState.value = _vetState.value.copy(
-                    error = "Error al generar reporte: ${e.message}"
-                )
-            }
-        }
-    }
-
-    fun generateInventoryReport() {
-        viewModelScope.launch {
-            try {
-                val expiringMedications = _vetState.value.medications.filter { medication ->
-                    medication.expirationDate?.let { expDate ->
-                        val daysUntilExpiration = (expDate - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)
-                        daysUntilExpiration <= 90
-                    } ?: false
-                }
-
-                val inventoryValue = _vetState.value.medications.sumOf { it.stock * it.unitPrice } +
-                        _vetState.value.vaccines.sumOf { it.stock * it.unitPrice }
-
-                val inventoryReport = InventoryReport(
-                    generatedAt = System.currentTimeMillis(),
-                    totalMedications = _vetState.value.medications.size,
-                    totalVaccines = _vetState.value.vaccines.size,
-                    totalValue = inventoryValue,
-                    lowStockItems = _vetState.value.lowStockMedications.size + _vetState.value.lowStockVaccines.size,
-                    expiringItems = expiringMedications.size,
-                    medicationsByCategory = _vetState.value.medications.groupingBy { it.category }.eachCount()
-                )
-
-                _vetState.value = _vetState.value.copy(
-                    currentInventoryReport = inventoryReport
-                )
-            } catch (e: Exception) {
-                _vetState.value = _vetState.value.copy(
-                    error = "Error al generar reporte de inventario: ${e.message}"
-                )
-            }
-        }
-    }
-
-    // ====================== ESTADÍSTICAS ======================
-
-    fun loadVetStatistics(startDate: Date, endDate: Date) {
-        val vetId = _vetState.value.currentVetId ?: return
-
-        viewModelScope.launch {
-            try {
-                // Cargar consultas del período
-                val consultationsSnapshot = firestore.collection("consultations")
-                    .whereEqualTo("veterinarianId", vetId)
-                    .whereGreaterThanOrEqualTo("startTime", startDate.time)
-                    .whereLessThanOrEqualTo("startTime", endDate.time)
-                    .get()
-                    .await()
-
-                val consultations = consultationsSnapshot.documents.mapNotNull { doc ->
-                    doc.toObject<MedicalConsultation>()?.copy(id = doc.id)
-                }
-
-                // Calcular estadísticas
-                val totalConsultations = consultations.size
-                val totalRevenue = consultations.sumOf { it.total }
-                val averageConsultationValue = if (totalConsultations > 0) totalRevenue / totalConsultations else 0.0
-
-                // Consultas por día
-                val consultationsByDay = consultations
-                    .groupBy { consultation ->
-                        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                            .format(Date(consultation.startTime))
-                    }
-                    .mapValues { it.value.size }
-
-                // Servicios más frecuentes
-                val topServices = consultations
-                    .flatMap { it.services }
-                    .groupingBy { it.name }
-                    .eachCount()
-                    .toList()
-                    .sortedByDescending { it.second }
-                    .take(10)
-
-                // Diagnósticos más comunes
-                val topDiagnoses = consultations
-                    .map { it.diagnosis }
-                    .filter { it.isNotBlank() }
-                    .groupingBy { it }
-                    .eachCount()
-                    .toList()
-                    .sortedByDescending { it.second }
-                    .take(10)
-
-                val statistics = VetStatistics(
-                    period = "$startDate - $endDate",
-                    totalConsultations = totalConsultations,
-                    totalRevenue = totalRevenue,
-                    averageConsultationValue = averageConsultationValue,
-                    consultationsByDay = consultationsByDay,
-                    topServices = topServices,
-                    topDiagnoses = topDiagnoses
-                )
-
-                _vetState.value = _vetState.value.copy(
-                    vetStatistics = statistics
-                )
-            } catch (e: Exception) {
-                _vetState.value = _vetState.value.copy(
-                    error = "Error al cargar estadísticas: ${e.message}"
-                )
-            }
-        }
-    }
-
-    // ====================== FUNCIONES AUXILIARES ======================
-
-    private fun getStartOfDay(date: Date): Long {
-        val calendar = Calendar.getInstance()
-        calendar.time = date
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        return calendar.timeInMillis
-    }
-
-    private fun getEndOfDay(date: Date): Long {
-        val calendar = Calendar.getInstance()
-        calendar.time = date
-        calendar.set(Calendar.HOUR_OF_DAY, 23)
-        calendar.set(Calendar.MINUTE, 59)
-        calendar.set(Calendar.SECOND, 59)
-        calendar.set(Calendar.MILLISECOND, 999)
-        return calendar.timeInMillis
-    }
-
     fun clearState() {
         _vetState.value = _vetState.value.copy(
             isMedicationAdded = false,
@@ -675,18 +366,12 @@ class VetViewModel @Inject constructor() : ViewModel() {
     }
 }
 
-// ====================== ESTADO Y MODELOS AUXILIARES ======================
-
+// Estado simplificado
 data class VetState(
-    // Control de acceso
     val isVeterinarian: Boolean = false,
     val currentVetId: String? = null,
-
-    // Agenda
     val todayAppointments: List<Pair<Appointment, Pet?>> = emptyList(),
     val vetSchedule: Map<Int, DaySchedule> = emptyMap(),
-
-    // Inventario
     val medications: List<Medication> = emptyList(),
     val vaccines: List<Vaccine> = emptyList(),
     val filteredMedications: List<Medication> = emptyList(),
@@ -694,19 +379,8 @@ data class VetState(
     val lowStockVaccines: List<Vaccine> = emptyList(),
     val inventorySummary: InventorySummary? = null,
     val medicationSearchQuery: String = "",
-
-    // Servicios
     val services: List<VeterinaryService> = emptyList(),
-
-    // Consultas
     val recentConsultations: List<MedicalConsultation> = emptyList(),
-
-    // Reportes
-    val currentDailyReport: DailyReport? = null,
-    val currentInventoryReport: InventoryReport? = null,
-    val vetStatistics: VetStatistics? = null,
-
-    // Estado UI
     val isLoading: Boolean = false,
     val isMedicationAdded: Boolean = false,
     val isVaccineAdded: Boolean = false,
@@ -723,36 +397,4 @@ data class InventorySummary(
     val totalItems: Int = 0,
     val totalValue: Double = 0.0,
     val lowStockCount: Int = 0
-)
-
-data class DailyReport(
-    val date: Date,
-    val veterinarianId: String,
-    val totalConsultations: Int,
-    val totalRevenue: Double,
-    val totalPaid: Double,
-    val pendingPayments: Double,
-    val servicesByCategory: Map<ServiceCategory, Int>,
-    val topMedications: List<Pair<String, Int>>,
-    val consultations: List<MedicalConsultation>
-)
-
-data class InventoryReport(
-    val generatedAt: Long,
-    val totalMedications: Int,
-    val totalVaccines: Int,
-    val totalValue: Double,
-    val lowStockItems: Int,
-    val expiringItems: Int,
-    val medicationsByCategory: Map<MedicationCategory, Int>
-)
-
-data class VetStatistics(
-    val period: String,
-    val totalConsultations: Int,
-    val totalRevenue: Double,
-    val averageConsultationValue: Double,
-    val consultationsByDay: Map<String, Int>,
-    val topServices: List<Pair<String, Int>>,
-    val topDiagnoses: List<Pair<String, Int>>
 )
