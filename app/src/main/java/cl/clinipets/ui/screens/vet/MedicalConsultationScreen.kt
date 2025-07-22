@@ -39,7 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.ui.viewmodels.AppointmentsViewModel
-import cl.clinipets.ui.viewmodels.VetViewModel
+import cl.clinipets.ui.viewmodels.ConsultationViewModel
 
 // ====================== CONSULTA MÉDICA ======================
 
@@ -49,10 +49,10 @@ fun MedicalConsultationScreen(
     appointmentId: String,
     onConsultationFinished: () -> Unit,
     onNavigateBack: () -> Unit,
-    viewModel: VetViewModel = hiltViewModel(),
+    viewModel: ConsultationViewModel = hiltViewModel(),
     appointmentsViewModel: AppointmentsViewModel = hiltViewModel()
 ) {
-    val vetState by viewModel.vetState.collectAsState()
+    val vetState by viewModel.consultationState.collectAsState()
     val appointmentsState by appointmentsViewModel.appointmentsState.collectAsState()
     var currentTab by remember { mutableStateOf(0) }
 

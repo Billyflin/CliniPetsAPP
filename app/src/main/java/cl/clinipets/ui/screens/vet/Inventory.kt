@@ -47,6 +47,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -63,7 +64,7 @@ import cl.clinipets.data.model.PaymentMethod
 import cl.clinipets.data.model.Pet
 import cl.clinipets.data.model.Vaccine
 import cl.clinipets.data.model.VeterinaryService
-import cl.clinipets.ui.viewmodels.VetViewModel
+import cl.clinipets.ui.viewmodels.InventoryViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -74,15 +75,15 @@ import java.util.Locale
 @Composable
 fun InventoryScreen(
     onNavigateBack: () -> Unit,
-    viewModel: VetViewModel = hiltViewModel()
+    viewModel: InventoryViewModel = hiltViewModel()
 ) {
-    val vetState by viewModel.vetState.collectAsState()
-    var selectedTab by remember { mutableStateOf(0) }
+    val vetState by viewModel.inventoryState.collectAsState()
+    var selectedTab by remember { mutableIntStateOf(0) }
     var showAddMedicationDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        viewModel.loadInventorySummary()
+        viewModel.loadInventory()
     }
 
     LaunchedEffect(searchQuery) {
@@ -119,7 +120,7 @@ fun InventoryScreen(
                 .padding(paddingValues)
         ) {
             // Resumen
-            vetState.inventorySummary?.let { summary ->
+            vetState.let { summary ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -241,7 +242,7 @@ fun InventoryScreen(
             AddMedicationDialog(
                 onMedicationAdded = {
                     showAddMedicationDialog = false
-                    viewModel.loadInventorySummary()
+                    viewModel.loadInventory()
                 },
                 onDismiss = { showAddMedicationDialog = false }
             )
