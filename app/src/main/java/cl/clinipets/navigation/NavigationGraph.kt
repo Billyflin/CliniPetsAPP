@@ -21,6 +21,7 @@ import cl.clinipets.ui.screens.profile.ProfileScreen
 import cl.clinipets.ui.screens.profile.SettingsScreen
 import cl.clinipets.ui.screens.vet.InventoryScreen
 import cl.clinipets.ui.screens.vet.ServicesScreen
+import cl.clinipets.ui.screens.vet.VetAddPetScreen
 import cl.clinipets.ui.screens.vet.VetDashboardScreen
 import cl.clinipets.ui.screens.vet.VetScheduleScreen
 import cl.clinipets.ui.viewmodels.AuthViewModel
@@ -148,10 +149,15 @@ fun AppNavigation() {
                 },
                 onNavigateToInventory = { navController.navigate("inventory") },
                 onNavigateToSchedule = { navController.navigate("vet_schedule") },
-                onNavigateToServices = {
-                    navController.navigate("vet_services")
+                onNavigateToCreatePet = { navController.navigate("vet_add_pet") }
+            )
+        }
 
-                })
+        composable("vet_add_pet") {
+            VetAddPetScreen(
+                onPetAdded = { navController.popBackStack() },
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable("medical_consultation/{appointmentId}") { backStackEntry ->
@@ -183,4 +189,5 @@ fun AppNavigation() {
 
     }
 }
+
 

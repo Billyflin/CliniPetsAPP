@@ -1,6 +1,7 @@
 // ui/screens/vet/VetScreens.kt
 package cl.clinipets.ui.screens.vet
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,8 +21,8 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Inventory
-import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,7 +41,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import cl.clinipets.data.model.Appointment
 import cl.clinipets.data.model.AppointmentStatus
+import cl.clinipets.data.model.Pet
 import cl.clinipets.ui.viewmodels.VetViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -54,8 +57,8 @@ fun VetDashboardScreen(
     onNavigateBack: () -> Unit,
     onNavigateToConsultation: (String) -> Unit,
     onNavigateToInventory: () -> Unit,
-    onNavigateToServices: () -> Unit,
     onNavigateToSchedule: () -> Unit,
+    onNavigateToCreatePet: () -> Unit,
     viewModel: VetViewModel = hiltViewModel()
 ) {
     val vetState by viewModel.vetState.collectAsState()
@@ -76,9 +79,7 @@ fun VetDashboardScreen(
                 },
                 actions = {
                     IconButton(onClick = { /* TODO: Notificaciones */ }) {
-
                         Icon(Icons.Default.Notifications, contentDescription = "Notificaciones")
-
                     }
                 }
             )
@@ -152,24 +153,24 @@ fun VetDashboardScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     QuickActionCard(
+                        title = "Nueva Mascota",
+                        subtitle = "Registrar paciente",
+                        icon = Icons.Default.Pets,
+                        onClick = onNavigateToCreatePet,
+                        modifier = Modifier.weight(1f)
+                    )
+                    QuickActionCard(
                         title = "Inventario",
-                        subtitle = "",
+                        subtitle = "Gestionar stock",
                         icon = Icons.Default.Inventory,
                         onClick = onNavigateToInventory,
                         modifier = Modifier.weight(1f)
                     )
                     QuickActionCard(
                         title = "Mi Horario",
-                        subtitle = "Configurar disponibilidad",
+                        subtitle = "Disponibilidad",
                         icon = Icons.Default.AccessTime,
                         onClick = onNavigateToSchedule,
-                        modifier = Modifier.weight(1f)
-                    )
-                    QuickActionCard(
-                        title = "Servicios",
-                        subtitle = "Gestionar precios",
-                        icon = Icons.Default.MedicalServices,
-                        onClick = { onNavigateToServices() },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -225,6 +226,37 @@ fun VetDashboardScreen(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun VetAppointmentCard(appointment: Appointment, pet: Pet?, onClick: () -> Unit) {
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .clickable { onClick() }
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "${pet?.name ?: "Mascota desconocida"} - ${appointment.date} ${appointment.time}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Razón: ${appointment.reason}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = "Estado: ${appointment.status.name}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

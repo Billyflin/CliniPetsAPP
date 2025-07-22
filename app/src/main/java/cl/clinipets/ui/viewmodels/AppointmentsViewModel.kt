@@ -6,11 +6,11 @@ import androidx.lifecycle.viewModelScope
 import cl.clinipets.data.model.Appointment
 import cl.clinipets.data.model.AppointmentStatus
 import cl.clinipets.data.model.Pet
-import com.google.firebase.auth.ktx.auth
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.firestore.ktx.toObject
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.firestore.firestore
+import com.google.firebase.firestore.toObject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,8 +49,7 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
                     firestore.collection("appointments")
                         .orderBy("dateTime", Query.Direction.DESCENDING)
                 } else {
-                    firestore.collection("appointments")
-                        .whereEqualTo("ownerId", userId)
+                    firestore.collection("appointments").whereEqualTo("ownerId", userId)
                         .orderBy("dateTime", Query.Direction.DESCENDING)
                 }
 
@@ -61,13 +60,11 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
                 }
 
                 val upcoming = appointments.filter {
-                    it.dateTime > System.currentTimeMillis() &&
-                            it.status == AppointmentStatus.SCHEDULED
+                    it.dateTime > System.currentTimeMillis() && it.status == AppointmentStatus.SCHEDULED || it.status == AppointmentStatus.CONFIRMED
                 }
 
                 val past = appointments.filter {
-                    it.dateTime <= System.currentTimeMillis() ||
-                            it.status == AppointmentStatus.COMPLETED
+                    it.dateTime <= System.currentTimeMillis() || it.status == AppointmentStatus.COMPLETED
                 }
 
                 _appointmentsState.value = _appointmentsState.value.copy(
@@ -78,18 +75,14 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
                 )
             } catch (e: Exception) {
                 _appointmentsState.value = _appointmentsState.value.copy(
-                    isLoading = false,
-                    error = "Error al cargar citas: ${e.message}"
+                    isLoading = false, error = "Error al cargar citas: ${e.message}"
                 )
             }
         }
     }
 
     fun createAppointment(
-        petId: String,
-        date: String,
-        time: String,
-        reason: String
+        petId: String, date: String, time: String, reason: String
     ) {
         val userId = auth.currentUser?.uid ?: return
 
@@ -112,20 +105,16 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
                     createdAt = System.currentTimeMillis()
                 )
 
-                firestore.collection("appointments")
-                    .add(appointment)
-                    .await()
+                firestore.collection("appointments").add(appointment).await()
 
                 _appointmentsState.value = _appointmentsState.value.copy(
-                    isLoading = false,
-                    isAppointmentCreated = true
+                    isLoading = false, isAppointmentCreated = true
                 )
 
                 loadAppointments()
             } catch (e: Exception) {
                 _appointmentsState.value = _appointmentsState.value.copy(
-                    isLoading = false,
-                    error = "Error al crear cita: ${e.message}"
+                    isLoading = false, error = "Error al crear cita: ${e.message}"
                 )
             }
         }
@@ -134,10 +123,8 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
     fun cancelAppointment(appointmentId: String) {
         viewModelScope.launch {
             try {
-                firestore.collection("appointments")
-                    .document(appointmentId)
-                    .update("status", AppointmentStatus.CANCELLED.name)
-                    .await()
+                firestore.collection("appointments").document(appointmentId)
+                    .update("status", AppointmentStatus.CANCELLED.name).await()
 
                 loadAppointments()
             } catch (e: Exception) {
@@ -148,17 +135,32 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
         }
     }
 
+    fun confirmAppointment(appointmentId: String) {
+        viewModelScope.launch {
+            try {
+                firestore.collection("appointments").document(appointmentId)
+                    .update("status", AppointmentStatus.CONFIRMED.name).await()
+
+                loadAppointments()
+            } catch (e: Exception) {
+                _appointmentsState.value = _appointmentsState.value.copy(
+                    error = "Error al confirmar cita: ${e.message}"
+                )
+            }
+        }
+    }
+
+
     fun loadAvailableTimeSlots(date: String) {
         viewModelScope.launch {
             try {
                 _appointmentsState.value = _appointmentsState.value.copy(isLoadingSlots = true)
 
-                // Obtener citas existentes para esa fecha
-                val existingAppointments = firestore.collection("appointments")
-                    .whereEqualTo("date", date)
-                    .whereEqualTo("status", AppointmentStatus.SCHEDULED.name)
-                    .get()
-                    .await()
+                // Obtener citas existentes para esa fecha shceduleada o comfirmed
+                val existingAppointments =
+                    firestore.collection("appointments").whereEqualTo("date", date)
+                        .whereEqualTo("status", AppointmentStatus.SCHEDULED.name)
+                        .whereEqualTo("status", AppointmentStatus.CONFIRMED.name).get().await()
 
                 val bookedTimes = existingAppointments.documents.map {
                     it.getString("time") ?: ""
@@ -168,19 +170,16 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
                 val allSlots = generateTimeSlots()
                 val availableSlots = allSlots.map { time ->
                     TimeSlot(
-                        time = time,
-                        isAvailable = !bookedTimes.contains(time)
+                        time = time, isAvailable = !bookedTimes.contains(time)
                     )
                 }
 
                 _appointmentsState.value = _appointmentsState.value.copy(
-                    availableTimeSlots = availableSlots,
-                    isLoadingSlots = false
+                    availableTimeSlots = availableSlots, isLoadingSlots = false
                 )
             } catch (e: Exception) {
                 _appointmentsState.value = _appointmentsState.value.copy(
-                    isLoadingSlots = false,
-                    error = "Error al cargar horarios: ${e.message}"
+                    isLoadingSlots = false, error = "Error al cargar horarios: ${e.message}"
                 )
             }
         }
@@ -200,11 +199,8 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val snapshot = firestore.collection("pets")
-                    .whereEqualTo("ownerId", userId)
-                    .whereEqualTo("active", true)
-                    .get()
-                    .await()
+                val snapshot = firestore.collection("pets").whereEqualTo("ownerId", userId)
+                    .whereEqualTo("active", true).get().await()
 
                 val pets = snapshot.documents.mapNotNull { doc ->
                     doc.toObject<Pet>()?.copy(id = doc.id)
@@ -221,8 +217,7 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
 
     fun clearState() {
         _appointmentsState.value = _appointmentsState.value.copy(
-            isAppointmentCreated = false,
-            error = null
+            isAppointmentCreated = false, error = null
         )
     }
 }
@@ -240,6 +235,5 @@ data class AppointmentsState(
 )
 
 data class TimeSlot(
-    val time: String = "",
-    val isAvailable: Boolean = true
+    val time: String = "", val isAvailable: Boolean = true
 )

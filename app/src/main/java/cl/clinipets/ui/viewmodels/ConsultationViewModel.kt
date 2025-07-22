@@ -4,16 +4,17 @@ package cl.clinipets.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.data.model.Appointment
+import cl.clinipets.data.model.AppointmentStatus
 import cl.clinipets.data.model.Consultation
 import cl.clinipets.data.model.MedicationUsed
 import cl.clinipets.data.model.Pet
 import cl.clinipets.data.model.ServiceApplied
 import cl.clinipets.data.model.VaccinationRecord
 import cl.clinipets.data.model.VaccineApplied
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.firestore.ktx.toObject
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
+import com.google.firebase.firestore.firestore
+import com.google.firebase.firestore.toObject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -60,7 +61,6 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
                         .await()
 
 
-
                     // Cargar información de la mascota
                     val petDoc = firestore.collection("pets")
                         .document(appointment.petId)
@@ -77,15 +77,15 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
                     )
 
                     // Actualizar estado de la cita
-//                    firestore.collection("appointments")
-//                        .document(appointmentId)
-//                        .update(
-//                            mapOf(
-//                                "status" to AppointmentStatus.CONFIRMED.name,
-//                                "consultationId" to consultationRef.id
-//                            )
-//                        )
-//                        .await()
+                    firestore.collection("appointments")
+                        .document(appointmentId)
+                        .update(
+                            mapOf(
+                                "status" to AppointmentStatus.COMPLETED.name,
+                                "consultationId" to consultationRef.id
+                            )
+                        )
+                        .await()
                 }
             } catch (e: Exception) {
                 _consultationState.value = _consultationState.value.copy(

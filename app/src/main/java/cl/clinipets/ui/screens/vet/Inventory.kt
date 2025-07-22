@@ -6,28 +6,26 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -42,12 +40,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import cl.clinipets.data.model.Appointment
-import cl.clinipets.data.model.AppointmentStatus
-import cl.clinipets.data.model.Medication
-import cl.clinipets.data.model.Pet
+import cl.clinipets.data.model.MedicationPresentation
+import cl.clinipets.data.model.ServiceCategory
 import cl.clinipets.ui.viewmodels.InventoryViewModel
 
 // ====================== INVENTARIO ======================
@@ -55,33 +52,57 @@ import cl.clinipets.ui.viewmodels.InventoryViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InventoryScreen(
-    onNavigateBack: () -> Unit, viewModel: InventoryViewModel = hiltViewModel()
+    onNavigateBack: () -> Unit,
+    viewModel: InventoryViewModel = hiltViewModel()
 ) {
     val inventoryState by viewModel.inventoryState.collectAsState()
     var selectedTab by remember { mutableStateOf(0) }
+    var showAddMedicationDialog by remember { mutableStateOf(false) }
+    var showAddVaccineDialog by remember { mutableStateOf(false) }
+    var showAddServiceDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Inventario") }, navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+            TopAppBar(
+                title = { Text("Inventario") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                    }
                 }
-            })
-        }) { paddingValues ->
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    when (selectedTab) {
+                        0 -> showAddMedicationDialog = true
+                        1 -> showAddVaccineDialog = true
+                        2 -> showAddServiceDialog = true
+                    }
+                }
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Agregar")
+            }
+        }
+    ) { paddingValues ->
         Column(Modifier.padding(paddingValues)) {
             TabRow(selectedTabIndex = selectedTab) {
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("Medicamentos") })
+                    text = { Text("Medicamentos") }
+                )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("Vacunas") })
+                    text = { Text("Vacunas") }
+                )
                 Tab(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
-                    text = { Text("Servicios") })
+                    text = { Text("Servicios") }
+                )
             }
 
             if (inventoryState.isLoading) {
@@ -104,7 +125,16 @@ fun InventoryScreen(
                                         ) {
                                             Column {
                                                 Text(medication.name, fontWeight = FontWeight.Bold)
-                                                Text(medication.presentation.name)
+                                                Text(
+                                                    when (medication.presentation) {
+                                                        MedicationPresentation.TABLET -> "Tableta"
+                                                        MedicationPresentation.SYRUP -> "Jarabe"
+                                                        MedicationPresentation.INJECTION -> "Inyección"
+                                                        MedicationPresentation.CREAM -> "Crema"
+                                                        MedicationPresentation.DROPS -> "Gotas"
+                                                        MedicationPresentation.OTHER -> "Otro"
+                                                    }
+                                                )
                                             }
                                             Column(horizontalAlignment = Alignment.End) {
                                                 Text("Stock: ${medication.stock}")
@@ -142,7 +172,6 @@ fun InventoryScreen(
                     }
 
                     2 -> {
-                        //servicios
                         LazyColumn(
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -154,258 +183,295 @@ fun InventoryScreen(
                                             Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            Text(service.name, fontWeight = FontWeight.Bold)
-                                            Column(horizontalAlignment = Alignment.End) {
-                                                Text("Precio: $${service.basePrice}")
+                                            Column {
+                                                Text(service.name, fontWeight = FontWeight.Bold)
+                                                Text(
+                                                    when (service.category) {
+                                                        ServiceCategory.CONSULTATION -> "Consulta"
+                                                        ServiceCategory.VACCINATION -> "Vacunación"
+                                                        ServiceCategory.SURGERY -> "Cirugía"
+                                                        ServiceCategory.GROOMING -> "Peluquería"
+                                                        ServiceCategory.OTHER -> "Otro"
+                                                    },
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
                                             }
+                                            Text("$${service.basePrice}")
                                         }
                                     }
                                 }
                             }
                         }
                     }
-
-
                 }
             }
+        }
+
+        // Diálogos
+        if (showAddMedicationDialog) {
+            CreateMedicationDialog(
+                onMedicationCreated = { name, presentation, stock, price ->
+                    viewModel.addMedication(name, presentation, stock, price)
+                    showAddMedicationDialog = false
+                },
+                onDismiss = { showAddMedicationDialog = false }
+            )
+        }
+
+        if (showAddVaccineDialog) {
+            CreateVaccineDialog(
+                onVaccineCreated = { name, stock, price ->
+                    viewModel.addVaccine(name, stock, price)
+                    showAddVaccineDialog = false
+                },
+                onDismiss = { showAddVaccineDialog = false }
+            )
+        }
+
+        if (showAddServiceDialog) {
+            CreateServiceDialog(
+                onServiceCreated = { name, category, price ->
+                    viewModel.addService(name, category, price)
+                    showAddServiceDialog = false
+                },
+                onDismiss = { showAddServiceDialog = false }
+            )
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MedicationInventoryCard(
-    medication: Medication, onUpdateStock: (Int) -> Unit
-) {
-    var showUpdateDialog by remember { mutableStateOf(false) }
-
-    Card(
-        onClick = { showUpdateDialog = true }, modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = medication.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "${medication.presentation}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = medication.unitPrice.toString(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Precio: ${medication.unitPrice}",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
-    }
-
-    if (showUpdateDialog) {
-        UpdateStockDialog(
-            medicationName = medication.name,
-            currentStock = medication.stock,
-            onUpdateStock = { newStock ->
-                onUpdateStock(newStock)
-                showUpdateDialog = false
-            },
-            onDismiss = { showUpdateDialog = false })
-    }
-}
-
-
-@Composable
-fun AddMedicationDialog(
-    medications: List<Medication>,
-    onMedicationAdded: (Medication, String) -> Unit,
+fun CreateMedicationDialog(
+    onMedicationCreated: (String, MedicationPresentation, Int, Double) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selectedMedication by remember { mutableStateOf<Medication?>(null) }
-    var dose by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
+    var selectedPresentation by remember { mutableStateOf(MedicationPresentation.TABLET) }
+    var stock by remember { mutableStateOf("") }
+    var price by remember { mutableStateOf("") }
 
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("Agregar Medicamento") }, text = {
-        Column {
-            // Lista de medicamentos
-            LazyColumn(modifier = Modifier.height(200.dp)) {
-                items(medications) { medication ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { selectedMedication = medication }
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(
-                            selected = selectedMedication == medication,
-                            onClick = { selectedMedication = medication })
-                        Text("${medication.name} - $${medication.unitPrice}")
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Agregar Medicamento") },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nombre") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text("Presentación", style = MaterialTheme.typography.bodySmall)
+                Column {
+                    MedicationPresentation.values().forEach { presentation ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedPresentation = presentation }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedPresentation == presentation,
+                                onClick = { selectedPresentation = presentation }
+                            )
+                            Text(
+                                text = when (presentation) {
+                                    MedicationPresentation.TABLET -> "Tableta"
+                                    MedicationPresentation.SYRUP -> "Jarabe"
+                                    MedicationPresentation.INJECTION -> "Inyección"
+                                    MedicationPresentation.CREAM -> "Crema"
+                                    MedicationPresentation.DROPS -> "Gotas"
+                                    MedicationPresentation.OTHER -> "Otro"
+                                },
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
                     }
                 }
+
+                OutlinedTextField(
+                    value = stock,
+                    onValueChange = { stock = it.filter { char -> char.isDigit() } },
+                    label = { Text("Stock inicial") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = price,
+                    onValueChange = { price = it.filter { char -> char.isDigit() || char == '.' } },
+                    label = { Text("Precio unitario") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = dose,
-                onValueChange = { dose = it },
-                label = { Text("Dosis") },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-    }, confirmButton = {
-        TextButton(
-            onClick = {
-                selectedMedication?.let { med ->
-                    onMedicationAdded(med, dose)
-                }
-            }, enabled = selectedMedication != null && dose.isNotBlank()
-        ) {
-            Text("Agregar")
-        }
-    }, dismissButton = {
-        TextButton(onClick = onDismiss) {
-            Text("Cancelar")
-        }
-    })
-}
-
-@Composable
-private fun UpdateStockDialog(
-    medicationName: String, currentStock: Int, onUpdateStock: (Int) -> Unit, onDismiss: () -> Unit
-) {
-    var newStock by remember { mutableStateOf(currentStock.toString()) }
-
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("Actualizar stock") }, text = {
-        Column {
-            Text(medicationName)
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = newStock,
-                onValueChange = { newStock = it },
-                label = { Text("Nuevo stock") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text(
-                text = "Stock actual: $currentStock",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }, confirmButton = {
-        TextButton(
-            onClick = {
-                newStock.toIntOrNull()?.let { stock ->
-                    onUpdateStock(stock)
-                }
-            }, enabled = newStock.toIntOrNull() != null && newStock.toIntOrNull() != currentStock
-        ) {
-            Text("Actualizar")
-        }
-    }, dismissButton = {
-        TextButton(onClick = onDismiss) {
-            Text("Cancelar")
-        }
-    })
-}
-
-@Composable
-private fun AppointmentStatusBadge(status: AppointmentStatus) {
-    val (color, text) = when (status) {
-        AppointmentStatus.SCHEDULED -> MaterialTheme.colorScheme.primary to "Agendada"
-        AppointmentStatus.CONFIRMED -> MaterialTheme.colorScheme.secondary to "Confirmada"
-        AppointmentStatus.COMPLETED -> MaterialTheme.colorScheme.tertiary to "Completada"
-        else -> MaterialTheme.colorScheme.surfaceVariant to status.name
-    }
-
-    Surface(
-        color = color.copy(alpha = 0.2f), shape = MaterialTheme.shapes.small
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = color,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-        )
-    }
-}
-
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun VetAppointmentCard(
-    appointment: Appointment, pet: Pet?, onClick: () -> Unit
-) {
-    Card(
-        onClick = onClick, modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Hora
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val stockInt = stock.toIntOrNull() ?: 0
+                    val priceDouble = price.toDoubleOrNull() ?: 0.0
+                    if (name.isNotBlank() && stockInt > 0 && priceDouble > 0) {
+                        onMedicationCreated(name, selectedPresentation, stockInt, priceDouble)
+                    }
+                },
+                enabled = name.isNotBlank() && stock.isNotBlank() && price.isNotBlank()
             ) {
-                Text(
-                    text = appointment.time,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                AppointmentStatusBadge(appointment.status)
+                Text("Agregar")
             }
-
-            // Información
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = pet?.name ?: "Mascota", style = MaterialTheme.typography.titleSmall
-                )
-                Text(
-                    text = "${pet?.species?.name ?: ""} - ${pet?.breed ?: ""}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Acción
-            if (appointment.status == AppointmentStatus.SCHEDULED) {
-                Button(
-                    onClick = onClick, modifier = Modifier.height(36.dp)
-                ) {
-                    Text("Iniciar", style = MaterialTheme.typography.bodySmall)
-                }
-            } else {
-                Icon(
-                    imageVector = Icons.Default.ChevronRight, contentDescription = null
-                )
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
             }
         }
-    }
+    )
 }
 
+@Composable
+fun CreateVaccineDialog(
+    onVaccineCreated: (String, Int, Double) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var stock by remember { mutableStateOf("") }
+    var price by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Agregar Vacuna") },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nombre") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = stock,
+                    onValueChange = { stock = it.filter { char -> char.isDigit() } },
+                    label = { Text("Stock inicial") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = price,
+                    onValueChange = { price = it.filter { char -> char.isDigit() || char == '.' } },
+                    label = { Text("Precio unitario") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val stockInt = stock.toIntOrNull() ?: 0
+                    val priceDouble = price.toDoubleOrNull() ?: 0.0
+                    if (name.isNotBlank() && stockInt > 0 && priceDouble > 0) {
+                        onVaccineCreated(name, stockInt, priceDouble)
+                    }
+                },
+                enabled = name.isNotBlank() && stock.isNotBlank() && price.isNotBlank()
+            ) {
+                Text("Agregar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+@Composable
+fun CreateServiceDialog(
+    onServiceCreated: (String, ServiceCategory, Double) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf(ServiceCategory.CONSULTATION) }
+    var price by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Agregar Servicio") },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nombre") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text("Categoría", style = MaterialTheme.typography.bodySmall)
+                Column {
+                    ServiceCategory.values().forEach { category ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedCategory = category }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedCategory == category,
+                                onClick = { selectedCategory = category }
+                            )
+                            Text(
+                                text = when (category) {
+                                    ServiceCategory.CONSULTATION -> "Consulta"
+                                    ServiceCategory.VACCINATION -> "Vacunación"
+                                    ServiceCategory.SURGERY -> "Cirugía"
+                                    ServiceCategory.GROOMING -> "Peluquería"
+                                    ServiceCategory.OTHER -> "Otro"
+                                },
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = price,
+                    onValueChange = { price = it.filter { char -> char.isDigit() || char == '.' } },
+                    label = { Text("Precio base") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val priceDouble = price.toDoubleOrNull() ?: 0.0
+                    if (name.isNotBlank() && priceDouble > 0) {
+                        onServiceCreated(name, selectedCategory, priceDouble)
+                    }
+                },
+                enabled = name.isNotBlank() && price.isNotBlank()
+            ) {
+                Text("Agregar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
