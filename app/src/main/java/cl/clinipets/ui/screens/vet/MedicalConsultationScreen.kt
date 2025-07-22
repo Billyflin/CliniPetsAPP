@@ -1,5 +1,7 @@
+// ui/screens/vet/MedicalConsultationScreen.kt
 package cl.clinipets.ui.screens.vet
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -7,20 +9,33 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -34,14 +49,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import cl.clinipets.ui.viewmodels.AppointmentsViewModel
+import cl.clinipets.data.model.MedicalConsultation
+import cl.clinipets.data.model.Medication
+import cl.clinipets.data.model.PaymentMethod
+import cl.clinipets.data.model.Vaccine
+import cl.clinipets.data.model.VeterinaryService
 import cl.clinipets.ui.viewmodels.ConsultationViewModel
-
-// ====================== CONSULTA MÉDICA ======================
+import cl.clinipets.ui.viewmodels.InventoryViewModel
+import cl.clinipets.ui.viewmodels.VetViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,39 +69,32 @@ fun MedicalConsultationScreen(
     appointmentId: String,
     onConsultationFinished: () -> Unit,
     onNavigateBack: () -> Unit,
-    viewModel: ConsultationViewModel = hiltViewModel(),
-    appointmentsViewModel: AppointmentsViewModel = hiltViewModel()
+    consultationViewModel: ConsultationViewModel = hiltViewModel(),
+    vetViewModel: VetViewModel = hiltViewModel(),
+    inventoryViewModel: InventoryViewModel = hiltViewModel()
 ) {
-    val vetState by viewModel.consultationState.collectAsState()
-    val appointmentsState by appointmentsViewModel.appointmentsState.collectAsState()
-    var currentTab by remember { mutableStateOf(0) }
+    val consultationState by consultationViewModel.consultationState.collectAsState()
+    val vetState by vetViewModel.vetState.collectAsState()
+    val inventoryState by inventoryViewModel.inventoryState.collectAsState()
 
-    // Datos clínicos
-    var weight by remember { mutableStateOf("") }
-    var temperature by remember { mutableStateOf("") }
-    var heartRate by remember { mutableStateOf("") }
-    var respiratoryRate by remember { mutableStateOf("") }
-    var symptoms by remember { mutableStateOf("") }
-    var clinicalExam by remember { mutableStateOf("") }
-    var diagnosis by remember { mutableStateOf("") }
-    var treatment by remember { mutableStateOf("") }
-    var observations by remember { mutableStateOf("") }
-    var recommendations by remember { mutableStateOf("") }
+    var selectedTab by remember { mutableStateOf(0) }
+    var showExitDialog by remember { mutableStateOf(false) }
 
-    // Estado de la consulta
-    var consultationStarted by remember { mutableStateOf(false) }
-    var showFinishDialog by remember { mutableStateOf(false) }
-
+    // Iniciar consulta
     LaunchedEffect(appointmentId) {
-        if (!consultationStarted) {
-            appointmentsViewModel.startConsultation(appointmentId)
-            consultationStarted = true
-        }
+        consultationViewModel.startConsultation(appointmentId)
+        vetViewModel.loadServices()
+        inventoryViewModel.loadInventory()
     }
 
-    LaunchedEffect(appointmentsState.isConsultationFinished) {
-        if (appointmentsState.isConsultationFinished) {
-            appointmentsViewModel.clearState()
+    // Procesar movimientos de inventario al finalizar
+    LaunchedEffect(consultationState.isConsultationFinished) {
+        if (consultationState.isConsultationFinished && consultationState.pendingInventoryMovements.isNotEmpty()) {
+            inventoryViewModel.processConsultationInventoryMovements(
+                consultationId = consultationState.activeConsultation?.id ?: "",
+                movements = consultationState.pendingInventoryMovements
+            )
+            consultationViewModel.clearState()
             onConsultationFinished()
         }
     }
@@ -89,18 +102,20 @@ fun MedicalConsultationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Consulta médica") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.Close, contentDescription = "Cerrar")
+                title = {
+                    Column {
+                        Text("Consulta médica")
+                        consultationState.currentPet?.let { pet ->
+                            Text(
+                                "${pet.name} - ${pet.species.name}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
                 },
-                actions = {
-                    TextButton(
-                        onClick = { showFinishDialog = true },
-                        enabled = appointmentsState.activeConsultationId != null
-                    ) {
-                        Text("Finalizar")
+                navigationIcon = {
+                    IconButton(onClick = { showExitDialog = true }) {
+                        Icon(Icons.Default.Close, contentDescription = "Cerrar")
                     }
                 }
             )
@@ -111,137 +126,106 @@ fun MedicalConsultationScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Tabs
-            TabRow(selectedTabIndex = currentTab) {
+            // Tabs simplificados
+            TabRow(selectedTabIndex = selectedTab) {
                 Tab(
-                    selected = currentTab == 0,
-                    onClick = { currentTab = 0 },
-                    text = { Text("Datos clínicos") }
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text("Clínico") },
+                    icon = { Icon(Icons.Default.MedicalServices, contentDescription = null) }
                 )
                 Tab(
-                    selected = currentTab == 1,
-                    onClick = { currentTab = 1 },
-                    text = { Text("Servicios") }
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = { Text("Servicios") },
+                    icon = { Icon(Icons.Default.Build, contentDescription = null) }
                 )
                 Tab(
-                    selected = currentTab == 2,
-                    onClick = { currentTab = 2 },
-                    text = { Text("Medicamentos") }
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    text = { Text("Medicamentos") },
+                    icon = { Icon(Icons.Default.Medication, contentDescription = null) }
                 )
                 Tab(
-                    selected = currentTab == 3,
-                    onClick = { currentTab = 3 },
-                    text = { Text("Facturación") }
+                    selected = selectedTab == 3,
+                    onClick = { selectedTab = 3 },
+                    text = { Text("Cobrar") },
+                    icon = { Icon(Icons.Default.AttachMoney, contentDescription = null) }
                 )
             }
 
-            when (currentTab) {
+            when (selectedTab) {
                 0 -> ClinicalDataTab(
-                    weight = weight,
-                    onWeightChange = { weight = it },
-                    temperature = temperature,
-                    onTemperatureChange = { temperature = it },
-                    heartRate = heartRate,
-                    onHeartRateChange = { heartRate = it },
-                    respiratoryRate = respiratoryRate,
-                    onRespiratoryRateChange = { respiratoryRate = it },
-                    symptoms = symptoms,
-                    onSymptomsChange = { symptoms = it },
-                    clinicalExam = clinicalExam,
-                    onClinicalExamChange = { clinicalExam = it },
-                    diagnosis = diagnosis,
-                    onDiagnosisChange = { diagnosis = it },
-                    treatment = treatment,
-                    onTreatmentChange = { treatment = it },
-                    observations = observations,
-                    onObservationsChange = { observations = it },
-                    recommendations = recommendations,
-                    onRecommendationsChange = { recommendations = it },
-                    onSave = {
-                        appointmentsState.activeConsultationId?.let { consultationId ->
-                            appointmentsViewModel.updateConsultation(
-                                consultationId = consultationId,
-                                weight = weight.toFloatOrNull(),
-                                temperature = temperature.toFloatOrNull(),
-                                heartRate = heartRate.toIntOrNull(),
-                                respiratoryRate = respiratoryRate.toIntOrNull(),
-                                symptoms = symptoms,
-                                clinicalExam = clinicalExam,
-                                diagnosis = diagnosis,
-                                treatment = treatment,
-                                observations = observations,
-                                recommendations = recommendations,
-                                nextCheckupDays = null,
-                                nextCheckupReason = null
-                            )
-                        }
+                    consultation = consultationState.activeConsultation,
+                    onSave = { weight, temp, hr, rr, symptoms, exam, diagnosis, treatment, obs, rec ->
+                        consultationViewModel.updateClinicalData(
+                            weight = weight,
+                            temperature = temp,
+                            heartRate = hr,
+                            respiratoryRate = rr,
+                            symptoms = symptoms,
+                            clinicalExam = exam,
+                            diagnosis = diagnosis,
+                            treatment = treatment,
+                            observations = obs,
+                            recommendations = rec
+                        )
                     }
                 )
 
                 1 -> ServicesTab(
-                    consultation = appointmentsState.selectedConsultation,
+                    consultation = consultationState.activeConsultation,
                     availableServices = vetState.services,
                     onAddService = { serviceId, price ->
-                        appointmentsState.activeConsultationId?.let { consultationId ->
-                            appointmentsViewModel.addServiceToConsultation(
-                                consultationId,
-                                serviceId,
-                                price
-                            )
-                        }
+                        consultationViewModel.addService(serviceId, price)
                     }
                 )
 
                 2 -> MedicationsTab(
-                    consultation = appointmentsState.selectedConsultation,
-                    availableMedications = vetState.medications,
-                    onAddMedication = { medicationId, dose, frequency, duration, route, quantity, unitPrice ->
-                        appointmentsState.activeConsultationId?.let { consultationId ->
-                            appointmentsViewModel.addMedicationToConsultation(
-                                consultationId,
-                                medicationId,
-                                dose,
-                                frequency,
-                                duration,
-                                route,
-                                quantity,
-                                unitPrice
-                            )
-                        }
+                    consultation = consultationState.activeConsultation,
+                    availableMedications = inventoryState.medications,
+                    availableVaccines = inventoryState.vaccines,
+                    onAddMedication = { medicationId, dose, frequency, duration, route, quantity ->
+                        consultationViewModel.addMedication(
+                            medicationId, dose, frequency, duration, route, quantity
+                        )
+                    },
+                    onAddVaccine = { vaccineId, batch, expirationDate, nextDoseDate ->
+                        consultationViewModel.addVaccine(
+                            vaccineId, batch, expirationDate, nextDoseDate
+                        )
                     }
                 )
 
                 3 -> BillingTab(
-                    consultation = appointmentsState.selectedConsultation,
+                    consultation = consultationState.activeConsultation,
                     onFinishConsultation = { discount, discountReason, paymentMethod, amountPaid ->
-                        appointmentsState.activeConsultationId?.let { consultationId ->
-                            appointmentsViewModel.finishConsultation(
-                                consultationId, discount, discountReason, paymentMethod, amountPaid
-                            )
-                        }
+                        consultationViewModel.finishConsultation(
+                            discount, discountReason, paymentMethod, amountPaid
+                        )
                     }
                 )
             }
         }
 
-        if (showFinishDialog) {
+        if (showExitDialog) {
             AlertDialog(
-                onDismissRequest = { showFinishDialog = false },
-                title = { Text("Finalizar consulta") },
-                text = { Text("¿Estás seguro de finalizar la consulta? Asegúrate de haber guardado todos los datos y procesado el pago.") },
+                onDismissRequest = { showExitDialog = false },
+                title = { Text("¿Salir de la consulta?") },
+                text = { Text("Los cambios no guardados se perderán") },
                 confirmButton = {
                     TextButton(
                         onClick = {
-                            showFinishDialog = false
-                            currentTab = 3 // Ir a facturación
+                            consultationViewModel.clearState()
+                            onNavigateBack()
                         }
                     ) {
-                        Text("Ir a facturación")
+                        Text("Salir", color = MaterialTheme.colorScheme.error)
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showFinishDialog = false }) {
-                        Text("Cancelar")
+                    TextButton(onClick = { showExitDialog = false }) {
+                        Text("Continuar")
                     }
                 }
             )
@@ -251,78 +235,45 @@ fun MedicalConsultationScreen(
 
 @Composable
 private fun ClinicalDataTab(
-    weight: String,
-    onWeightChange: (String) -> Unit,
-    temperature: String,
-    onTemperatureChange: (String) -> Unit,
-    heartRate: String,
-    onHeartRateChange: (String) -> Unit,
-    respiratoryRate: String,
-    onRespiratoryRateChange: (String) -> Unit,
-    symptoms: String,
-    onSymptomsChange: (String) -> Unit,
-    clinicalExam: String,
-    onClinicalExamChange: (String) -> Unit,
-    diagnosis: String,
-    onDiagnosisChange: (String) -> Unit,
-    treatment: String,
-    onTreatmentChange: (String) -> Unit,
-    observations: String,
-    onObservationsChange: (String) -> Unit,
-    recommendations: String,
-    onRecommendationsChange: (String) -> Unit,
-    onSave: () -> Unit
+    consultation: MedicalConsultation?,
+    onSave: (Float?, Float?, Int?, Int?, String, String, String, String, String, String) -> Unit
 ) {
+    var weight by remember { mutableStateOf(consultation?.weight?.toString() ?: "") }
+    var temperature by remember { mutableStateOf(consultation?.temperature?.toString() ?: "") }
+    var heartRate by remember { mutableStateOf(consultation?.heartRate?.toString() ?: "") }
+    var respiratoryRate by remember {
+        mutableStateOf(
+            consultation?.respiratoryRate?.toString() ?: ""
+        )
+    }
+    var symptoms by remember { mutableStateOf(consultation?.symptoms ?: "") }
+    var clinicalExam by remember { mutableStateOf(consultation?.clinicalExam ?: "") }
+    var diagnosis by remember { mutableStateOf(consultation?.diagnosis ?: "") }
+    var treatment by remember { mutableStateOf(consultation?.treatment ?: "") }
+    var observations by remember { mutableStateOf(consultation?.observations ?: "") }
+    var recommendations by remember { mutableStateOf(consultation?.recommendations ?: "") }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Signos vitales
         item {
             Card {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Signos vitales",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Signos vitales", fontWeight = FontWeight.Bold)
+                    Row(modifier = Modifier.fillMaxWidth()) {
                         OutlinedTextField(
                             value = weight,
-                            onValueChange = onWeightChange,
+                            onValueChange = { weight = it },
                             label = { Text("Peso (kg)") },
                             modifier = Modifier.weight(1f)
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
                         OutlinedTextField(
                             value = temperature,
-                            onValueChange = onTemperatureChange,
+                            onValueChange = { temperature = it },
                             label = { Text("Temp (°C)") },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = heartRate,
-                            onValueChange = onHeartRateChange,
-                            label = { Text("FC (lpm)") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = respiratoryRate,
-                            onValueChange = onRespiratoryRateChange,
-                            label = { Text("FR (rpm)") },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -330,81 +281,459 @@ private fun ClinicalDataTab(
             }
         }
 
-        // Anamnesis
         item {
             OutlinedTextField(
                 value = symptoms,
-                onValueChange = onSymptomsChange,
-                label = { Text("Síntomas / Motivo de consulta") },
+                onValueChange = { symptoms = it },
+                label = { Text("Síntomas") },
                 modifier = Modifier.fillMaxWidth(),
-                minLines = 3
+                minLines = 2
             )
         }
 
-        // Examen clínico
-        item {
-            OutlinedTextField(
-                value = clinicalExam,
-                onValueChange = onClinicalExamChange,
-                label = { Text("Examen físico") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3
-            )
-        }
-
-        // Diagnóstico
         item {
             OutlinedTextField(
                 value = diagnosis,
-                onValueChange = onDiagnosisChange,
+                onValueChange = { diagnosis = it },
                 label = { Text("Diagnóstico") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2
             )
         }
 
-        // Tratamiento
         item {
             OutlinedTextField(
                 value = treatment,
-                onValueChange = onTreatmentChange,
-                label = { Text("Plan de tratamiento") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3
-            )
-        }
-
-        // Observaciones
-        item {
-            OutlinedTextField(
-                value = observations,
-                onValueChange = onObservationsChange,
-                label = { Text("Observaciones") },
+                onValueChange = { treatment = it },
+                label = { Text("Tratamiento") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2
             )
         }
 
-        // Recomendaciones
-        item {
-            OutlinedTextField(
-                value = recommendations,
-                onValueChange = onRecommendationsChange,
-                label = { Text("Recomendaciones para el propietario") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2
-            )
-        }
-
-        // Botón guardar
         item {
             Button(
-                onClick = onSave,
+                onClick = {
+                    onSave(
+                        weight.toFloatOrNull(),
+                        temperature.toFloatOrNull(),
+                        heartRate.toIntOrNull(),
+                        respiratoryRate.toIntOrNull(),
+                        symptoms,
+                        clinicalExam,
+                        diagnosis,
+                        treatment,
+                        observations,
+                        recommendations
+                    )
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Default.Save, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Guardar datos clínicos")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ServicesTab(
+    consultation: MedicalConsultation?,
+    availableServices: List<VeterinaryService>,
+    onAddService: (String, Double) -> Unit
+) {
+    var showAddDialog by remember { mutableStateOf(false) }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Servicios aplicados", fontWeight = FontWeight.Bold)
+                Button(onClick = { showAddDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Text("Agregar")
+                }
+            }
+        }
+
+        consultation?.services?.let { services ->
+            items(services) { service ->
+                Card {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(service.name, fontWeight = FontWeight.Medium)
+                            Text(
+                                service.category.name,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Text(
+                            "$${service.price}",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Subtotal servicios", fontWeight = FontWeight.Bold)
+                    Text(
+                        "$${consultation?.services?.sumOf { it.price } ?: 0.0}",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+
+    if (showAddDialog) {
+        ServiceSelectionDialog(
+            services = availableServices,
+            onServiceSelected = { service, customPrice ->
+                onAddService(service.id, customPrice ?: service.basePrice)
+                showAddDialog = false
+            },
+            onDismiss = { showAddDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun MedicationsTab(
+    consultation: MedicalConsultation?,
+    availableMedications: List<Medication>,
+    availableVaccines: List<Vaccine>,
+    onAddMedication: (String, String, String, String, String, Int) -> Unit,
+    onAddVaccine: (String, String, Long, Long?) -> Unit
+) {
+    var showMedicationDialog by remember { mutableStateOf(false) }
+    var showVaccineDialog by remember { mutableStateOf(false) }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Medicamentos
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Medicamentos", fontWeight = FontWeight.Bold)
+                OutlinedButton(onClick = { showMedicationDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Text("Agregar")
+                }
+            }
+        }
+
+        consultation?.medications?.let { medications ->
+            items(medications) { medication ->
+                Card {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(medication.name, fontWeight = FontWeight.Medium)
+                            Text("$${medication.totalPrice}")
+                        }
+                        Text(
+                            "Dosis: ${medication.dose} - ${medication.frequency}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            "Cantidad: ${medication.quantity} unidades",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+        }
+
+        // Vacunas
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Vacunas aplicadas", fontWeight = FontWeight.Bold)
+                OutlinedButton(onClick = { showVaccineDialog = true }) {
+                    Icon(Icons.Default.Vaccines, contentDescription = null)
+                    Text("Agregar")
+                }
+            }
+        }
+
+        consultation?.vaccines?.let { vaccines ->
+            items(vaccines) { vaccine ->
+                Card {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(vaccine.name, fontWeight = FontWeight.Medium)
+                            Text(
+                                "Lote: ${vaccine.batch}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Text("$${vaccine.price}")
+                    }
+                }
+            }
+        }
+
+        // Total medicamentos y vacunas
+        item {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Subtotal medicamentos")
+                        Text("$${consultation?.medications?.sumOf { it.totalPrice } ?: 0.0}")
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Subtotal vacunas")
+                        Text("$${consultation?.vaccines?.sumOf { it.price } ?: 0.0}")
+                    }
+                }
+            }
+        }
+    }
+
+    if (showMedicationDialog) {
+        MedicationSelectionDialog(
+            medications = availableMedications,
+            onMedicationAdded = onAddMedication,
+            onDismiss = { showMedicationDialog = false }
+        )
+    }
+
+    if (showVaccineDialog) {
+        VaccineSelectionDialog(
+            vaccines = availableVaccines,
+            onVaccineAdded = onAddVaccine,
+            onDismiss = { showVaccineDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun BillingTab(
+    consultation: MedicalConsultation?,
+    onFinishConsultation: (Double, String?, PaymentMethod, Double) -> Unit
+) {
+    var discount by remember { mutableStateOf("0") }
+    var discountReason by remember { mutableStateOf("") }
+    var selectedPaymentMethod by remember { mutableStateOf(PaymentMethod.CASH) }
+    var amountPaid by remember { mutableStateOf("") }
+
+    val subtotal = consultation?.subtotal ?: 0.0
+    val discountAmount = discount.toDoubleOrNull() ?: 0.0
+    val total = subtotal - discountAmount
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Resumen de cobros
+        item {
+            Card {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text("Resumen de cobros", fontWeight = FontWeight.Bold)
+                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Servicios")
+                        Text("$${consultation?.services?.sumOf { it.price } ?: 0.0}")
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Medicamentos")
+                        Text("$${consultation?.medications?.sumOf { it.totalPrice } ?: 0.0}")
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Vacunas")
+                        Text("$${consultation?.vaccines?.sumOf { it.price } ?: 0.0}")
+                    }
+
+                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Subtotal", fontWeight = FontWeight.Medium)
+                        Text("$$subtotal", fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
+        }
+
+        // Descuento
+        item {
+            OutlinedTextField(
+                value = discount,
+                onValueChange = { discount = it },
+                label = { Text("Descuento") },
+                prefix = { Text("$") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        if (discountAmount > 0) {
+            item {
+                OutlinedTextField(
+                    value = discountReason,
+                    onValueChange = { discountReason = it },
+                    label = { Text("Motivo del descuento") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
+        // Total
+        item {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("TOTAL A PAGAR", fontWeight = FontWeight.Bold)
+                    Text("$$total", style = MaterialTheme.typography.headlineMedium)
+                }
+            }
+        }
+
+        // Forma de pago
+        item {
+            Text("Forma de pago", fontWeight = FontWeight.Bold)
+            Column {
+                PaymentMethod.values().forEach { method ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedPaymentMethod = method }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedPaymentMethod == method,
+                            onClick = { selectedPaymentMethod = method }
+                        )
+                        Text(getPaymentMethodName(method))
+                    }
+                }
+            }
+        }
+
+        // Monto pagado
+        item {
+            OutlinedTextField(
+                value = amountPaid,
+                onValueChange = { amountPaid = it },
+                label = { Text("Monto pagado") },
+                prefix = { Text("$") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            val paid = amountPaid.toDoubleOrNull() ?: 0.0
+            when {
+                paid > total -> Text(
+                    "Vuelto: $${paid - total}",
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                paid < total -> Text(
+                    "Saldo pendiente: $${total - paid}",
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+
+        // Finalizar
+        item {
+            Button(
+                onClick = {
+                    onFinishConsultation(
+                        discountAmount,
+                        discountReason.ifBlank { null },
+                        selectedPaymentMethod,
+                        amountPaid.toDoubleOrNull() ?: 0.0
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = amountPaid.isNotBlank()
+            ) {
+                Icon(Icons.Default.CheckCircle, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Finalizar consulta y cobrar")
             }
         }
     }

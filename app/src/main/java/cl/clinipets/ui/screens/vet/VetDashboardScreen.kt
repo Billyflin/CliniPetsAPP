@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -24,9 +23,7 @@ import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -155,7 +152,7 @@ fun VetDashboardScreen(
                 ) {
                     QuickActionCard(
                         title = "Inventario",
-                        subtitle = "${vetState.inventorySummary?.lowStockCount ?: 0} items bajo stock",
+                        subtitle = "",
                         icon = Icons.Default.Inventory,
                         onClick = onNavigateToInventory,
                         modifier = Modifier.weight(1f)
@@ -225,51 +222,6 @@ fun VetDashboardScreen(
                             }
                         }
                     )
-                }
-            }
-
-            // Alertas de inventario
-            if (vetState.lowStockMedications.isNotEmpty() || vetState.lowStockVaccines.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "Alertas de inventario",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.Warning,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Items con stock bajo",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            vetState.lowStockMedications.take(3).forEach { medication ->
-                                Text("• ${medication.name}: ${medication.stock} unidades")
-                            }
-                            if (vetState.lowStockMedications.size > 3) {
-                                Text("... y ${vetState.lowStockMedications.size - 3} más")
-                            }
-                        }
-                    }
                 }
             }
         }
