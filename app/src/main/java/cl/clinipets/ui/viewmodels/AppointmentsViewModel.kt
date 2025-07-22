@@ -74,7 +74,10 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
                 // Separar citas por estado
                 val upcoming = appointments.filter {
                     it.dateTime > System.currentTimeMillis() &&
-                            it.status in listOf(AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED)
+                            it.status in listOf(
+                        AppointmentStatus.SCHEDULED,
+                        AppointmentStatus.CONFIRMED
+                    )
                 }
                 val past = appointments.filter {
                     it.dateTime <= System.currentTimeMillis() ||
@@ -167,13 +170,30 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
         viewModelScope.launch {
             try {
                 _appointmentsState.value = _appointmentsState.value.copy(isLoadingSlots = true)
+                Log.d("VetAvailability", "Loading availability for vet: $vetId on date: $date")
 
+                // Cambiar el formato a "yyyy-MM-dd" si la fecha de entrada es así
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 val selectedDate = dateFormat.parse(date) ?: return@launch
+                Log.d(
+                    "VetAvailability",
+                    "Parsed selectedDate: $selectedDate"
+                ) // Log para verificar la fecha parseada
 
                 val calendar = Calendar.getInstance()
                 calendar.time = selectedDate
                 val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+                Log.d("VetAvailability", "Selected day of week (Calendar): $dayOfWeek")
+
+                // Ajuste para que Lunes sea 1, Martes 2, etc. Si tus claves de schedule son así
+                // Calendar.MONDAY = 2, Calendar.SUNDAY = 1
+                // Si tus claves de schedule van de Lunes (1) a Domingo (7)
+                val adjustedDayOfWeek = when (dayOfWeek) {
+                    Calendar.SUNDAY -> 7 // Si Domingo es la clave 7
+                    else -> dayOfWeek - 1 // Lunes (2) se convierte en 1, Martes (3) en 2, etc.
+                }
+                Log.d("VetAvailability", "Adjusted day of week for schedule: $adjustedDayOfWeek")
+
 
                 // Cargar configuración de horario del veterinario
                 val vetDoc = firestore.collection("users")
@@ -182,7 +202,11 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
                     .await()
 
                 val schedule = vetDoc.get("schedule") as? Map<String, Any>
-                val daySchedule = schedule?.get(dayOfWeek.toString()) as? Map<String, Any>
+                Log.d("VetAvailability", "Vet schedule: $schedule")
+
+                // Usa el día de la semana ajustado para buscar en el schedule
+                val daySchedule = schedule?.get(adjustedDayOfWeek.toString()) as? Map<String, Any>
+                Log.d("VetAvailability", "Day schedule: $daySchedule")
 
                 if (daySchedule != null && daySchedule["isActive"] == true) {
                     val startTime = daySchedule["startTime"] as? String ?: "09:00"
@@ -195,11 +219,13 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
                     val existingAppointments = firestore.collection("appointments")
                         .whereEqualTo("veterinarianId", vetId)
                         .whereEqualTo("date", date)
-                        .whereIn("status", listOf(
-                            AppointmentStatus.SCHEDULED.name,
-                            AppointmentStatus.CONFIRMED.name,
-                            AppointmentStatus.IN_PROGRESS.name
-                        ))
+                        .whereIn(
+                            "status", listOf(
+                                AppointmentStatus.SCHEDULED.name,
+                                AppointmentStatus.CONFIRMED.name,
+                                AppointmentStatus.IN_PROGRESS.name
+                            )
+                        )
                         .get()
                         .await()
 
@@ -230,10 +256,14 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
                     isLoadingSlots = false,
                     error = "Error al cargar horarios: ${e.message}"
                 )
+                Log.e(
+                    "VetAvailability",
+                    "Error loading schedules: ${e.message}",
+                    e
+                ) // Log más detallado del error
             }
         }
     }
-
     fun createAppointment(
         petId: String,
         veterinarianId: String,
@@ -385,10 +415,12 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
                     // Actualizar estado de la cita
                     firestore.collection("appointments")
                         .document(appointmentId)
-                        .update(mapOf(
-                            "status" to AppointmentStatus.IN_PROGRESS.name,
-                            "consultationId" to consultationRef.id
-                        ))
+                        .update(
+                            mapOf(
+                                "status" to AppointmentStatus.IN_PROGRESS.name,
+                                "consultationId" to consultationRef.id
+                            )
+                        )
                         .await()
 
                     _appointmentsState.value = _appointmentsState.value.copy(
@@ -483,11 +515,13 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
                             val subtotal = consultation.subtotal + price
                             val total = subtotal - consultation.discount
 
-                            transaction.update(consultationRef, mapOf(
-                                "services" to updatedServices,
-                                "subtotal" to subtotal,
-                                "total" to total
-                            ))
+                            transaction.update(
+                                consultationRef, mapOf(
+                                    "services" to updatedServices,
+                                    "subtotal" to subtotal,
+                                    "total" to total
+                                )
+                            )
                         }
                     }.await()
 
@@ -545,11 +579,13 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
                             val subtotal = consultation.subtotal + (unitPrice * quantity)
                             val total = subtotal - consultation.discount
 
-                            transaction.update(consultationRef, mapOf(
-                                "medications" to updatedMedications,
-                                "subtotal" to subtotal,
-                                "total" to total
-                            ))
+                            transaction.update(
+                                consultationRef, mapOf(
+                                    "medications" to updatedMedications,
+                                    "subtotal" to subtotal,
+                                    "total" to total
+                                )
+                            )
                         }
                     }.await()
 
@@ -605,11 +641,13 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
                             val subtotal = consultation.subtotal + price
                             val total = subtotal - consultation.discount
 
-                            transaction.update(consultationRef, mapOf(
-                                "vaccines" to updatedVaccines,
-                                "subtotal" to subtotal,
-                                "total" to total
-                            ))
+                            transaction.update(
+                                consultationRef, mapOf(
+                                    "vaccines" to updatedVaccines,
+                                    "subtotal" to subtotal,
+                                    "total" to total
+                                )
+                            )
 
                             // Crear registro de vacunación
                             val vaccinationRecord = VaccinationRecord(
@@ -668,21 +706,24 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
                             else -> PaymentStatus.PENDING
                         }
 
-                        transaction.update(consultationRef, mapOf(
-                            "discount" to discount,
-                            "discountReason" to discountReason,
-                            "total" to total,
-                            "amountPaid" to amountPaid,
-                            "paymentStatus" to paymentStatus.name,
-                            "paymentMethod" to paymentMethod.name,
-                            "endTime" to System.currentTimeMillis()
-                        ))
+                        transaction.update(
+                            consultationRef, mapOf(
+                                "discount" to discount,
+                                "discountReason" to discountReason,
+                                "total" to total,
+                                "amountPaid" to amountPaid,
+                                "paymentStatus" to paymentStatus.name,
+                                "paymentMethod" to paymentMethod.name,
+                                "endTime" to System.currentTimeMillis()
+                            )
+                        )
 
                         // Actualizar estado de la cita
                         consultation.appointmentId.let { appointmentId ->
                             val appointmentRef = firestore.collection("appointments")
                                 .document(appointmentId)
-                            transaction.update(appointmentRef,
+                            transaction.update(
+                                appointmentRef,
                                 "status", AppointmentStatus.COMPLETED.name
                             )
                         }
@@ -730,7 +771,10 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
         return slots
     }
 
-    private suspend fun sendAppointmentNotification(veterinarianId: String, appointment: Appointment) {
+    private suspend fun sendAppointmentNotification(
+        veterinarianId: String,
+        appointment: Appointment
+    ) {
         try {
             val notification = mapOf(
                 "recipientId" to veterinarianId,
@@ -753,7 +797,11 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    private suspend fun updateMedicationStock(medicationId: String, quantityChange: Int, consultationId: String) {
+    private suspend fun updateMedicationStock(
+        medicationId: String,
+        quantityChange: Int,
+        consultationId: String
+    ) {
         try {
             val medicationRef = firestore.collection("medications").document(medicationId)
 
@@ -832,9 +880,6 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    fun generateConsultationReport(consultationId: String) {
-        // TODO: Implementar generación de reporte PDF
-    }
 }
 
 // ====================== ESTADO ======================

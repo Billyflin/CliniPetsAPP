@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Pets
@@ -53,7 +52,6 @@ fun HomeScreen(
     onNavigateToAppointments: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToVetSchedule: () -> Unit,
-    onSignOut: () -> Unit,
     userViewModel: UserViewModel = hiltViewModel(),
     vetViewModel: VetViewModel = hiltViewModel()
 ) {
@@ -186,14 +184,6 @@ fun HomeScreen(
                             onClick = onNavigateToVetSchedule
                         )
                     }
-                    QuickActionCard(
-                        title = "Emergencia",
-                        subtitle = "Contacta con veterinario de urgencia",
-                        icon = Icons.Default.LocalHospital,
-                        onClick = { /* TODO */ },
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    )
                 }
             }
 
@@ -231,8 +221,6 @@ fun HomeScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                        Text("• Luna - Vacuna antirrábica (en 2 semanas)")
-                        Text("• Max - Refuerzo triple felina (próximo mes)")
                     }
                 }
             }

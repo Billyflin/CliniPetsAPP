@@ -43,8 +43,7 @@ fun AppNavigation() {
     }
 
     NavHost(
-        navController = navController,
-        startDestination = startDestination
+        navController = navController, startDestination = startDestination
     ) {
         // ====================== AUTENTICACIÓN ======================
         composable("login") {
@@ -53,8 +52,7 @@ fun AppNavigation() {
                     navController.navigate("home") {
                         popUpTo("login") { inclusive = true }
                     }
-                }
-            )
+                })
         }
 
         // ====================== HOME ======================
@@ -63,11 +61,7 @@ fun AppNavigation() {
                 onNavigateToPets = { navController.navigate("pets") },
                 onNavigateToAppointments = { navController.navigate("appointments") },
                 onNavigateToProfile = { navController.navigate("profile") },
-                onNavigateToVetSchedule = { navController.navigate("vet_dashboard") },
-                onSignOut = {
-                    authViewModel.signOut()
-                }
-            )
+                onNavigateToVetSchedule = { navController.navigate("vet_dashboard") })
         }
 
         // ====================== MASCOTAS ======================
@@ -77,16 +71,14 @@ fun AppNavigation() {
                 onNavigateToAddPet = { navController.navigate("add_pet") },
                 onNavigateToPetDetail = { petId ->
                     navController.navigate("pet_detail/$petId")
-                }
-            )
+                })
         }
 
         composable("add_pet") {
             AddEditPetScreen(
                 petId = null,
                 onPetSaved = { navController.popBackStack() },
-                onNavigateBack = { navController.popBackStack() }
-            )
+                onNavigateBack = { navController.popBackStack() })
         }
 
         composable("edit_pet/{petId}") { backStackEntry ->
@@ -94,8 +86,7 @@ fun AppNavigation() {
             AddEditPetScreen(
                 petId = petId,
                 onPetSaved = { navController.popBackStack() },
-                onNavigateBack = { navController.popBackStack() }
-            )
+                onNavigateBack = { navController.popBackStack() })
         }
 
         composable("pet_detail/{petId}") { backStackEntry ->
@@ -108,8 +99,7 @@ fun AppNavigation() {
                 },
                 onNavigateToNewAppointment = { id ->
                     navController.navigate("create_appointment?petId=$id")
-                }
-            )
+                })
         }
 
         // ====================== CITAS ======================
@@ -119,8 +109,7 @@ fun AppNavigation() {
                 onNavigateToAddAppointment = { navController.navigate("create_appointment") },
                 onNavigateToAppointmentDetail = { appointmentId ->
                     navController.navigate("appointment_detail/$appointmentId")
-                }
-            )
+                })
         }
 
         composable("create_appointment?petId={petId}") { backStackEntry ->
@@ -128,8 +117,7 @@ fun AppNavigation() {
             CreateAppointmentScreen(
                 petId = petId,
                 onAppointmentCreated = { navController.popBackStack() },
-                onNavigateBack = { navController.popBackStack() }
-            )
+                onNavigateBack = { navController.popBackStack() })
         }
 
         composable("appointment_detail/{appointmentId}") { backStackEntry ->
@@ -139,12 +127,9 @@ fun AppNavigation() {
 
         // ====================== PERFIL Y CONFIGURACIÓN ======================
         composable("profile") {
-            ProfileScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onSignOut = {
-                    // Navegación manejada por LaunchedEffect arriba
-                }
-            )
+            ProfileScreen(onNavigateBack = { navController.popBackStack() }, onSignOut = {
+                // Navegación manejada por LaunchedEffect arriba
+            })
         }
 
         composable("settings") {
@@ -162,37 +147,28 @@ fun AppNavigation() {
                 },
                 onNavigateToInventory = { navController.navigate("inventory") },
                 onNavigateToSchedule = { navController.navigate("vet_schedule") },
-                onNavigateToReports = { navController.navigate("vet_reports") }
             )
         }
 
         composable("medical_consultation/{appointmentId}") { backStackEntry ->
             val appointmentId = backStackEntry.arguments?.getString("appointmentId") ?: ""
-            MedicalConsultationScreen(
-                appointmentId = appointmentId,
-                onConsultationFinished = {
-                    navController.popBackStack()
-                    navController.popBackStack() // Volver al dashboard
-                },
-                onNavigateBack = { navController.popBackStack() }
-            )
+            MedicalConsultationScreen(appointmentId = appointmentId, onConsultationFinished = {
+                navController.popBackStack()
+                navController.popBackStack() // Volver al dashboard
+            }, onNavigateBack = { navController.popBackStack() })
         }
 
         composable("inventory") {
             InventoryScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
+                onNavigateBack = { navController.popBackStack() })
         }
 
         composable("vet_schedule") {
             VetScheduleScreen(
+                onNavigateBack = { navController.popBackStack() },
 
-
-            )
+                )
         }
 
-        composable("vet_reports") {
-            // TODO: Implementar pantalla de reportes
-        }
     }
 }

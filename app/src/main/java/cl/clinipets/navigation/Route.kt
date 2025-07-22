@@ -15,9 +15,6 @@ sealed interface Route {
     data object Login : Route
 
     @Serializable
-    data object Register : Route
-
-    @Serializable
     data object Home : Route
 
     @Serializable
@@ -47,6 +44,4 @@ sealed interface Route {
     @Serializable
     data object Settings : Route
 
-    @Serializable
-    data object Emergency : Route
 }
