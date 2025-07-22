@@ -151,7 +151,7 @@ class InventoryViewModel @Inject constructor() : ViewModel() {
                     name = name,
                     category = category,
                     basePrice = basePrice,
-                    isActive = true
+                    active = true
                 )
 
                 firestore.collection("services")
@@ -223,7 +223,7 @@ class InventoryViewModel @Inject constructor() : ViewModel() {
             try {
                 firestore.collection(collection)
                     .document(itemId)
-                    .update("isActive", false)
+                    .update("active", false)
                     .await()
 
                 loadInventory()

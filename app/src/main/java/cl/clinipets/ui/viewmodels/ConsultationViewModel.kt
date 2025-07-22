@@ -4,7 +4,6 @@ package cl.clinipets.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.data.model.Appointment
-import cl.clinipets.data.model.AppointmentStatus
 import cl.clinipets.data.model.Consultation
 import cl.clinipets.data.model.MedicationUsed
 import cl.clinipets.data.model.Pet
@@ -21,6 +20,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+
+// package cl.clinipets.ui.viewmodels
 
 @HiltViewModel
 class ConsultationViewModel @Inject constructor() : ViewModel() {
@@ -51,7 +52,6 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
                     val consultation = Consultation(
                         appointmentId = appointmentId,
                         petId = appointment.petId,
-                        veterinarianId = veterinarianId,
                         createdAt = System.currentTimeMillis()
                     )
 
@@ -59,16 +59,7 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
                         .add(consultation)
                         .await()
 
-                    // Actualizar estado de la cita
-                    firestore.collection("appointments")
-                        .document(appointmentId)
-                        .update(
-                            mapOf(
-                                "status" to AppointmentStatus.COMPLETED.name,
-                                "consultationId" to consultationRef.id
-                            )
-                        )
-                        .await()
+
 
                     // Cargar información de la mascota
                     val petDoc = firestore.collection("pets")
@@ -84,6 +75,17 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
                         currentPet = pet,
                         currentAppointment = appointment
                     )
+
+                    // Actualizar estado de la cita
+//                    firestore.collection("appointments")
+//                        .document(appointmentId)
+//                        .update(
+//                            mapOf(
+//                                "status" to AppointmentStatus.CONFIRMED.name,
+//                                "consultationId" to consultationRef.id
+//                            )
+//                        )
+//                        .await()
                 }
             } catch (e: Exception) {
                 _consultationState.value = _consultationState.value.copy(
@@ -132,6 +134,7 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
                 _consultationState.value = _consultationState.value.copy(
                     activeConsultation = updatedConsultation
                 )
+
             } catch (e: Exception) {
                 _consultationState.value = _consultationState.value.copy(
                     error = "Error al guardar datos clínicos: ${e.message}"
@@ -140,21 +143,22 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    fun addService(serviceName: String, price: Double) {
+    // ACTUALIZADO: ahora usa serviceId
+    fun addService(serviceId: String, serviceName: String, price: Double) {
         val consultationId = _consultationState.value.activeConsultation?.id ?: return
 
         viewModelScope.launch {
             try {
                 val service = ServiceApplied(
+                    serviceId = serviceId,
                     name = serviceName,
                     price = price
                 )
 
                 val consultation = _consultationState.value.activeConsultation!!
                 val updatedServices = consultation.services + service
-                val total = updatedServices.sumOf { it.price } +
-                        consultation.medications.sumOf { it.price } +
-                        consultation.vaccines.sumOf { it.price }
+                val total =
+                    calculateTotal(updatedServices, consultation.medications, consultation.vaccines)
 
                 firestore.collection("consultations")
                     .document(consultationId)
@@ -194,9 +198,8 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
 
                 val consultation = _consultationState.value.activeConsultation!!
                 val updatedMedications = consultation.medications + medication
-                val total = consultation.services.sumOf { it.price } +
-                        updatedMedications.sumOf { it.price } +
-                        consultation.vaccines.sumOf { it.price }
+                val total =
+                    calculateTotal(consultation.services, updatedMedications, consultation.vaccines)
 
                 firestore.collection("consultations")
                     .document(consultationId)
@@ -240,9 +243,8 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
 
                 val consultation = _consultationState.value.activeConsultation!!
                 val updatedVaccines = consultation.vaccines + vaccine
-                val total = consultation.services.sumOf { it.price } +
-                        consultation.medications.sumOf { it.price } +
-                        updatedVaccines.sumOf { it.price }
+                val total =
+                    calculateTotal(consultation.services, consultation.medications, updatedVaccines)
 
                 firestore.collection("consultations")
                     .document(consultationId)
@@ -259,8 +261,7 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
                     petId = petId,
                     vaccineName = name,
                     applicationDate = System.currentTimeMillis(),
-                    nextDoseDate = nextDoseDate,
-                    veterinarianId = consultation.veterinarianId
+                    nextDoseDate = nextDoseDate
                 )
 
                 firestore.collection("vaccinations")
@@ -305,6 +306,16 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
         }
     }
 
+    private fun calculateTotal(
+        services: List<ServiceApplied>,
+        medications: List<MedicationUsed>,
+        vaccines: List<VaccineApplied>
+    ): Double {
+        return services.sumOf { it.price } +
+                medications.sumOf { it.price } +
+                vaccines.sumOf { it.price }
+    }
+
     private suspend fun updateMedicationStock(medicationId: String, change: Int) {
         try {
             val medicationRef = firestore.collection("medications").document(medicationId)
@@ -330,7 +341,12 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
     fun clearState() {
         _consultationState.value = ConsultationState()
     }
+
+    fun clearError() {
+        _consultationState.value = _consultationState.value.copy(error = null)
+    }
 }
+
 
 data class ConsultationState(
     val activeConsultation: Consultation? = null,

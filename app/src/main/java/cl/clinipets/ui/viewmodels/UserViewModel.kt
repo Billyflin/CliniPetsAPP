@@ -45,21 +45,18 @@ class UserViewModel @Inject constructor() : ViewModel() {
                 val isVet = userDoc.getBoolean("isVet") == true
 
 
-                // Contar mascotas
-                val petsCount = firestore.collection("users")
-                    .document(userId)
-                    .collection("pets")
+                // Contar mascotas y citas
+                val petsSnapshot = firestore.collection("pets")
+                    .whereEqualTo("ownerId", userId)
                     .get()
                     .await()
-                    .size()
+                val petsCount = petsSnapshot.size()
+                val appointmentsSnapshot = firestore.collection("appointments")
+                    .whereEqualTo("ownerId", userId)
+                    .get()
+                    .await()
+                val appointmentsCount = appointmentsSnapshot.size()
 
-                // Contar citas
-                val appointmentsCount = firestore.collection("users")
-                    .document(userId)
-                    .collection("appointments")
-                    .get()
-                    .await()
-                    .size()
 
                 _userState.value = UserState(
                     userName = userName,

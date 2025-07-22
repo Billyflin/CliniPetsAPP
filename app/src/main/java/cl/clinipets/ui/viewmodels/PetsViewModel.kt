@@ -1,6 +1,7 @@
 // ui/viewmodels/PetsViewModel.kt
 package cl.clinipets.ui.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.data.model.Consultation
@@ -222,10 +223,12 @@ class PetsViewModel @Inject constructor() : ViewModel() {
                     .get()
                     .await()
 
+                Log.d("Consultations", snapshot.documents.toString())
+
                 val consultations = snapshot.documents.mapNotNull { doc ->
                     doc.toObject<Consultation>()?.copy(id = doc.id)
                 }
-
+                Log.d("Consultations", consultations.toString())
                 _petsState.value = _petsState.value.copy(
                     selectedPetConsultations = consultations
                 )

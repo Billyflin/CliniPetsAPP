@@ -55,36 +55,33 @@ import cl.clinipets.ui.viewmodels.InventoryViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InventoryScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: InventoryViewModel = hiltViewModel()
+    onNavigateBack: () -> Unit, viewModel: InventoryViewModel = hiltViewModel()
 ) {
     val inventoryState by viewModel.inventoryState.collectAsState()
     var selectedTab by remember { mutableStateOf(0) }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Inventario") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
-                    }
+            TopAppBar(title = { Text("Inventario") }, navigationIcon = {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
                 }
-            )
-        }
-    ) { paddingValues ->
+            })
+        }) { paddingValues ->
         Column(Modifier.padding(paddingValues)) {
             TabRow(selectedTabIndex = selectedTab) {
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("Medicamentos") }
-                )
+                    text = { Text("Medicamentos") })
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("Vacunas") }
-                )
+                    text = { Text("Vacunas") })
+                Tab(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    text = { Text("Servicios") })
             }
 
             if (inventoryState.isLoading) {
@@ -143,6 +140,32 @@ fun InventoryScreen(
                             }
                         }
                     }
+
+                    2 -> {
+                        //servicios
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(inventoryState.services) { service ->
+                                Card(Modifier.fillMaxWidth()) {
+                                    Column(Modifier.padding(16.dp)) {
+                                        Row(
+                                            Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(service.name, fontWeight = FontWeight.Bold)
+                                            Column(horizontalAlignment = Alignment.End) {
+                                                Text("Precio: $${service.basePrice}")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+
                 }
             }
         }
@@ -152,14 +175,12 @@ fun InventoryScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MedicationInventoryCard(
-    medication: Medication,
-    onUpdateStock: (Int) -> Unit
+    medication: Medication, onUpdateStock: (Int) -> Unit
 ) {
     var showUpdateDialog by remember { mutableStateOf(false) }
 
     Card(
-        onClick = { showUpdateDialog = true },
-        modifier = Modifier.fillMaxWidth()
+        onClick = { showUpdateDialog = true }, modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier
@@ -193,8 +214,7 @@ private fun MedicationInventoryCard(
             }
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
                     text = "Precio: ${medication.unitPrice}",
@@ -212,8 +232,7 @@ private fun MedicationInventoryCard(
                 onUpdateStock(newStock)
                 showUpdateDialog = false
             },
-            onDismiss = { showUpdateDialog = false }
-        )
+            onDismiss = { showUpdateDialog = false })
     }
 }
 
@@ -227,107 +246,88 @@ fun AddMedicationDialog(
     var selectedMedication by remember { mutableStateOf<Medication?>(null) }
     var dose by remember { mutableStateOf("") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Agregar Medicamento") },
-        text = {
-            Column {
-                // Lista de medicamentos
-                LazyColumn(modifier = Modifier.height(200.dp)) {
-                    items(medications) { medication ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { selectedMedication = medication }
-                                .padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = selectedMedication == medication,
-                                onClick = { selectedMedication = medication }
-                            )
-                            Text("${medication.name} - $${medication.unitPrice}")
-                        }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Agregar Medicamento") }, text = {
+        Column {
+            // Lista de medicamentos
+            LazyColumn(modifier = Modifier.height(200.dp)) {
+                items(medications) { medication ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedMedication = medication }
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = selectedMedication == medication,
+                            onClick = { selectedMedication = medication })
+                        Text("${medication.name} - $${medication.unitPrice}")
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(
-                    value = dose,
-                    onValueChange = { dose = it },
-                    label = { Text("Dosis") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    selectedMedication?.let { med ->
-                        onMedicationAdded(med, dose)
-                    }
-                },
-                enabled = selectedMedication != null && dose.isNotBlank()
-            ) {
-                Text("Agregar")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
+            OutlinedTextField(
+                value = dose,
+                onValueChange = { dose = it },
+                label = { Text("Dosis") },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
-    )
+    }, confirmButton = {
+        TextButton(
+            onClick = {
+                selectedMedication?.let { med ->
+                    onMedicationAdded(med, dose)
+                }
+            }, enabled = selectedMedication != null && dose.isNotBlank()
+        ) {
+            Text("Agregar")
+        }
+    }, dismissButton = {
+        TextButton(onClick = onDismiss) {
+            Text("Cancelar")
+        }
+    })
 }
 
 @Composable
 private fun UpdateStockDialog(
-    medicationName: String,
-    currentStock: Int,
-    onUpdateStock: (Int) -> Unit,
-    onDismiss: () -> Unit
+    medicationName: String, currentStock: Int, onUpdateStock: (Int) -> Unit, onDismiss: () -> Unit
 ) {
     var newStock by remember { mutableStateOf(currentStock.toString()) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Actualizar stock") },
-        text = {
-            Column {
-                Text(medicationName)
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = newStock,
-                    onValueChange = { newStock = it },
-                    label = { Text("Nuevo stock") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text(
-                    text = "Stock actual: $currentStock",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    newStock.toIntOrNull()?.let { stock ->
-                        onUpdateStock(stock)
-                    }
-                },
-                enabled = newStock.toIntOrNull() != null && newStock.toIntOrNull() != currentStock
-            ) {
-                Text("Actualizar")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Actualizar stock") }, text = {
+        Column {
+            Text(medicationName)
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = newStock,
+                onValueChange = { newStock = it },
+                label = { Text("Nuevo stock") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                text = "Stock actual: $currentStock",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
-    )
+    }, confirmButton = {
+        TextButton(
+            onClick = {
+                newStock.toIntOrNull()?.let { stock ->
+                    onUpdateStock(stock)
+                }
+            }, enabled = newStock.toIntOrNull() != null && newStock.toIntOrNull() != currentStock
+        ) {
+            Text("Actualizar")
+        }
+    }, dismissButton = {
+        TextButton(onClick = onDismiss) {
+            Text("Cancelar")
+        }
+    })
 }
 
 @Composable
@@ -340,8 +340,7 @@ private fun AppointmentStatusBadge(status: AppointmentStatus) {
     }
 
     Surface(
-        color = color.copy(alpha = 0.2f),
-        shape = MaterialTheme.shapes.small
+        color = color.copy(alpha = 0.2f), shape = MaterialTheme.shapes.small
     ) {
         Text(
             text = text,
@@ -356,13 +355,10 @@ private fun AppointmentStatusBadge(status: AppointmentStatus) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun VetAppointmentCard(
-    appointment: Appointment,
-    pet: Pet?,
-    onClick: () -> Unit
+    appointment: Appointment, pet: Pet?, onClick: () -> Unit
 ) {
     Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+        onClick = onClick, modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
@@ -388,8 +384,7 @@ internal fun VetAppointmentCard(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = pet?.name ?: "Mascota",
-                    style = MaterialTheme.typography.titleSmall
+                    text = pet?.name ?: "Mascota", style = MaterialTheme.typography.titleSmall
                 )
                 Text(
                     text = "${pet?.species?.name ?: ""} - ${pet?.breed ?: ""}",
@@ -401,15 +396,13 @@ internal fun VetAppointmentCard(
             // Acción
             if (appointment.status == AppointmentStatus.SCHEDULED) {
                 Button(
-                    onClick = onClick,
-                    modifier = Modifier.height(36.dp)
+                    onClick = onClick, modifier = Modifier.height(36.dp)
                 ) {
                     Text("Iniciar", style = MaterialTheme.typography.bodySmall)
                 }
             } else {
                 Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null
+                    imageVector = Icons.Default.ChevronRight, contentDescription = null
                 )
             }
         }

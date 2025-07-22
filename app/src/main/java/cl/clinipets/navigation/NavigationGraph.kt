@@ -1,6 +1,7 @@
 // navigation/AppNavigation.kt
 package cl.clinipets.navigation
 
+import MedicalConsultationScreen
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -19,7 +20,6 @@ import cl.clinipets.ui.screens.pets.PetsScreen
 import cl.clinipets.ui.screens.profile.ProfileScreen
 import cl.clinipets.ui.screens.profile.SettingsScreen
 import cl.clinipets.ui.screens.vet.InventoryScreen
-import cl.clinipets.ui.screens.vet.MedicalConsultationScreen
 import cl.clinipets.ui.screens.vet.ServicesScreen
 import cl.clinipets.ui.screens.vet.VetDashboardScreen
 import cl.clinipets.ui.screens.vet.VetScheduleScreen

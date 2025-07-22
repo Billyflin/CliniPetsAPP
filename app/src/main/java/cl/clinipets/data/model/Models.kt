@@ -33,14 +33,10 @@ data class Pet(
 )
 
 @Serializable
-enum class PetSpecies {
-    DOG, CAT, OTHER
-}
+enum class PetSpecies { DOG, CAT, OTHER }
 
 @Serializable
-enum class PetSex {
-    MALE, FEMALE
-}
+enum class PetSex { MALE, FEMALE }
 
 // ====================== CITAS ======================
 
@@ -49,9 +45,9 @@ data class Appointment(
     val id: String = "",
     val petId: String = "",
     val ownerId: String = "",
-    val date: String = "",  // formato: "2025-07-20"
-    val time: String = "",  // formato: "14:30"
-    val dateTime: Long = 0,  // timestamp para ordenar
+    val date: String = "",
+    val time: String = "",
+    val dateTime: Long = 0,
     val reason: String = "",
     val status: AppointmentStatus = AppointmentStatus.SCHEDULED,
     val consultationId: String? = null,
@@ -59,12 +55,7 @@ data class Appointment(
 )
 
 @Serializable
-enum class AppointmentStatus {
-    SCHEDULED,    // Agendada
-    CONFIRMED,    // Confirmada
-    COMPLETED,    // Completada
-    CANCELLED     // Cancelada
-}
+enum class AppointmentStatus { SCHEDULED, CONFIRMED, COMPLETED, CANCELLED }
 
 // ====================== CONSULTAS ======================
 
@@ -73,30 +64,23 @@ data class Consultation(
     val id: String = "",
     val appointmentId: String = "",
     val petId: String = "",
-    val veterinarianId: String = "",
-
-    // Datos clínicos básicos
     val weight: Float? = null,
     val temperature: Float? = null,
     val symptoms: String = "",
     val diagnosis: String = "",
     val treatment: String = "",
     val observations: String = "",
-
-    // Servicios aplicados
     val services: List<ServiceApplied> = emptyList(),
     val medications: List<MedicationUsed> = emptyList(),
     val vaccines: List<VaccineApplied> = emptyList(),
-
-    // Cobro
     val total: Double = 0.0,
     val paid: Boolean = false,
-
     val createdAt: Long = System.currentTimeMillis()
 )
 
 @Serializable
 data class ServiceApplied(
+    val serviceId: String = "",
     val name: String = "",
     val price: Double = 0.0
 )
@@ -123,19 +107,13 @@ data class VaccineApplied(
 data class Service(
     val id: String = "",
     val name: String = "",
+    val active: Boolean = true,
     val category: ServiceCategory = ServiceCategory.CONSULTATION,
     val basePrice: Double = 0.0,
-    val isActive: Boolean = true
 )
 
 @Serializable
-enum class ServiceCategory {
-    CONSULTATION,  // Consulta
-    VACCINATION,   // Vacunación
-    SURGERY,       // Cirugía
-    GROOMING,      // Peluquería
-    OTHER         // Otro
-}
+enum class ServiceCategory { CONSULTATION, VACCINATION, SURGERY, GROOMING, OTHER }
 
 // ====================== MEDICAMENTOS ======================
 
@@ -150,14 +128,7 @@ data class Medication(
 )
 
 @Serializable
-enum class MedicationPresentation {
-    TABLET,        // Tableta
-    SYRUP,         // Jarabe
-    INJECTION,     // Inyectable
-    CREAM,         // Crema
-    DROPS,         // Gotas
-    OTHER         // Otro
-}
+enum class MedicationPresentation { TABLET, SYRUP, INJECTION, CREAM, DROPS, OTHER }
 
 // ====================== VACUNAS ======================
 
