@@ -10,16 +10,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import cl.clinipets.ui.screens.LoginScreen
-import cl.clinipets.ui.screens.ProfileScreen
 import cl.clinipets.ui.screens.appointments.AppointmentsScreen
 import cl.clinipets.ui.screens.appointments.CreateAppointmentScreen
 import cl.clinipets.ui.screens.home.HomeScreen
 import cl.clinipets.ui.screens.pets.AddEditPetScreen
 import cl.clinipets.ui.screens.pets.PetDetailScreen
 import cl.clinipets.ui.screens.pets.PetsScreen
+import cl.clinipets.ui.screens.profile.ProfileScreen
 import cl.clinipets.ui.screens.profile.SettingsScreen
 import cl.clinipets.ui.screens.vet.InventoryScreen
 import cl.clinipets.ui.screens.vet.MedicalConsultationScreen
+import cl.clinipets.ui.screens.vet.ServicesScreen
 import cl.clinipets.ui.screens.vet.VetDashboardScreen
 import cl.clinipets.ui.screens.vet.VetScheduleScreen
 import cl.clinipets.ui.viewmodels.AuthViewModel
@@ -61,7 +62,7 @@ fun AppNavigation() {
                 onNavigateToPets = { navController.navigate("pets") },
                 onNavigateToAppointments = { navController.navigate("appointments") },
                 onNavigateToProfile = { navController.navigate("profile") },
-                onNavigateToVetSchedule = { navController.navigate("vet_dashboard") })
+                onNavigateToVetDashboard = { navController.navigate("vet_dashboard") })
         }
 
         // ====================== MASCOTAS ======================
@@ -106,10 +107,12 @@ fun AppNavigation() {
         composable("appointments") {
             AppointmentsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToAddAppointment = { navController.navigate("create_appointment") },
-                onNavigateToAppointmentDetail = { appointmentId ->
-                    navController.navigate("appointment_detail/$appointmentId")
-                })
+                onNavigateToAddAppointment = { navController.navigate("create_appointment") }
+
+//               , onNavigateToAppointmentDetail = { appointmentId ->
+//                    navController.navigate("appointment_detail/$appointmentId")
+//                }
+            )
         }
 
         composable("create_appointment?petId={petId}") { backStackEntry ->
@@ -122,13 +125,11 @@ fun AppNavigation() {
 
         composable("appointment_detail/{appointmentId}") { backStackEntry ->
             val appointmentId = backStackEntry.arguments?.getString("appointmentId") ?: ""
-            // TODO: Implementar pantalla de detalle de cita
         }
 
         // ====================== PERFIL Y CONFIGURACIÓN ======================
         composable("profile") {
             ProfileScreen(onNavigateBack = { navController.popBackStack() }, onSignOut = {
-                // Navegación manejada por LaunchedEffect arriba
             })
         }
 
@@ -147,7 +148,10 @@ fun AppNavigation() {
                 },
                 onNavigateToInventory = { navController.navigate("inventory") },
                 onNavigateToSchedule = { navController.navigate("vet_schedule") },
-            )
+                onNavigateToServices = {
+                    navController.navigate("vet_services")
+
+                })
         }
 
         composable("medical_consultation/{appointmentId}") { backStackEntry ->
@@ -170,5 +174,13 @@ fun AppNavigation() {
                 )
         }
 
+        // ====================== SERVICIOS VETERINARIOS ======================
+        composable("vet_services") {
+            ServicesScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
     }
 }
+

@@ -54,6 +54,7 @@ fun VetDashboardScreen(
     onNavigateBack: () -> Unit,
     onNavigateToConsultation: (String) -> Unit,
     onNavigateToInventory: () -> Unit,
+    onNavigateToServices: () -> Unit,
     onNavigateToSchedule: () -> Unit,
     viewModel: VetViewModel = hiltViewModel()
 ) {
@@ -168,7 +169,7 @@ fun VetDashboardScreen(
                         title = "Servicios",
                         subtitle = "Gestionar precios",
                         icon = Icons.Default.MedicalServices,
-                        onClick = { /* TODO */ },
+                        onClick = { onNavigateToServices() },
                         modifier = Modifier.weight(1f)
                     )
                 }

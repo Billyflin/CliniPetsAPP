@@ -79,7 +79,9 @@ class InventoryViewModel @Inject constructor() : ViewModel() {
                     medications = medications,
                     vaccines = vaccines,
                     services = services,
-                    isLoading = false
+                    isLoading = false,
+                    stock = medications.sumOf { it.stock } +
+                            vaccines.sumOf { it.stock }
                 )
             } catch (e: Exception) {
                 _inventoryState.value = _inventoryState.value.copy(
@@ -242,6 +244,7 @@ data class InventoryState(
     val medications: List<Medication> = emptyList(),
     val vaccines: List<Vaccine> = emptyList(),
     val services: List<Service> = emptyList(),
+    val stock: Int = 0,
     val isLoading: Boolean = false,
     val error: String? = null
 )

@@ -1,6 +1,8 @@
 package cl.clinipets.ui.screens.vet
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,23 +11,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -34,10 +34,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,7 +48,6 @@ import cl.clinipets.data.model.Appointment
 import cl.clinipets.data.model.AppointmentStatus
 import cl.clinipets.data.model.Medication
 import cl.clinipets.data.model.Pet
-import cl.clinipets.data.model.Vaccine
 import cl.clinipets.ui.viewmodels.InventoryViewModel
 
 // ====================== INVENTARIO ======================
@@ -61,16 +58,8 @@ fun InventoryScreen(
     onNavigateBack: () -> Unit,
     viewModel: InventoryViewModel = hiltViewModel()
 ) {
-    val vetState by viewModel.inventoryState.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) }
-    var showAddMedicationDialog by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
-
-    LaunchedEffect(Unit) {
-        viewModel.loadInventory()
-    }
-
-
+    val inventoryState by viewModel.inventoryState.collectAsState()
+    var selectedTab by remember { mutableStateOf(0) }
 
     Scaffold(
         topBar = {
@@ -82,53 +71,10 @@ fun InventoryScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showAddMedicationDialog = true }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Agregar")
-            }
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Resumen
-            vetState.let { summary ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = summary.medications.size.toString(),
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Total items",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Tabs
-            TabRow(
-                selectedTabIndex = selectedTab,
-                modifier = Modifier.padding(top = 8.dp)
-            ) {
+        Column(Modifier.padding(paddingValues)) {
+            TabRow(selectedTabIndex = selectedTab) {
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
@@ -139,66 +85,65 @@ fun InventoryScreen(
                     onClick = { selectedTab = 1 },
                     text = { Text("Vacunas") }
                 )
-                Tab(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    text = { Text("Stock bajo") }
-                )
             }
 
-            when (selectedTab) {
-                0 -> MedicationsInventoryTab(
-                    medications = vetState.medications,
-                    onUpdateStock = { medicationId, newStock ->
-                        viewModel.updateMedicationStock(
-                            medicationId,
-                            newStock,
-                        )
+            if (inventoryState.isLoading) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                when (selectedTab) {
+                    0 -> {
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(inventoryState.medications) { medication ->
+                                Card(Modifier.fillMaxWidth()) {
+                                    Column(Modifier.padding(16.dp)) {
+                                        Row(
+                                            Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Column {
+                                                Text(medication.name, fontWeight = FontWeight.Bold)
+                                                Text(medication.presentation.name)
+                                            }
+                                            Column(horizontalAlignment = Alignment.End) {
+                                                Text("Stock: ${medication.stock}")
+                                                Text("$${medication.unitPrice}")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
-                )
 
-                1 -> VaccinesInventoryTab(
-                    vaccines = vetState.vaccines
-                )
-            }
-        }
-
-        if (showAddMedicationDialog) {
-            AddMedicationDialog(
-                onMedicationAdded = {
-                    showAddMedicationDialog = false
-                    viewModel.loadInventory()
-                },
-                onDismiss = { showAddMedicationDialog = false }
-            )
-        }
-    }
-}
-
-
-@Composable
-private fun MedicationsInventoryTab(
-    medications: List<Medication>,
-    onUpdateStock: (String, Int) -> Unit
-) {
-    if (medications.isEmpty()) {
-        EmptyInventoryState(
-            title = "No hay medicamentos",
-            message = "Agrega medicamentos al inventario"
-        )
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(medications) { medication ->
-                MedicationInventoryCard(
-                    medication = medication,
-                    onUpdateStock = { newStock ->
-                        onUpdateStock(medication.id, newStock)
+                    1 -> {
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(inventoryState.vaccines) { vaccine ->
+                                Card(Modifier.fillMaxWidth()) {
+                                    Column(Modifier.padding(16.dp)) {
+                                        Row(
+                                            Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(vaccine.name, fontWeight = FontWeight.Bold)
+                                            Column(horizontalAlignment = Alignment.End) {
+                                                Text("Stock: ${vaccine.stock}")
+                                                Text("$${vaccine.unitPrice}")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
-                )
+                }
             }
         }
     }
@@ -272,103 +217,68 @@ private fun MedicationInventoryCard(
     }
 }
 
-@Composable
-private fun VaccinesInventoryTab(vaccines: List<Vaccine>) {
-    if (vaccines.isEmpty()) {
-        EmptyInventoryState(
-            title = "No hay vacunas",
-            message = "Agrega vacunas al inventario"
-        )
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(vaccines) { vaccine ->
-                VaccineInventoryCard(vaccine)
-            }
-        }
-    }
-}
 
 @Composable
-private fun VaccineInventoryCard(vaccine: Vaccine) {
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = vaccine.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+fun AddMedicationDialog(
+    medications: List<Medication>,
+    onMedicationAdded: (Medication, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedMedication by remember { mutableStateOf<Medication?>(null) }
+    var dose by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Agregar Medicamento") },
+        text = {
+            Column {
+                // Lista de medicamentos
+                LazyColumn(modifier = Modifier.height(200.dp)) {
+                    items(medications) { medication ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedMedication = medication }
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedMedication == medication,
+                                onClick = { selectedMedication = medication }
+                            )
+                            Text("${medication.name} - $${medication.unitPrice}")
+                        }
+                    }
                 }
-            }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Precio: ${vaccine.unitPrice}",
-                    style = MaterialTheme.typography.bodySmall
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = dose,
+                    onValueChange = { dose = it },
+                    label = { Text("Dosis") },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    selectedMedication?.let { med ->
+                        onMedicationAdded(med, dose)
+                    }
+                },
+                enabled = selectedMedication != null && dose.isNotBlank()
+            ) {
+                Text("Agregar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
         }
-    }
-}
-
-
-@Composable
-private fun EmptyInventoryState(
-    title: String,
-    message: String
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.Inventory,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium
-        )
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun AddMedicationDialog(
-    onMedicationAdded: () -> Unit,
-    onDismiss: () -> Unit,
-    viewModel: InventoryViewModel = hiltViewModel()
-) {
-
+    )
 }
 
 @Composable
