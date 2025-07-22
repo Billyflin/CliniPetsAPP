@@ -15,15 +15,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Inventory
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -56,9 +52,6 @@ import cl.clinipets.data.model.Medication
 import cl.clinipets.data.model.Pet
 import cl.clinipets.data.model.Vaccine
 import cl.clinipets.ui.viewmodels.InventoryViewModel
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 // ====================== INVENTARIO ======================
 
@@ -77,9 +70,7 @@ fun InventoryScreen(
         viewModel.loadInventory()
     }
 
-    LaunchedEffect(searchQuery) {
-        viewModel.searchMedications(searchQuery)
-    }
+
 
     Scaffold(
         topBar = {
@@ -120,7 +111,7 @@ fun InventoryScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = summary.totalItems.toString(),
+                                text = summary.medications.size.toString(),
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold
                             )
@@ -129,53 +120,9 @@ fun InventoryScreen(
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "${summary.totalValue}",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = "Valor total",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = summary.lowStockCount.toString(),
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = if (summary.lowStockCount > 0)
-                                    MaterialTheme.colorScheme.error
-                                else MaterialTheme.colorScheme.tertiary
-                            )
-                            Text(
-                                text = "Stock bajo",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
                     }
                 }
             }
-
-            // Búsqueda
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                placeholder = { Text("Buscar medicamento...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Limpiar")
-                        }
-                    }
-                }
-            )
 
             // Tabs
             TabRow(
@@ -201,25 +148,17 @@ fun InventoryScreen(
 
             when (selectedTab) {
                 0 -> MedicationsInventoryTab(
-                    medications = if (searchQuery.isNotEmpty())
-                        vetState.filteredMedications
-                    else vetState.medications,
+                    medications = vetState.medications,
                     onUpdateStock = { medicationId, newStock ->
                         viewModel.updateMedicationStock(
                             medicationId,
                             newStock,
-                            "Ajuste manual de inventario"
                         )
                     }
                 )
 
                 1 -> VaccinesInventoryTab(
                     vaccines = vetState.vaccines
-                )
-
-                2 -> LowStockTab(
-                    medications = vetState.lowStockMedications,
-                    vaccines = vetState.lowStockVaccines
                 )
             }
         }
@@ -295,34 +234,17 @@ private fun MedicationInventoryCard(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "${medication.activeIngredient} - ${medication.presentation}",
+                        text = "${medication.presentation}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = medication.laboratory,
+                        text = medication.unitPrice.toString(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "${medication.stock} unidades",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = when {
-                            medication.stock <= medication.minStock -> MaterialTheme.colorScheme.error
-                            medication.stock <= medication.minStock * 1.5 -> MaterialTheme.colorScheme.tertiary
-                            else -> MaterialTheme.colorScheme.onSurface
-                        }
-                    )
-                    Text(
-                        text = "Min: ${medication.minStock}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
 
             Row(
@@ -333,44 +255,6 @@ private fun MedicationInventoryCard(
                     text = "Precio: ${medication.unitPrice}",
                     style = MaterialTheme.typography.bodySmall
                 )
-                medication.expirationDate?.let { expDate ->
-                    val daysUntilExpiration =
-                        ((expDate - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)).toInt()
-                    Text(
-                        text = when {
-                            daysUntilExpiration < 0 -> "VENCIDO"
-                            daysUntilExpiration <= 30 -> "Vence en $daysUntilExpiration días"
-                            daysUntilExpiration <= 90 -> "Vence en ${daysUntilExpiration / 30} meses"
-                            else -> "Vence: ${
-                                SimpleDateFormat(
-                                    "MM/yyyy",
-                                    Locale.getDefault()
-                                ).format(Date(expDate))
-                            }"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = when {
-                            daysUntilExpiration < 0 -> MaterialTheme.colorScheme.error
-                            daysUntilExpiration <= 30 -> MaterialTheme.colorScheme.error
-                            daysUntilExpiration <= 90 -> MaterialTheme.colorScheme.tertiary
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
-                }
-            }
-
-            if (medication.isControlled) {
-                Surface(
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Text(
-                        text = "CONTROLADO",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                    )
-                }
             }
         }
     }
@@ -430,33 +314,6 @@ private fun VaccineInventoryCard(vaccine: Vaccine) {
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
-                        text = vaccine.manufacturer,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Previene: ${vaccine.diseases.joinToString(", ")}",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "${vaccine.stock} dosis",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = when {
-                            vaccine.stock <= vaccine.minStock -> MaterialTheme.colorScheme.error
-                            vaccine.stock <= vaccine.minStock * 1.5 -> MaterialTheme.colorScheme.tertiary
-                            else -> MaterialTheme.colorScheme.onSurface
-                        }
-                    )
-                    Text(
-                        text = "Min: ${vaccine.minStock}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
 
@@ -464,10 +321,6 @@ private fun VaccineInventoryCard(vaccine: Vaccine) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = "Especies: ${vaccine.species.joinToString(", ") { it.name }}",
-                    style = MaterialTheme.typography.bodySmall
-                )
                 Text(
                     text = "Precio: ${vaccine.unitPrice}",
                     style = MaterialTheme.typography.bodySmall
@@ -477,130 +330,6 @@ private fun VaccineInventoryCard(vaccine: Vaccine) {
     }
 }
 
-
-@Composable
-internal fun LowStockTab(
-    medications: List<Medication>,
-    vaccines: List<Vaccine>
-) {
-    if (medications.isEmpty() && vaccines.isEmpty()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.tertiary
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "¡Todo en orden!",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(
-                text = "No hay items con stock bajo",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (medications.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "Medicamentos con stock bajo",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                items(medications) { medication ->
-                    LowStockCard(
-                        name = medication.name,
-                        currentStock = medication.stock,
-                        minStock = medication.minStock,
-                        subtitle = "${medication.presentation} - ${medication.laboratory}"
-                    )
-                }
-            }
-
-            if (vaccines.isNotEmpty()) {
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Vacunas con stock bajo",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                items(vaccines) { vaccine ->
-                    LowStockCard(
-                        name = vaccine.name,
-                        currentStock = vaccine.stock,
-                        minStock = vaccine.minStock,
-                        subtitle = vaccine.manufacturer
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LowStockCard(
-    name: String,
-    currentStock: Int,
-    minStock: Int,
-    subtitle: String
-) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f)
-                )
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "$currentStock / $minStock",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.error
-                )
-                Text(
-                    text = "Actual / Mínimo",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f)
-                )
-            }
-        }
-    }
-}
 
 @Composable
 private fun EmptyInventoryState(
@@ -695,7 +424,7 @@ private fun UpdateStockDialog(
 private fun AppointmentStatusBadge(status: AppointmentStatus) {
     val (color, text) = when (status) {
         AppointmentStatus.SCHEDULED -> MaterialTheme.colorScheme.primary to "Agendada"
-        AppointmentStatus.IN_PROGRESS -> MaterialTheme.colorScheme.secondary to "En curso"
+        AppointmentStatus.CONFIRMED -> MaterialTheme.colorScheme.secondary to "Confirmada"
         AppointmentStatus.COMPLETED -> MaterialTheme.colorScheme.tertiary to "Completada"
         else -> MaterialTheme.colorScheme.surfaceVariant to status.name
     }
@@ -756,11 +485,6 @@ internal fun VetAppointmentCard(
                     text = "${pet?.species?.name ?: ""} - ${pet?.breed ?: ""}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = appointment.serviceType.name,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
                 )
             }
 

@@ -24,9 +24,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MedicalServices
-import androidx.compose.material.icons.filled.PersonOff
 import androidx.compose.material.icons.filled.Pets
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -273,10 +271,6 @@ private fun AppointmentCard(
                     contentDescription = null,
                     modifier = Modifier.size(20.dp)
                 )
-                Text(
-                    text = appointment.serviceType.name,
-                    style = MaterialTheme.typography.bodyMedium
-                )
             }
 
             if (appointment.reason.isNotBlank()) {
@@ -329,10 +323,8 @@ private fun AppointmentStatusChip(status: AppointmentStatus) {
     val (color, icon) = when (status) {
         AppointmentStatus.SCHEDULED -> MaterialTheme.colorScheme.primary to Icons.Default.Schedule
         AppointmentStatus.CONFIRMED -> MaterialTheme.colorScheme.tertiary to Icons.Default.CheckCircle
-        AppointmentStatus.IN_PROGRESS -> MaterialTheme.colorScheme.secondary to Icons.Default.PlayArrow
         AppointmentStatus.COMPLETED -> MaterialTheme.colorScheme.surfaceVariant to Icons.Default.Done
         AppointmentStatus.CANCELLED -> MaterialTheme.colorScheme.error to Icons.Default.Cancel
-        AppointmentStatus.NO_SHOW -> MaterialTheme.colorScheme.error to Icons.Default.PersonOff
     }
 
     AssistChip(
@@ -357,10 +349,8 @@ private fun getStatusText(status: AppointmentStatus): String {
     return when (status) {
         AppointmentStatus.SCHEDULED -> "Agendada"
         AppointmentStatus.CONFIRMED -> "Confirmada"
-        AppointmentStatus.IN_PROGRESS -> "En curso"
         AppointmentStatus.COMPLETED -> "Completada"
         AppointmentStatus.CANCELLED -> "Cancelada"
-        AppointmentStatus.NO_SHOW -> "No asistió"
     }
 }
 

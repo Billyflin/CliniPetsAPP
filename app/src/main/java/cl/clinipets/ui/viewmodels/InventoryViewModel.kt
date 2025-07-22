@@ -1,19 +1,18 @@
 // ui/viewmodels/InventoryViewModel.kt
 package cl.clinipets.ui.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cl.clinipets.data.model.InventoryItemType
-import cl.clinipets.data.model.InventoryMovement
 import cl.clinipets.data.model.Medication
-import cl.clinipets.data.model.MedicationCategory
-import cl.clinipets.data.model.MovementType
+import cl.clinipets.data.model.MedicationPresentation
+import cl.clinipets.data.model.Service
+import cl.clinipets.data.model.ServiceCategory
 import cl.clinipets.data.model.Vaccine
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.firestore.ktx.toObject
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
+import com.google.firebase.firestore.firestore
+import com.google.firebase.firestore.toObject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,7 +39,7 @@ class InventoryViewModel @Inject constructor() : ViewModel() {
 
                 // Cargar medicamentos
                 val medicationsSnapshot = firestore.collection("medications")
-                    .whereEqualTo("isActive", true)
+                    .whereEqualTo("active", true)
                     .orderBy("name")
                     .get()
                     .await()
@@ -51,7 +50,7 @@ class InventoryViewModel @Inject constructor() : ViewModel() {
 
                 // Cargar vacunas
                 val vaccinesSnapshot = firestore.collection("vaccines")
-                    .whereEqualTo("isActive", true)
+                    .whereEqualTo("active", true)
                     .orderBy("name")
                     .get()
                     .await()
@@ -60,21 +59,26 @@ class InventoryViewModel @Inject constructor() : ViewModel() {
                     doc.toObject<Vaccine>()?.copy(id = doc.id)
                 }
 
-                // Calcular estadísticas
-                val totalItems = medications.size + vaccines.size
-                val totalValue = medications.sumOf { it.stock * it.unitPrice } +
-                        vaccines.sumOf { it.stock * it.unitPrice }
-                val lowStockMedications = medications.filter { it.stock <= it.minStock }
-                val lowStockVaccines = vaccines.filter { it.stock <= it.minStock }
+                // Cargar servicios
+                val servicesSnapshot = firestore.collection("services")
+                    .whereEqualTo("active", true)
+                    .orderBy("category")
+                    .orderBy("name")
+                    .get()
+                    .await()
 
+                val services = servicesSnapshot.documents.mapNotNull { doc ->
+                    doc.toObject<Service>()?.copy(id = doc.id)
+                }
+
+                // Actualizar el estado del inventario
+                Log.d("InventoryViewModel", "Medications: $medications")
+                Log.d("InventoryViewModel", "Vaccines: $vaccines")
+                Log.d("InventoryViewModel", "Services: $services")
                 _inventoryState.value = _inventoryState.value.copy(
                     medications = medications,
                     vaccines = vaccines,
-                    lowStockMedications = lowStockMedications,
-                    lowStockVaccines = lowStockVaccines,
-                    totalItems = totalItems,
-                    totalValue = totalValue,
-                    lowStockCount = lowStockMedications.size + lowStockVaccines.size,
+                    services = services,
                     isLoading = false
                 )
             } catch (e: Exception) {
@@ -88,128 +92,86 @@ class InventoryViewModel @Inject constructor() : ViewModel() {
 
     fun addMedication(
         name: String,
-        activeIngredient: String,
-        presentation: String,
-        laboratory: String,
-        category: MedicationCategory,
-        unitPrice: Double,
-        purchasePrice: Double,
-        initialStock: Int,
-        minStock: Int,
-        expirationDate: Long?,
-        batch: String,
-        isControlled: Boolean
+        presentation: MedicationPresentation,
+        stock: Int,
+        unitPrice: Double
     ) {
         viewModelScope.launch {
             try {
-                _inventoryState.value = _inventoryState.value.copy(isLoading = true)
-
                 val medication = Medication(
                     name = name,
-                    activeIngredient = activeIngredient,
                     presentation = presentation,
-                    laboratory = laboratory,
-                    category = category,
+                    stock = stock,
                     unitPrice = unitPrice,
-                    purchasePrice = purchasePrice,
-                    stock = initialStock,
-                    minStock = minStock,
-                    expirationDate = expirationDate,
-                    batch = batch,
-                    isControlled = isControlled,
-                    isActive = true,
-                    lastUpdated = System.currentTimeMillis()
+                    active = true
                 )
 
-                val docRef = firestore.collection("medications")
+                firestore.collection("medications")
                     .add(medication)
                     .await()
-
-                // Registrar movimiento inicial
-                recordInventoryMovement(
-                    itemId = docRef.id,
-                    itemType = InventoryItemType.MEDICATION,
-                    movementType = MovementType.IN,
-                    quantity = initialStock,
-                    unitPrice = purchasePrice,
-                    reason = "Stock inicial"
-                )
-
-                _inventoryState.value = _inventoryState.value.copy(
-                    isLoading = false,
-                    isMedicationAdded = true
-                )
 
                 loadInventory()
             } catch (e: Exception) {
                 _inventoryState.value = _inventoryState.value.copy(
-                    isLoading = false,
                     error = "Error al agregar medicamento: ${e.message}"
                 )
             }
         }
     }
 
-    fun updateMedicationStock(
-        medicationId: String,
-        newStock: Int,
-        reason: String,
-        unitPrice: Double? = null
-    ) {
+    fun addVaccine(name: String, stock: Int, unitPrice: Double) {
         viewModelScope.launch {
             try {
-                val medicationRef = firestore.collection("medications").document(medicationId)
+                val vaccine = Vaccine(
+                    name = name,
+                    stock = stock,
+                    unitPrice = unitPrice,
+                    active = true
+                )
 
-                firestore.runTransaction { transaction ->
-                    val medicationDoc = transaction.get(medicationRef)
-                    val currentStock = medicationDoc.getLong("stock")?.toInt() ?: 0
-                    val difference = newStock - currentStock
+                firestore.collection("vaccines")
+                    .add(vaccine)
+                    .await()
 
-                    transaction.update(
-                        medicationRef, mapOf(
-                            "stock" to newStock,
-                            "lastUpdated" to System.currentTimeMillis()
-                        )
-                    )
+                loadInventory()
+            } catch (e: Exception) {
+                _inventoryState.value = _inventoryState.value.copy(
+                    error = "Error al agregar vacuna: ${e.message}"
+                )
+            }
+        }
+    }
 
-                    // Determinar tipo de movimiento
-                    val movementType = when {
-                        difference > 0 -> MovementType.IN
-                        difference < 0 && reason.contains(
-                            "consulta",
-                            ignoreCase = true
-                        ) -> MovementType.OUT
+    fun addService(name: String, category: ServiceCategory, basePrice: Double) {
+        viewModelScope.launch {
+            try {
+                val service = Service(
+                    name = name,
+                    category = category,
+                    basePrice = basePrice,
+                    isActive = true
+                )
 
-                        difference < 0 && reason.contains(
-                            "vencido",
-                            ignoreCase = true
-                        ) -> MovementType.EXPIRED
+                firestore.collection("services")
+                    .add(service)
+                    .await()
 
-                        difference < 0 && reason.contains(
-                            "dañado",
-                            ignoreCase = true
-                        ) -> MovementType.DAMAGED
+                loadInventory()
+            } catch (e: Exception) {
+                _inventoryState.value = _inventoryState.value.copy(
+                    error = "Error al agregar servicio: ${e.message}"
+                )
+            }
+        }
+    }
 
-                        else -> MovementType.ADJUSTMENT
-                    }
-
-                    // Registrar movimiento
-                    val movement = InventoryMovement(
-                        itemId = medicationId,
-                        itemType = InventoryItemType.MEDICATION,
-                        movementType = movementType,
-                        quantity = kotlin.math.abs(difference),
-                        unitPrice = unitPrice ?: medicationDoc.getDouble("unitPrice") ?: 0.0,
-                        totalPrice = kotlin.math.abs(difference) * (unitPrice
-                            ?: medicationDoc.getDouble("unitPrice") ?: 0.0),
-                        reason = reason,
-                        performedBy = auth.currentUser?.uid ?: "",
-                        timestamp = System.currentTimeMillis()
-                    )
-
-                    firestore.collection("inventory_movements")
-                        .add(movement)
-                }.await()
+    fun updateMedicationStock(medicationId: String, newStock: Int) {
+        viewModelScope.launch {
+            try {
+                firestore.collection("medications")
+                    .document(medicationId)
+                    .update("stock", newStock)
+                    .await()
 
                 loadInventory()
             } catch (e: Exception) {
@@ -220,234 +182,66 @@ class InventoryViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    fun updateVaccineStock(
-        vaccineId: String,
-        newStock: Int,
-        reason: String
-    ) {
+    fun updateVaccineStock(vaccineId: String, newStock: Int) {
         viewModelScope.launch {
             try {
-                val vaccineRef = firestore.collection("vaccines").document(vaccineId)
-
-                firestore.runTransaction { transaction ->
-                    val vaccineDoc = transaction.get(vaccineRef)
-                    val currentStock = vaccineDoc.getLong("stock")?.toInt() ?: 0
-                    val difference = newStock - currentStock
-
-                    transaction.update(
-                        vaccineRef, mapOf(
-                            "stock" to newStock,
-                            "lastUpdated" to System.currentTimeMillis()
-                        )
-                    )
-
-                    val movementType = when {
-                        difference > 0 -> MovementType.IN
-                        difference < 0 && reason.contains(
-                            "vacunación",
-                            ignoreCase = true
-                        ) -> MovementType.OUT
-
-                        else -> MovementType.ADJUSTMENT
-                    }
-
-                    val movement = InventoryMovement(
-                        itemId = vaccineId,
-                        itemType = InventoryItemType.VACCINE,
-                        movementType = movementType,
-                        quantity = kotlin.math.abs(difference),
-                        unitPrice = vaccineDoc.getDouble("unitPrice") ?: 0.0,
-                        totalPrice = kotlin.math.abs(difference) * (vaccineDoc.getDouble("unitPrice")
-                            ?: 0.0),
-                        reason = reason,
-                        performedBy = auth.currentUser?.uid ?: "",
-                        timestamp = System.currentTimeMillis()
-                    )
-
-                    firestore.collection("inventory_movements")
-                        .add(movement)
-                }.await()
+                firestore.collection("vaccines")
+                    .document(vaccineId)
+                    .update("stock", newStock)
+                    .await()
 
                 loadInventory()
             } catch (e: Exception) {
                 _inventoryState.value = _inventoryState.value.copy(
-                    error = "Error al actualizar stock de vacuna: ${e.message}"
+                    error = "Error al actualizar stock: ${e.message}"
                 )
             }
         }
     }
 
-    fun processConsultationInventoryMovements(
-        consultationId: String,
-        movements: List<PendingInventoryMovement>
-    ) {
+    fun updateServicePrice(serviceId: String, newPrice: Double) {
         viewModelScope.launch {
             try {
-                movements.forEach { movement ->
-                    when (movement.itemType) {
-                        InventoryItemType.MEDICATION -> {
-                            updateMedicationStock(
-                                medicationId = movement.itemId,
-                                newStock = getCurrentStock(
-                                    movement.itemId,
-                                    movement.itemType
-                                ) + movement.quantity,
-                                reason = movement.reason
-                            )
-                        }
+                firestore.collection("services")
+                    .document(serviceId)
+                    .update("basePrice", newPrice)
+                    .await()
 
-                        InventoryItemType.VACCINE -> {
-                            updateVaccineStock(
-                                vaccineId = movement.itemId,
-                                newStock = getCurrentStock(
-                                    movement.itemId,
-                                    movement.itemType
-                                ) + movement.quantity,
-                                reason = movement.reason
-                            )
-                        }
-
-                        else -> {}
-                    }
-                }
+                loadInventory()
             } catch (e: Exception) {
                 _inventoryState.value = _inventoryState.value.copy(
-                    error = "Error al procesar movimientos de inventario: ${e.message}"
+                    error = "Error al actualizar precio: ${e.message}"
                 )
             }
         }
     }
 
-    private suspend fun getCurrentStock(itemId: String, itemType: InventoryItemType): Int {
-        return when (itemType) {
-            InventoryItemType.MEDICATION -> {
-                val doc = firestore.collection("medications").document(itemId).get().await()
-                doc.getLong("stock")?.toInt() ?: 0
-            }
-
-            InventoryItemType.VACCINE -> {
-                val doc = firestore.collection("vaccines").document(itemId).get().await()
-                doc.getLong("stock")?.toInt() ?: 0
-            }
-
-            else -> 0
-        }
-    }
-
-    fun loadInventoryMovements(itemId: String? = null, limit: Int = 50) {
+    fun deleteItem(collection: String, itemId: String) {
         viewModelScope.launch {
             try {
-                var query = firestore.collection("inventory_movements")
-                    .orderBy("timestamp", Query.Direction.DESCENDING)
-                    .limit(limit.toLong())
+                firestore.collection(collection)
+                    .document(itemId)
+                    .update("isActive", false)
+                    .await()
 
-                if (itemId != null) {
-                    query = query.whereEqualTo("itemId", itemId)
-                }
-
-                val snapshot = query.get().await()
-
-                val movements = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject<InventoryMovement>()?.copy(id = doc.id)
-                }
-
-                _inventoryState.value = _inventoryState.value.copy(
-                    inventoryMovements = movements
-                )
+                loadInventory()
             } catch (e: Exception) {
                 _inventoryState.value = _inventoryState.value.copy(
-                    error = "Error al cargar movimientos: ${e.message}"
+                    error = "Error al eliminar: ${e.message}"
                 )
             }
         }
     }
 
-    fun searchMedications(query: String) {
-        val filtered = if (query.isBlank()) {
-            _inventoryState.value.medications
-        } else {
-            _inventoryState.value.medications.filter { medication ->
-                medication.name.contains(query, ignoreCase = true) ||
-                        medication.activeIngredient.contains(query, ignoreCase = true) ||
-                        medication.laboratory.contains(query, ignoreCase = true) ||
-                        medication.presentation.contains(query, ignoreCase = true)
-            }
-        }
-
-        _inventoryState.value = _inventoryState.value.copy(
-            filteredMedications = filtered,
-            searchQuery = query
-        )
-    }
-
-    fun checkExpirations() {
-        viewModelScope.launch {
-            val thirtyDaysFromNow = System.currentTimeMillis() + (30 * 24 * 60 * 60 * 1000L)
-
-            val expiringMedications = _inventoryState.value.medications.filter { medication ->
-                medication.expirationDate?.let { it <= thirtyDaysFromNow } ?: false
-            }
-
-            _inventoryState.value = _inventoryState.value.copy(
-                expiringMedications = expiringMedications
-            )
-        }
-    }
-
-    private suspend fun recordInventoryMovement(
-        itemId: String,
-        itemType: InventoryItemType,
-        movementType: MovementType,
-        quantity: Int,
-        unitPrice: Double,
-        reason: String,
-        consultationId: String? = null,
-        supplierId: String? = null,
-        invoiceNumber: String? = null
-    ) {
-        val movement = InventoryMovement(
-            itemId = itemId,
-            itemType = itemType,
-            movementType = movementType,
-            quantity = quantity,
-            unitPrice = unitPrice,
-            totalPrice = quantity * unitPrice,
-            reason = reason,
-            consultationId = consultationId,
-            supplierId = supplierId,
-            invoiceNumber = invoiceNumber,
-            performedBy = auth.currentUser?.uid ?: "",
-            timestamp = System.currentTimeMillis()
-        )
-
-        firestore.collection("inventory_movements")
-            .add(movement)
-            .await()
-    }
-
-    fun clearState() {
-        _inventoryState.value = _inventoryState.value.copy(
-            isMedicationAdded = false,
-            isVaccineAdded = false,
-            error = null
-        )
+    fun clearError() {
+        _inventoryState.value = _inventoryState.value.copy(error = null)
     }
 }
 
 data class InventoryState(
     val medications: List<Medication> = emptyList(),
     val vaccines: List<Vaccine> = emptyList(),
-    val filteredMedications: List<Medication> = emptyList(),
-    val lowStockMedications: List<Medication> = emptyList(),
-    val lowStockVaccines: List<Vaccine> = emptyList(),
-    val expiringMedications: List<Medication> = emptyList(),
-    val inventoryMovements: List<InventoryMovement> = emptyList(),
-    val totalItems: Int = 0,
-    val totalValue: Double = 0.0,
-    val lowStockCount: Int = 0,
-    val searchQuery: String = "",
+    val services: List<Service> = emptyList(),
     val isLoading: Boolean = false,
-    val isMedicationAdded: Boolean = false,
-    val isVaccineAdded: Boolean = false,
     val error: String? = null
 )

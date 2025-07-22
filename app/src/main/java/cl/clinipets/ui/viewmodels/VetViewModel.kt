@@ -1,14 +1,13 @@
-// ui/viewmodels/VetViewModel.kt (SIMPLIFICADO)
+// ui/viewmodels/VetViewModel.kt
 package cl.clinipets.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.data.model.Appointment
-import cl.clinipets.data.model.MedicalConsultation
+import cl.clinipets.data.model.AppointmentStatus
+import cl.clinipets.data.model.Consultation
 import cl.clinipets.data.model.Pet
-import cl.clinipets.data.model.VeterinaryService
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
@@ -48,7 +47,7 @@ class VetViewModel @Inject constructor() : ViewModel() {
                         isVeterinarian = true,
                         currentVetId = userId
                     )
-                    loadVetDashboardData()
+                    loadTodayAppointments()
                 } else {
                     _vetState.value = _vetState.value.copy(isVeterinarian = false)
                 }
@@ -58,23 +57,15 @@ class VetViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    private fun loadVetDashboardData() {
-        loadTodayAppointments()
-        loadVetSchedule()
-        loadRecentConsultations()
-    }
-
     fun loadTodayAppointments() {
-        val vetId = _vetState.value.currentVetId ?: return
-
         viewModelScope.launch {
             try {
                 val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
                     .format(java.util.Date())
 
                 val snapshot = firestore.collection("appointments")
-                    .whereEqualTo("veterinarianId", vetId)
                     .whereEqualTo("date", today)
+                    .whereEqualTo("status", AppointmentStatus.SCHEDULED.name)
                     .orderBy("time")
                     .get()
                     .await()
@@ -83,110 +74,50 @@ class VetViewModel @Inject constructor() : ViewModel() {
                     doc.toObject<Appointment>()?.copy(id = doc.id)
                 }
 
-                val appointmentsWithPetInfo = appointments.map { appointment ->
+                // Cargar información de mascotas
+                val appointmentsWithPets = appointments.map { appointment ->
                     val petDoc = firestore.collection("pets")
                         .document(appointment.petId)
                         .get()
                         .await()
 
-                    val pet = petDoc.toObject<Pet>()
+                    val pet = petDoc.toObject<Pet>()?.copy(id = petDoc.id)
                     appointment to pet
                 }
 
                 _vetState.value = _vetState.value.copy(
-                    todayAppointments = appointmentsWithPetInfo
+                    todayAppointments = appointmentsWithPets
                 )
             } catch (e: Exception) {
                 _vetState.value = _vetState.value.copy(
-                    error = "Error al cargar citas del día: ${e.message}"
+                    error = "Error al cargar citas: ${e.message}"
                 )
             }
         }
     }
 
-    fun loadVetSchedule() {
-        val vetId = _vetState.value.currentVetId ?: return
-
-        viewModelScope.launch {
-            try {
-                val userDoc = firestore.collection("users")
-                    .document(vetId)
-                    .get()
-                    .await()
-
-                val schedule = userDoc.get("schedule") as? Map<String, Any> ?: emptyMap()
-
-                val daySchedules = mutableMapOf<Int, DaySchedule>()
-                for (day in 1..7) {
-                    val dayData = schedule[day.toString()] as? Map<String, Any>
-                    daySchedules[day] = if (dayData != null) {
-                        DaySchedule(
-                            isActive = dayData["isActive"] as? Boolean == true,
-                            startTime = dayData["startTime"] as? String ?: "09:00",
-                            endTime = dayData["endTime"] as? String ?: "18:00"
-                        )
-                    } else {
-                        DaySchedule()
-                    }
-                }
-
-                _vetState.value = _vetState.value.copy(
-                    vetSchedule = daySchedules
-                )
-            } catch (e: Exception) {
-                // Error handling silencioso
-            }
-        }
-    }
-
-    fun updateVetSchedule(dayNumber: Int, isActive: Boolean, startTime: String, endTime: String) {
-        val vetId = _vetState.value.currentVetId ?: return
-
-        viewModelScope.launch {
-            try {
-                val scheduleUpdate = mapOf(
-                    "schedule.$dayNumber" to mapOf(
-                        "isActive" to isActive,
-                        "startTime" to startTime,
-                        "endTime" to endTime
-                    )
-                )
-
-                firestore.collection("users")
-                    .document(vetId)
-                    .update(scheduleUpdate)
-                    .await()
-
-                loadVetSchedule()
-            } catch (e: Exception) {
-                _vetState.value = _vetState.value.copy(
-                    error = "Error al actualizar horario: ${e.message}"
-                )
-            }
-        }
-    }
-
-    fun loadRecentConsultations() {
-        val vetId = _vetState.value.currentVetId ?: return
-
+    fun loadWeekStats() {
         viewModelScope.launch {
             try {
                 val oneWeekAgo = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000)
 
-                val snapshot = firestore.collection("consultations")
-                    .whereEqualTo("veterinarianId", vetId)
+                // Contar consultas de la semana
+                val consultationsSnapshot = firestore.collection("consultations")
                     .whereGreaterThan("createdAt", oneWeekAgo)
-                    .orderBy("createdAt", Query.Direction.DESCENDING)
-                    .limit(20)
                     .get()
                     .await()
 
-                val consultations = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject<MedicalConsultation>()?.copy(id = doc.id)
-                }
+                val totalConsultations = consultationsSnapshot.size()
+                val totalRevenue = consultationsSnapshot.documents
+                    .mapNotNull { it.toObject<Consultation>() }
+                    .filter { it.paid }
+                    .sumOf { it.total }
 
                 _vetState.value = _vetState.value.copy(
-                    recentConsultations = consultations
+                    weeklyStats = WeeklyStats(
+                        consultations = totalConsultations,
+                        revenue = totalRevenue
+                    )
                 )
             } catch (e: Exception) {
                 // Error handling silencioso
@@ -194,32 +125,7 @@ class VetViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    fun loadServices() {
-        viewModelScope.launch {
-            try {
-                val snapshot = firestore.collection("services")
-                    .whereEqualTo("isActive", true)
-                    .orderBy("category")
-                    .orderBy("name")
-                    .get()
-                    .await()
-
-                val services = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject<VeterinaryService>()?.copy(id = doc.id)
-                }
-
-                _vetState.value = _vetState.value.copy(
-                    services = services
-                )
-            } catch (e: Exception) {
-                _vetState.value = _vetState.value.copy(
-                    error = "Error al cargar servicios: ${e.message}"
-                )
-            }
-        }
-    }
-
-    fun clearState() {
+    fun clearError() {
         _vetState.value = _vetState.value.copy(error = null)
     }
 }
@@ -228,15 +134,11 @@ data class VetState(
     val isVeterinarian: Boolean = false,
     val currentVetId: String? = null,
     val todayAppointments: List<Pair<Appointment, Pet?>> = emptyList(),
-    val vetSchedule: Map<Int, DaySchedule> = emptyMap(),
-    val services: List<VeterinaryService> = emptyList(),
-    val recentConsultations: List<MedicalConsultation> = emptyList(),
-    val isLoading: Boolean = false,
+    val weeklyStats: WeeklyStats = WeeklyStats(),
     val error: String? = null
 )
 
-data class DaySchedule(
-    val isActive: Boolean = false,
-    val startTime: String = "09:00",
-    val endTime: String = "18:00"
+data class WeeklyStats(
+    val consultations: Int = 0,
+    val revenue: Double = 0.0
 )

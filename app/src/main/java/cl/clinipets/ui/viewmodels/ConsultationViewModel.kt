@@ -5,18 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.data.model.Appointment
 import cl.clinipets.data.model.AppointmentStatus
-import cl.clinipets.data.model.InventoryItemType
-import cl.clinipets.data.model.MedicalConsultation
-import cl.clinipets.data.model.Medication
+import cl.clinipets.data.model.Consultation
 import cl.clinipets.data.model.MedicationUsed
-import cl.clinipets.data.model.PaymentMethod
-import cl.clinipets.data.model.PaymentStatus
 import cl.clinipets.data.model.Pet
-import cl.clinipets.data.model.ServiceProvided
+import cl.clinipets.data.model.ServiceApplied
 import cl.clinipets.data.model.VaccinationRecord
-import cl.clinipets.data.model.Vaccine
 import cl.clinipets.data.model.VaccineApplied
-import cl.clinipets.data.model.VeterinaryService
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
@@ -53,12 +47,12 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
                     appointmentDoc.toObject<Appointment>()?.copy(id = appointmentDoc.id)
 
                 if (appointment != null) {
-                    // Crear consulta médica
-                    val consultation = MedicalConsultation(
+                    // Crear consulta
+                    val consultation = Consultation(
                         appointmentId = appointmentId,
                         petId = appointment.petId,
                         veterinarianId = veterinarianId,
-                        startTime = System.currentTimeMillis()
+                        createdAt = System.currentTimeMillis()
                     )
 
                     val consultationRef = firestore.collection("consultations")
@@ -70,7 +64,7 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
                         .document(appointmentId)
                         .update(
                             mapOf(
-                                "status" to AppointmentStatus.IN_PROGRESS.name,
+                                "status" to AppointmentStatus.COMPLETED.name,
                                 "consultationId" to consultationRef.id
                             )
                         )
@@ -101,16 +95,12 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
     }
 
     fun updateClinicalData(
-        weight: Float? = null,
-        temperature: Float? = null,
-        heartRate: Int? = null,
-        respiratoryRate: Int? = null,
-        symptoms: String = "",
-        clinicalExam: String = "",
-        diagnosis: String = "",
-        treatment: String = "",
-        observations: String = "",
-        recommendations: String = ""
+        weight: Float?,
+        temperature: Float?,
+        symptoms: String,
+        diagnosis: String,
+        treatment: String,
+        observations: String
     ) {
         val consultationId = _consultationState.value.activeConsultation?.id ?: return
 
@@ -119,42 +109,28 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
                 val updates = mapOf(
                     "weight" to weight,
                     "temperature" to temperature,
-                    "heartRate" to heartRate,
-                    "respiratoryRate" to respiratoryRate,
                     "symptoms" to symptoms,
-                    "clinicalExam" to clinicalExam,
                     "diagnosis" to diagnosis,
                     "treatment" to treatment,
-                    "observations" to observations,
-                    "recommendations" to recommendations,
-                    "lastUpdated" to System.currentTimeMillis()
-                ).filterValues { it != null }
+                    "observations" to observations
+                )
 
                 firestore.collection("consultations")
                     .document(consultationId)
                     .update(updates)
                     .await()
 
-                // Actualizar estado local
                 val updatedConsultation = _consultationState.value.activeConsultation?.copy(
-                    weight = weight ?: _consultationState.value.activeConsultation!!.weight,
-                    temperature = temperature
-                        ?: _consultationState.value.activeConsultation!!.temperature,
-                    heartRate = heartRate
-                        ?: _consultationState.value.activeConsultation!!.heartRate,
-                    respiratoryRate = respiratoryRate
-                        ?: _consultationState.value.activeConsultation!!.respiratoryRate,
+                    weight = weight,
+                    temperature = temperature,
                     symptoms = symptoms,
-                    clinicalExam = clinicalExam,
                     diagnosis = diagnosis,
                     treatment = treatment,
-                    observations = observations,
-                    recommendations = recommendations
+                    observations = observations
                 )
 
                 _consultationState.value = _consultationState.value.copy(
-                    activeConsultation = updatedConsultation,
-                    isClinicalDataSaved = true
+                    activeConsultation = updatedConsultation
                 )
             } catch (e: Exception) {
                 _consultationState.value = _consultationState.value.copy(
@@ -164,50 +140,38 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    fun addService(serviceId: String, customPrice: Double? = null) {
+    fun addService(serviceName: String, price: Double) {
         val consultationId = _consultationState.value.activeConsultation?.id ?: return
 
         viewModelScope.launch {
             try {
-                val serviceDoc = firestore.collection("services")
-                    .document(serviceId)
-                    .get()
+                val service = ServiceApplied(
+                    name = serviceName,
+                    price = price
+                )
+
+                val consultation = _consultationState.value.activeConsultation!!
+                val updatedServices = consultation.services + service
+                val total = updatedServices.sumOf { it.price } +
+                        consultation.medications.sumOf { it.price } +
+                        consultation.vaccines.sumOf { it.price }
+
+                firestore.collection("consultations")
+                    .document(consultationId)
+                    .update(
+                        mapOf(
+                            "services" to updatedServices,
+                            "total" to total
+                        )
+                    )
                     .await()
 
-                val service = serviceDoc.toObject<VeterinaryService>()
-
-                if (service != null) {
-                    val serviceProvided = ServiceProvided(
-                        serviceId = serviceId,
-                        name = service.name,
-                        category = service.category,
-                        price = customPrice ?: service.basePrice
+                _consultationState.value = _consultationState.value.copy(
+                    activeConsultation = consultation.copy(
+                        services = updatedServices,
+                        total = total
                     )
-
-                    val consultationRef = firestore.collection("consultations")
-                        .document(consultationId)
-
-                    firestore.runTransaction { transaction ->
-                        val consultationDoc = transaction.get(consultationRef)
-                        val consultation = consultationDoc.toObject<MedicalConsultation>()
-
-                        if (consultation != null) {
-                            val updatedServices = consultation.services + serviceProvided
-                            val subtotal = updatedServices.sumOf { it.price }
-                            val total = subtotal - consultation.discount
-
-                            transaction.update(
-                                consultationRef, mapOf(
-                                    "services" to updatedServices,
-                                    "subtotal" to subtotal,
-                                    "total" to total
-                                )
-                            )
-                        }
-                    }.await()
-
-                    loadConsultation(consultationId)
-                }
+                )
             } catch (e: Exception) {
                 _consultationState.value = _consultationState.value.copy(
                     error = "Error al agregar servicio: ${e.message}"
@@ -216,76 +180,43 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    fun addMedication(
-        medicationId: String,
-        dose: String,
-        frequency: String,
-        duration: String,
-        route: String,
-        quantity: Int
-    ) {
+    fun addMedication(medicationId: String, name: String, dose: String, price: Double) {
         val consultationId = _consultationState.value.activeConsultation?.id ?: return
 
         viewModelScope.launch {
             try {
-                val medicationDoc = firestore.collection("medications")
-                    .document(medicationId)
-                    .get()
+                val medication = MedicationUsed(
+                    medicationId = medicationId,
+                    name = name,
+                    dose = dose,
+                    price = price
+                )
+
+                val consultation = _consultationState.value.activeConsultation!!
+                val updatedMedications = consultation.medications + medication
+                val total = consultation.services.sumOf { it.price } +
+                        updatedMedications.sumOf { it.price } +
+                        consultation.vaccines.sumOf { it.price }
+
+                firestore.collection("consultations")
+                    .document(consultationId)
+                    .update(
+                        mapOf(
+                            "medications" to updatedMedications,
+                            "total" to total
+                        )
+                    )
                     .await()
 
-                val medication = medicationDoc.toObject<Medication>()
+                // Actualizar stock
+                updateMedicationStock(medicationId, -1)
 
-                if (medication != null) {
-                    val medicationUsed = MedicationUsed(
-                        medicationId = medicationId,
-                        name = medication.name,
-                        dose = dose,
-                        frequency = frequency,
-                        duration = duration,
-                        route = route,
-                        quantity = quantity,
-                        unitPrice = medication.unitPrice,
-                        totalPrice = medication.unitPrice * quantity
+                _consultationState.value = _consultationState.value.copy(
+                    activeConsultation = consultation.copy(
+                        medications = updatedMedications,
+                        total = total
                     )
-
-                    val consultationRef = firestore.collection("consultations")
-                        .document(consultationId)
-
-                    firestore.runTransaction { transaction ->
-                        val consultationDoc = transaction.get(consultationRef)
-                        val consultation = consultationDoc.toObject<MedicalConsultation>()
-
-                        if (consultation != null) {
-                            val updatedMedications = consultation.medications + medicationUsed
-                            val medicationsTotal = updatedMedications.sumOf { it.totalPrice }
-                            val servicesTotal = consultation.services.sumOf { it.price }
-                            val vaccinesTotal = consultation.vaccines.sumOf { it.price }
-                            val subtotal = servicesTotal + medicationsTotal + vaccinesTotal
-                            val total = subtotal - consultation.discount
-
-                            transaction.update(
-                                consultationRef, mapOf(
-                                    "medications" to updatedMedications,
-                                    "subtotal" to subtotal,
-                                    "total" to total
-                                )
-                            )
-                        }
-                    }.await()
-
-                    // Notificar al InventoryViewModel para actualizar stock
-                    _consultationState.value = _consultationState.value.copy(
-                        pendingInventoryMovements = _consultationState.value.pendingInventoryMovements +
-                                PendingInventoryMovement(
-                                    itemId = medicationId,
-                                    itemType = InventoryItemType.MEDICATION,
-                                    quantity = -quantity,
-                                    reason = "Uso en consulta $consultationId"
-                                )
-                    )
-
-                    loadConsultation(consultationId)
-                }
+                )
             } catch (e: Exception) {
                 _consultationState.value = _consultationState.value.copy(
                     error = "Error al agregar medicamento: ${e.message}"
@@ -294,89 +225,57 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    fun addVaccine(
-        vaccineId: String,
-        batch: String,
-        expirationDate: Long,
-        nextDoseDate: Long? = null
-    ) {
+    fun addVaccine(vaccineId: String, name: String, price: Double, nextDoseDate: Long?) {
         val consultationId = _consultationState.value.activeConsultation?.id ?: return
         val petId = _consultationState.value.activeConsultation?.petId ?: return
 
         viewModelScope.launch {
             try {
-                val vaccineDoc = firestore.collection("vaccines")
-                    .document(vaccineId)
-                    .get()
+                val vaccine = VaccineApplied(
+                    vaccineId = vaccineId,
+                    name = name,
+                    price = price,
+                    nextDoseDate = nextDoseDate
+                )
+
+                val consultation = _consultationState.value.activeConsultation!!
+                val updatedVaccines = consultation.vaccines + vaccine
+                val total = consultation.services.sumOf { it.price } +
+                        consultation.medications.sumOf { it.price } +
+                        updatedVaccines.sumOf { it.price }
+
+                firestore.collection("consultations")
+                    .document(consultationId)
+                    .update(
+                        mapOf(
+                            "vaccines" to updatedVaccines,
+                            "total" to total
+                        )
+                    )
                     .await()
 
-                val vaccine = vaccineDoc.toObject<Vaccine>()
+                // Crear registro de vacunación
+                val vaccinationRecord = VaccinationRecord(
+                    petId = petId,
+                    vaccineName = name,
+                    applicationDate = System.currentTimeMillis(),
+                    nextDoseDate = nextDoseDate,
+                    veterinarianId = consultation.veterinarianId
+                )
 
-                if (vaccine != null) {
-                    val vaccineApplied = VaccineApplied(
-                        vaccineId = vaccineId,
-                        name = vaccine.name,
-                        batch = batch,
-                        expirationDate = expirationDate,
-                        nextDoseDate = nextDoseDate,
-                        price = vaccine.unitPrice
+                firestore.collection("vaccinations")
+                    .add(vaccinationRecord)
+                    .await()
+
+                // Actualizar stock
+                updateVaccineStock(vaccineId, -1)
+
+                _consultationState.value = _consultationState.value.copy(
+                    activeConsultation = consultation.copy(
+                        vaccines = updatedVaccines,
+                        total = total
                     )
-
-                    val consultationRef = firestore.collection("consultations")
-                        .document(consultationId)
-
-                    firestore.runTransaction { transaction ->
-                        val consultationDoc = transaction.get(consultationRef)
-                        val consultation = consultationDoc.toObject<MedicalConsultation>()
-
-                        if (consultation != null) {
-                            val updatedVaccines = consultation.vaccines + vaccineApplied
-                            val vaccinesTotal = updatedVaccines.sumOf { it.price }
-                            val servicesTotal = consultation.services.sumOf { it.price }
-                            val medicationsTotal = consultation.medications.sumOf { it.totalPrice }
-                            val subtotal = servicesTotal + medicationsTotal + vaccinesTotal
-                            val total = subtotal - consultation.discount
-
-                            transaction.update(
-                                consultationRef, mapOf(
-                                    "vaccines" to updatedVaccines,
-                                    "subtotal" to subtotal,
-                                    "total" to total
-                                )
-                            )
-
-                            // Crear registro de vacunación
-                            val vaccinationRecord = VaccinationRecord(
-                                petId = petId,
-                                vaccineId = vaccineId,
-                                vaccineName = vaccine.name,
-                                consultationId = consultationId,
-                                veterinarianId = consultation.veterinarianId,
-                                applicationDate = System.currentTimeMillis(),
-                                batch = batch,
-                                expirationDate = expirationDate,
-                                nextDoseDate = nextDoseDate,
-                                certificateNumber = generateCertificateNumber()
-                            )
-
-                            firestore.collection("vaccinations")
-                                .add(vaccinationRecord)
-                        }
-                    }.await()
-
-                    // Notificar al InventoryViewModel
-                    _consultationState.value = _consultationState.value.copy(
-                        pendingInventoryMovements = _consultationState.value.pendingInventoryMovements +
-                                PendingInventoryMovement(
-                                    itemId = vaccineId,
-                                    itemType = InventoryItemType.VACCINE,
-                                    quantity = -1,
-                                    reason = "Vacunación en consulta $consultationId"
-                                )
-                    )
-
-                    loadConsultation(consultationId)
-                }
+                )
             } catch (e: Exception) {
                 _consultationState.value = _consultationState.value.copy(
                     error = "Error al aplicar vacuna: ${e.message}"
@@ -385,89 +284,47 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    fun finishConsultation(
-        discount: Double = 0.0,
-        discountReason: String? = null,
-        paymentMethod: PaymentMethod,
-        amountPaid: Double
-    ) {
+    fun finishConsultation(isPaid: Boolean) {
         val consultationId = _consultationState.value.activeConsultation?.id ?: return
-        val appointmentId = _consultationState.value.activeConsultation?.appointmentId ?: return
 
         viewModelScope.launch {
             try {
-                _consultationState.value = _consultationState.value.copy(isLoading = true)
-
-                val consultationRef = firestore.collection("consultations")
+                firestore.collection("consultations")
                     .document(consultationId)
-
-                firestore.runTransaction { transaction ->
-                    val consultationDoc = transaction.get(consultationRef)
-                    val consultation = consultationDoc.toObject<MedicalConsultation>()
-
-                    if (consultation != null) {
-                        val total = consultation.subtotal - discount
-                        val paymentStatus = when {
-                            amountPaid >= total -> PaymentStatus.PAID
-                            amountPaid > 0 -> PaymentStatus.PARTIAL
-                            else -> PaymentStatus.PENDING
-                        }
-
-                        transaction.update(
-                            consultationRef, mapOf(
-                                "discount" to discount,
-                                "discountReason" to discountReason,
-                                "total" to total,
-                                "amountPaid" to amountPaid,
-                                "paymentStatus" to paymentStatus.name,
-                                "paymentMethod" to paymentMethod.name,
-                                "endTime" to System.currentTimeMillis()
-                            )
-                        )
-
-                        // Actualizar estado de la cita
-                        val appointmentRef = firestore.collection("appointments")
-                            .document(appointmentId)
-                        transaction.update(
-                            appointmentRef,
-                            "status", AppointmentStatus.COMPLETED.name
-                        )
-                    }
-                }.await()
+                    .update("paid", isPaid)
+                    .await()
 
                 _consultationState.value = _consultationState.value.copy(
-                    isLoading = false,
-                    isConsultationFinished = true,
-                    activeConsultation = null
+                    isConsultationFinished = true
                 )
             } catch (e: Exception) {
                 _consultationState.value = _consultationState.value.copy(
-                    isLoading = false,
                     error = "Error al finalizar consulta: ${e.message}"
                 )
             }
         }
     }
 
-    private suspend fun loadConsultation(consultationId: String) {
+    private suspend fun updateMedicationStock(medicationId: String, change: Int) {
         try {
-            val doc = firestore.collection("consultations")
-                .document(consultationId)
-                .get()
-                .await()
-
-            val consultation = doc.toObject<MedicalConsultation>()?.copy(id = doc.id)
-
-            _consultationState.value = _consultationState.value.copy(
-                activeConsultation = consultation
-            )
+            val medicationRef = firestore.collection("medications").document(medicationId)
+            val doc = medicationRef.get().await()
+            val currentStock = doc.getLong("stock")?.toInt() ?: 0
+            medicationRef.update("stock", currentStock + change).await()
         } catch (e: Exception) {
-            // Error handling silencioso
+            // Log error
         }
     }
 
-    private fun generateCertificateNumber(): String {
-        return "CERT-${System.currentTimeMillis()}-${(1000..9999).random()}"
+    private suspend fun updateVaccineStock(vaccineId: String, change: Int) {
+        try {
+            val vaccineRef = firestore.collection("vaccines").document(vaccineId)
+            val doc = vaccineRef.get().await()
+            val currentStock = doc.getLong("stock")?.toInt() ?: 0
+            vaccineRef.update("stock", currentStock + change).await()
+        } catch (e: Exception) {
+            // Log error
+        }
     }
 
     fun clearState() {
@@ -476,19 +333,10 @@ class ConsultationViewModel @Inject constructor() : ViewModel() {
 }
 
 data class ConsultationState(
-    val activeConsultation: MedicalConsultation? = null,
+    val activeConsultation: Consultation? = null,
     val currentPet: Pet? = null,
     val currentAppointment: Appointment? = null,
-    val pendingInventoryMovements: List<PendingInventoryMovement> = emptyList(),
     val isLoading: Boolean = false,
-    val isClinicalDataSaved: Boolean = false,
     val isConsultationFinished: Boolean = false,
     val error: String? = null
-)
-
-data class PendingInventoryMovement(
-    val itemId: String,
-    val itemType: InventoryItemType,
-    val quantity: Int,
-    val reason: String
 )

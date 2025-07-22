@@ -79,9 +79,9 @@ fun CreateAppointmentScreen(
         }
     }
 
-    LaunchedEffect(selectedVetId, selectedDate) {
-        if (selectedVetId.isNotBlank() && selectedDate.isNotBlank()) {
-            viewModel.loadVetAvailability(selectedVetId, selectedDate)
+    LaunchedEffect(selectedDate) {
+        if (selectedDate.isNotBlank()) {
+            viewModel.loadAvailableTimeSlots(selectedDate)
         }
     }
 
@@ -162,52 +162,7 @@ fun CreateAppointmentScreen(
                     }
 
                     1 -> {
-                        // Paso 2: Seleccionar veterinario
-                        item {
-                            Text(
-                                text = "Paso 2: Selecciona el veterinario",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
-                        items(appointmentsState.veterinarians) { vet ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { selectedVetId = vet.id },
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (selectedVetId == vet.id)
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    else MaterialTheme.colorScheme.surface
-                                )
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(
-                                        selected = selectedVetId == vet.id,
-                                        onClick = { selectedVetId = vet.id }
-                                    )
-                                    Column {
-                                        Text(
-                                            text = vet.name,
-                                            style = MaterialTheme.typography.titleSmall
-                                        )
-                                        Text(
-                                            text = vet.email ?: "",
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    2 -> {
-                        // Paso 3: Seleccionar servicio
+                        // Paso 2: Seleccionar servicio
                         item {
                             Text(
                                 text = "Paso 3: Selecciona el tipo de servicio",
@@ -237,7 +192,7 @@ fun CreateAppointmentScreen(
                         }
                     }
 
-                    3 -> {
+                    2 -> {
                         // Paso 4: Seleccionar fecha y hora
                         item {
                             Text(
@@ -336,11 +291,8 @@ fun CreateAppointmentScreen(
                                 ) {
                                     val selectedPet =
                                         appointmentsState.userPets.find { it.id == selectedPetId }
-                                    val selectedVet =
-                                        appointmentsState.veterinarians.find { it.id == selectedVetId }
 
                                     InfoRow("Mascota", selectedPet?.name ?: "")
-                                    InfoRow("Veterinario", selectedVet?.name ?: "")
                                     InfoRow(
                                         "Servicio",
                                         selectedServiceType?.let { getServiceCategoryName(it) }
@@ -388,8 +340,6 @@ fun CreateAppointmentScreen(
                                 selectedServiceType?.let { service ->
                                     viewModel.createAppointment(
                                         petId = selectedPetId,
-                                        veterinarianId = selectedVetId,
-                                        serviceType = service,
                                         date = selectedDate,
                                         time = selectedTime,
                                         reason = reason
@@ -472,14 +422,7 @@ private fun getServiceCategoryName(category: ServiceCategory): String {
         ServiceCategory.CONSULTATION -> "Consulta general"
         ServiceCategory.VACCINATION -> "Vacunación"
         ServiceCategory.SURGERY -> "Cirugía"
-        ServiceCategory.LABORATORY -> "Exámenes de laboratorio"
-        ServiceCategory.RADIOLOGY -> "Radiografías"
-        ServiceCategory.ULTRASOUND -> "Ecografías"
         ServiceCategory.GROOMING -> "Peluquería"
-        ServiceCategory.HOSPITALIZATION -> "Hospitalización"
-        ServiceCategory.EMERGENCY -> "Emergencia"
-        ServiceCategory.DEWORMING -> "Desparasitación"
-        ServiceCategory.DENTAL -> "Dental"
         ServiceCategory.OTHER -> "Otro"
     }
 }

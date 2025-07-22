@@ -3,19 +3,16 @@ package cl.clinipets.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cl.clinipets.data.model.MedicalConsultation
-import cl.clinipets.data.model.MedicalHistory
-import cl.clinipets.data.model.MedicalHistoryEntry
+import cl.clinipets.data.model.Consultation
 import cl.clinipets.data.model.Pet
 import cl.clinipets.data.model.PetSex
 import cl.clinipets.data.model.PetSpecies
-import cl.clinipets.data.model.SurgeryRecord
 import cl.clinipets.data.model.VaccinationRecord
-import com.google.firebase.auth.ktx.auth
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.firestore.ktx.toObject
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.firestore.firestore
+import com.google.firebase.firestore.toObject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,8 +31,6 @@ class PetsViewModel @Inject constructor() : ViewModel() {
     init {
         loadPets()
     }
-
-    // ====================== CRUD MASCOTAS ======================
 
     fun loadPets() {
         val userId = auth.currentUser?.uid ?: return
@@ -79,9 +74,8 @@ class PetsViewModel @Inject constructor() : ViewModel() {
 
                 val pet = doc.toObject<Pet>()?.copy(id = doc.id)
 
-                // Cargar historial médico
                 if (pet != null) {
-                    loadMedicalHistory(petId)
+                    loadPetConsultations(petId)
                     loadVaccinationRecords(petId)
                 }
 
@@ -105,8 +99,6 @@ class PetsViewModel @Inject constructor() : ViewModel() {
         birthDate: Long?,
         weight: Float,
         sex: PetSex,
-        neutered: Boolean,
-        microchipId: String?,
         notes: String
     ) {
         val userId = auth.currentUser?.uid ?: return
@@ -128,8 +120,6 @@ class PetsViewModel @Inject constructor() : ViewModel() {
                     birthDate = birthDate,
                     weight = weight,
                     sex = sex,
-                    neutered = neutered,
-                    microchipId = microchipId,
                     notes = notes,
                     createdAt = System.currentTimeMillis()
                 )
@@ -161,8 +151,6 @@ class PetsViewModel @Inject constructor() : ViewModel() {
         birthDate: Long?,
         weight: Float,
         sex: PetSex,
-        neutered: Boolean,
-        microchipId: String?,
         notes: String
     ) {
         viewModelScope.launch {
@@ -176,8 +164,6 @@ class PetsViewModel @Inject constructor() : ViewModel() {
                     "birthDate" to birthDate,
                     "weight" to weight,
                     "sex" to sex.name,
-                    "neutered" to neutered,
-                    "microchipId" to microchipId,
                     "notes" to notes
                 )
 
@@ -206,7 +192,6 @@ class PetsViewModel @Inject constructor() : ViewModel() {
             try {
                 _petsState.value = _petsState.value.copy(isLoading = true)
 
-                // Soft delete - solo marcar como inactivo
                 firestore.collection("pets")
                     .document(petId)
                     .update("active", false)
@@ -227,58 +212,22 @@ class PetsViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    // ====================== HISTORIAL MÉDICO ======================
-
-    fun loadMedicalHistory(petId: String) {
+    private fun loadPetConsultations(petId: String) {
         viewModelScope.launch {
             try {
-                // Cargar consultas médicas
-                val consultationsSnapshot = firestore.collection("consultations")
+                val snapshot = firestore.collection("consultations")
                     .whereEqualTo("petId", petId)
                     .orderBy("createdAt", Query.Direction.DESCENDING)
-                    .limit(50)
+                    .limit(10)
                     .get()
                     .await()
 
-                val consultations = consultationsSnapshot.documents.mapNotNull { doc ->
-                    doc.toObject<MedicalConsultation>()?.let { consultation ->
-                        MedicalHistoryEntry(
-                            consultationId = doc.id,
-                            date = consultation.createdAt,
-                            veterinarianName = "", // Se cargará después
-                            diagnosis = consultation.diagnosis,
-                            treatment = consultation.treatment,
-                            weight = consultation.weight
-                        )
-                    }
+                val consultations = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject<Consultation>()?.copy(id = doc.id)
                 }
 
-                // Cargar cirugías
-                val surgeries = consultations
-                    .filter { it.treatment.contains("cirugía", ignoreCase = true) }
-                    .map { entry ->
-                        SurgeryRecord(
-                            id = entry.consultationId,
-                            consultationId = entry.consultationId,
-                            date = entry.date,
-                            surgeryType = entry.diagnosis,
-                            veterinarianName = entry.veterinarianName,
-                            anesthesiaType = "General", // Por defecto
-                            outcome = "Exitosa"
-                        )
-                    }
-
-                val medicalHistory = MedicalHistory(
-                    petId = petId,
-                    consultations = consultations,
-                    surgeries = surgeries,
-                    allergies = _petsState.value.selectedPet?.notes?.let {
-                        extractAllergies(it)
-                    } ?: emptyList()
-                )
-
                 _petsState.value = _petsState.value.copy(
-                    selectedPetMedicalHistory = medicalHistory
+                    selectedPetConsultations = consultations
                 )
             } catch (e: Exception) {
                 // Error handling silencioso
@@ -308,71 +257,16 @@ class PetsViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    fun addVaccinationRecord(
-        petId: String,
-        vaccineId: String,
-        vaccineName: String,
-        batch: String,
-        expirationDate: Long,
-        veterinarianId: String,
-        nextDoseDate: Long?
-    ) {
-        viewModelScope.launch {
-            try {
-                _petsState.value = _petsState.value.copy(isLoading = true)
+    fun getNextVaccinations(): List<VaccinationRecord> {
+        val thirtyDaysFromNow = System.currentTimeMillis() + (30 * 24 * 60 * 60 * 1000L)
 
-                val record = VaccinationRecord(
-                    petId = petId,
-                    vaccineId = vaccineId,
-                    vaccineName = vaccineName,
-                    veterinarianId = veterinarianId,
-                    applicationDate = System.currentTimeMillis(),
-                    batch = batch,
-                    expirationDate = expirationDate,
-                    nextDoseDate = nextDoseDate,
-                    certificateNumber = generateCertificateNumber()
-                )
-
-                firestore.collection("vaccinations")
-                    .add(record)
-                    .await()
-
-                _petsState.value = _petsState.value.copy(
-                    isLoading = false,
-                    isVaccinationAdded = true
-                )
-
-                loadVaccinationRecords(petId)
-            } catch (e: Exception) {
-                _petsState.value = _petsState.value.copy(
-                    isLoading = false,
-                    error = "Error al registrar vacuna: ${e.message}"
-                )
+        return _petsState.value.vaccinationRecords
+            .filter { record ->
+                record.nextDoseDate?.let { nextDate ->
+                    nextDate <= thirtyDaysFromNow && nextDate >= System.currentTimeMillis()
+                } ?: false
             }
-        }
-    }
-
-    // ====================== FUNCIONES AUXILIARES ======================
-
-    private fun extractAllergies(notes: String): List<String> {
-        // Buscar patrones como "alérgico a", "alergia:", etc.
-        val allergies = mutableListOf<String>()
-        val patterns = listOf("alérgico a", "alergia:", "alergias:")
-
-        patterns.forEach { pattern ->
-            if (notes.contains(pattern, ignoreCase = true)) {
-                val startIndex = notes.indexOf(pattern, ignoreCase = true) + pattern.length
-                val endIndex = notes.indexOf("\n", startIndex).takeIf { it != -1 } ?: notes.length
-                val allergyText = notes.substring(startIndex, endIndex).trim()
-                allergies.addAll(allergyText.split(",").map { it.trim() })
-            }
-        }
-
-        return allergies
-    }
-
-    private fun generateCertificateNumber(): String {
-        return "CERT-${System.currentTimeMillis()}-${(1000..9999).random()}"
+            .sortedBy { it.nextDoseDate }
     }
 
     fun clearState() {
@@ -380,58 +274,19 @@ class PetsViewModel @Inject constructor() : ViewModel() {
             isPetAdded = false,
             isPetUpdated = false,
             isPetDeleted = false,
-            isVaccinationAdded = false,
             error = null
-        )
-    }
-
-    // ====================== BÚSQUEDA Y FILTROS ======================
-
-    fun searchPets(query: String) {
-        val filteredPets = if (query.isBlank()) {
-            _petsState.value.pets
-        } else {
-            _petsState.value.pets.filter { pet ->
-                pet.name.contains(query, ignoreCase = true) ||
-                        pet.breed.contains(query, ignoreCase = true) ||
-                        pet.microchipId?.contains(query, ignoreCase = true) == true
-            }
-        }
-
-        _petsState.value = _petsState.value.copy(
-            filteredPets = filteredPets,
-            searchQuery = query
-        )
-    }
-
-    fun filterBySpecies(species: PetSpecies?) {
-        val filteredPets = if (species == null) {
-            _petsState.value.pets
-        } else {
-            _petsState.value.pets.filter { it.species == species }
-        }
-
-        _petsState.value = _petsState.value.copy(
-            filteredPets = filteredPets,
-            selectedSpeciesFilter = species
         )
     }
 }
 
-// ====================== ESTADO ======================
-
 data class PetsState(
     val pets: List<Pet> = emptyList(),
-    val filteredPets: List<Pet> = emptyList(),
     val selectedPet: Pet? = null,
-    val selectedPetMedicalHistory: MedicalHistory? = null,
+    val selectedPetConsultations: List<Consultation> = emptyList(),
     val vaccinationRecords: List<VaccinationRecord> = emptyList(),
     val isLoading: Boolean = false,
     val isPetAdded: Boolean = false,
     val isPetUpdated: Boolean = false,
     val isPetDeleted: Boolean = false,
-    val isVaccinationAdded: Boolean = false,
-    val error: String? = null,
-    val searchQuery: String = "",
-    val selectedSpeciesFilter: PetSpecies? = null
+    val error: String? = null
 )
