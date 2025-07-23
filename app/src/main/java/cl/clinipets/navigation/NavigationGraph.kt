@@ -20,7 +20,6 @@ import cl.clinipets.ui.screens.pets.PetsScreen
 import cl.clinipets.ui.screens.profile.ProfileScreen
 import cl.clinipets.ui.screens.profile.SettingsScreen
 import cl.clinipets.ui.screens.vet.InventoryScreen
-import cl.clinipets.ui.screens.vet.ServicesScreen
 import cl.clinipets.ui.screens.vet.VetDashboardScreen
 import cl.clinipets.ui.screens.vet.VetScheduleScreen
 import cl.clinipets.ui.viewmodels.AuthViewModel
@@ -172,14 +171,6 @@ fun AppNavigation() {
 
                 )
         }
-
-        // ====================== SERVICIOS VETERINARIOS ======================
-        composable("vet_services") {
-            ServicesScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
     }
 }
 

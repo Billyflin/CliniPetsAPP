@@ -28,6 +28,10 @@ class UserViewModel @Inject constructor() : ViewModel() {
         loadUserData()
     }
 
+    fun refreshUser() {
+        loadUserData()
+    }
+
     fun loadUserData() {
         val userId = auth.currentUser?.uid ?: return
 

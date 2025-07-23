@@ -27,7 +27,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -40,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.clinipets.data.model.Appointment
 import cl.clinipets.data.model.AppointmentStatus
 import cl.clinipets.ui.viewmodels.AppointmentsViewModel
@@ -51,7 +51,7 @@ fun AppointmentsScreen(
     onNavigateToAddAppointment: () -> Unit,
     viewModel: AppointmentsViewModel = hiltViewModel()
 ) {
-    val state by viewModel.appointmentsState.collectAsState()
+    val state by viewModel.appointmentsState.collectAsStateWithLifecycle()
 
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 

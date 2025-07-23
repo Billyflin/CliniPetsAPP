@@ -29,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.clinipets.data.model.Consultation
 import cl.clinipets.data.model.Pet
 import cl.clinipets.data.model.PetSex
@@ -58,7 +58,7 @@ fun PetDetailScreen(
     onNavigateToNewAppointment: (String) -> Unit,
     viewModel: PetsViewModel = hiltViewModel()
 ) {
-    val petsState by viewModel.petsState.collectAsState()
+    val petsState by viewModel.petsState.collectAsStateWithLifecycle()
     var selectedTab by remember { mutableStateOf(0) }
 
     LaunchedEffect(petId) {

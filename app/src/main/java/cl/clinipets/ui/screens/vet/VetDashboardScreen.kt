@@ -34,13 +34,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.clinipets.data.model.Appointment
 import cl.clinipets.data.model.AppointmentStatus
 import cl.clinipets.data.model.Pet
@@ -61,7 +61,7 @@ fun VetDashboardScreen(
     onNavigateToCreatePet: () -> Unit,
     viewModel: VetViewModel = hiltViewModel()
 ) {
-    val vetState by viewModel.vetState.collectAsState()
+    val vetState by viewModel.vetState.collectAsStateWithLifecycle()
 
     if (!vetState.isVeterinarian) {
         NoVetAccessScreen(onNavigateBack)

@@ -31,7 +31,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.clinipets.ui.viewmodels.VetViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,7 +49,7 @@ fun VetScheduleScreen(
     onNavigateBack: () -> Unit,
     viewModel: VetViewModel = hiltViewModel()
 ) {
-    val vetState by viewModel.vetState.collectAsState()
+    val vetState by viewModel.vetState.collectAsStateWithLifecycle()
 
     // Estados para cada día
     var schedules by remember {

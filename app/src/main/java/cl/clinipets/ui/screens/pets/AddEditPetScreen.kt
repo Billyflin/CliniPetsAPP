@@ -40,7 +40,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.clinipets.data.model.PetSex
 import cl.clinipets.data.model.PetSpecies
 import cl.clinipets.data.model.User
@@ -67,8 +67,8 @@ fun AddEditPetScreen(
     vm: PetsViewModel = hiltViewModel(),
     vetVm: VetViewModel = hiltViewModel()
 ) {
-    val petState by vm.petsState.collectAsState()
-    val vetState by vetVm.vetState.collectAsState()
+    val petState by vm.petsState.collectAsStateWithLifecycle()
+    val vetState by vetVm.vetState.collectAsStateWithLifecycle()
     val editing = petId != null
     val isVet = vetState.isVeterinarian
 

@@ -32,8 +32,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.clinipets.data.model.MedicationPresentation
 import cl.clinipets.data.model.ServiceCategory
 import cl.clinipets.ui.viewmodels.InventoryViewModel
@@ -55,8 +56,8 @@ fun InventoryScreen(
     onNavigateBack: () -> Unit,
     viewModel: InventoryViewModel = hiltViewModel()
 ) {
-    val inventoryState by viewModel.inventoryState.collectAsState()
-    var selectedTab by remember { mutableStateOf(0) }
+    val inventoryState by viewModel.inventoryState.collectAsStateWithLifecycle()
+    var selectedTab by remember { mutableIntStateOf(0) }
     var showAddMedicationDialog by remember { mutableStateOf(false) }
     var showAddVaccineDialog by remember { mutableStateOf(false) }
     var showAddServiceDialog by remember { mutableStateOf(false) }
