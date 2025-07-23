@@ -1,6 +1,7 @@
 // ui/screens/pets/AddEditPetScreen.kt
 package cl.clinipets.ui.screens.pets
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,11 +38,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.data.model.PetSex
 import cl.clinipets.data.model.PetSpecies
+import cl.clinipets.data.model.User
 import cl.clinipets.ui.viewmodels.PetsViewModel
+import cl.clinipets.ui.viewmodels.VetViewModel
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -52,10 +57,12 @@ fun AddEditPetScreen(
     petId: String? = null,
     onPetSaved: () -> Unit,
     onNavigateBack: () -> Unit,
-    viewModel: PetsViewModel = hiltViewModel()
+    viewModel: PetsViewModel = hiltViewModel(),
+    vetViewModel: VetViewModel = hiltViewModel(),
 ) {
     val petsState by viewModel.petsState.collectAsState()
     val isEditing = petId != null
+    val isVet = vetViewModel.vetState.collectAsState().value.isVeterinarian
 
     var name by remember { mutableStateOf("") }
     var selectedSpecies by remember { mutableStateOf(PetSpecies.DOG) }
@@ -66,10 +73,21 @@ fun AddEditPetScreen(
     var notes by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
 
+    // Estados para la asignación de dueño
+    var ownerSearchQuery by remember { mutableStateOf("") }
+    var selectedOwnerId by remember { mutableStateOf<String?>(null) }
+    var showOwnerDialog by remember { mutableStateOf(false) }
+
     // Cargar datos si es edición
     LaunchedEffect(petId) {
         if (isEditing && petId != null) {
             viewModel.loadPetDetail(petId)
+        }
+    }
+
+    LaunchedEffect(isVet) {
+        if (isVet) {
+            viewModel.loadOwners()
         }
     }
 
@@ -82,6 +100,7 @@ fun AddEditPetScreen(
             weight = pet.weight.toString()
             selectedSex = pet.sex
             notes = pet.notes
+            selectedOwnerId = pet.ownerId
         }
     }
 
@@ -124,11 +143,14 @@ fun AddEditPetScreen(
                                     birthDate = birthDate,
                                     weight = weightFloat,
                                     sex = selectedSex,
-                                    notes = notes
+                                    notes = notes,
+                                    ownerId = if (isVet) selectedOwnerId else null
                                 )
                             }
                         },
-                        enabled = name.isNotBlank() && !petsState.isLoading
+                        enabled = name.isNotBlank() &&
+                                !petsState.isLoading &&
+                                (!isVet || selectedOwnerId != null)
                     ) {
                         if (petsState.isLoading) {
                             CircularProgressIndicator(modifier = Modifier.size(16.dp))
@@ -148,6 +170,63 @@ fun AddEditPetScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Si es veterinario y no es edición, mostrar selector de dueño
+            if (isVet && !isEditing) {
+                Card {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Dueño de la mascota *", style = MaterialTheme.typography.labelLarge)
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedTextField(
+                            value = ownerSearchQuery,
+                            onValueChange = { ownerSearchQuery = it },
+                            label = { Text("Buscar por email o teléfono") },
+                            modifier = Modifier.fillMaxWidth(),
+                            readOnly = selectedOwnerId != null,
+                            trailingIcon = {
+                                if (selectedOwnerId != null) {
+                                    IconButton(onClick = {
+                                        selectedOwnerId = null
+                                        ownerSearchQuery = ""
+                                    }) {
+                                        Icon(Icons.Default.Close, contentDescription = "Limpiar")
+                                    }
+                                } else {
+                                    IconButton(onClick = { showOwnerDialog = true }) {
+                                        Icon(Icons.Default.Search, contentDescription = "Buscar")
+                                    }
+                                }
+                            }
+                        )
+
+                        // Mostrar el usuario seleccionado
+                        selectedOwnerId?.let { ownerId ->
+                            val selectedUser = petsState.owners.find { it.id == ownerId }
+                            selectedUser?.let { user ->
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = user.name,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            text = user.email ?: user.phone ?: "",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -245,6 +324,25 @@ fun AddEditPetScreen(
             )
         }
 
+        // Diálogo de búsqueda de dueños
+        if (showOwnerDialog) {
+            SearchOwnerDialog(
+                searchQuery = ownerSearchQuery,
+                owners = petsState.owners.filter { user ->
+                    ownerSearchQuery.isBlank() ||
+                            user.email.contains(ownerSearchQuery, ignoreCase = true) == true ||
+                            user.phone?.contains(ownerSearchQuery) == true ||
+                            user.name.contains(ownerSearchQuery, ignoreCase = true)
+                },
+                onUserSelected = { user ->
+                    selectedOwnerId = user.id
+                    ownerSearchQuery = user.email ?: user.phone ?: user.name
+                    showOwnerDialog = false
+                },
+                onDismiss = { showOwnerDialog = false }
+            )
+        }
+
         if (showDatePicker) {
             DatePickerDialog(
                 onDateSelected = { date ->
@@ -268,6 +366,93 @@ fun AddEditPetScreen(
             )
         }
     }
+}
+
+
+@Composable
+private fun SearchOwnerDialog(
+    searchQuery: String,
+    owners: List<User>,
+    onUserSelected: (User) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val filteredOwners = remember(searchQuery, owners) {
+        owners.filter { owner ->
+            searchQuery.isBlank() ||
+                    owner.email.contains(searchQuery, ignoreCase = true) == true ||
+                    owner.phone?.contains(searchQuery) == true ||
+                    owner.name.contains(searchQuery, ignoreCase = true)
+        }.take(5) // Limitar a 5 resultados para evitar problemas de tamaño
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Seleccionar Dueño") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (filteredOwners.isEmpty()) {
+                    Text(
+                        text = "No se encontraron usuarios",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                } else {
+                    filteredOwners.forEach { owner ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onUserSelected(owner) }
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp)
+                            ) {
+                                Text(
+                                    text = owner.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                owner.email?.let {
+                                    Text(
+                                        text = it,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                owner.phone?.let {
+                                    Text(
+                                        text = it,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (owners.size > 5 && filteredOwners.size == 5) {
+                        Text(
+                            text = "Mostrando solo los primeros 5 resultados...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
 }
 
 @Composable

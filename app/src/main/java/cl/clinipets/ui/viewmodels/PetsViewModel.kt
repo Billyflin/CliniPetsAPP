@@ -8,6 +8,7 @@ import cl.clinipets.data.model.Consultation
 import cl.clinipets.data.model.Pet
 import cl.clinipets.data.model.PetSex
 import cl.clinipets.data.model.PetSpecies
+import cl.clinipets.data.model.User
 import cl.clinipets.data.model.VaccinationRecord
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
@@ -63,6 +64,34 @@ class PetsViewModel @Inject constructor() : ViewModel() {
         }
     }
 
+    fun loadOwners() {
+        viewModelScope.launch {
+            try {
+                _petsState.value = _petsState.value.copy(isLoading = true)
+                val snapshot = firestore.collection("users")
+                    .get()
+                    .await()
+                Log.d("OwnersSnapshot", snapshot.documents.toString())
+
+                val owners = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject<User>()?.copy(id = doc.id)
+                }
+
+                Log.d("Owners", owners.toString())
+                _petsState.value = _petsState.value.copy(
+                    owners = owners,
+                    isLoading = false
+                )
+            } catch (e: Exception) {
+                _petsState.value = _petsState.value.copy(
+                    isLoading = false,
+                    error = "Error al cargar mascota: ${e.message}"
+                )
+            }
+        }
+    }
+
+
     fun loadPetDetail(petId: String) {
         viewModelScope.launch {
             try {
@@ -94,6 +123,7 @@ class PetsViewModel @Inject constructor() : ViewModel() {
     }
 
     fun addPet(
+        ownerId: String? = null,
         name: String,
         species: PetSpecies,
         breed: String,
@@ -114,7 +144,7 @@ class PetsViewModel @Inject constructor() : ViewModel() {
                 _petsState.value = _petsState.value.copy(isLoading = true)
 
                 val pet = Pet(
-                    ownerId = userId,
+                    ownerId = ownerId ?: userId,
                     name = name,
                     species = species,
                     breed = breed,
@@ -285,8 +315,10 @@ class PetsViewModel @Inject constructor() : ViewModel() {
 data class PetsState(
     val pets: List<Pet> = emptyList(),
     val selectedPet: Pet? = null,
+    val selectedOwnerId: String? = null,
     val selectedPetConsultations: List<Consultation> = emptyList(),
     val vaccinationRecords: List<VaccinationRecord> = emptyList(),
+    val owners: List<User> = emptyList(),
     val isLoading: Boolean = false,
     val isPetAdded: Boolean = false,
     val isPetUpdated: Boolean = false,
