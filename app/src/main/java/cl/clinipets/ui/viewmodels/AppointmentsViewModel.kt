@@ -1,11 +1,15 @@
+// Modificar el archivo app/src/main/java/cl/clinipets/ui/viewmodels/AppointmentsViewModel.kt
+
 // ui/viewmodels/AppointmentsViewModel.kt
 package cl.clinipets.ui.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.data.model.Appointment
 import cl.clinipets.data.model.AppointmentStatus
 import cl.clinipets.data.model.Pet
+import cl.clinipets.data.model.VetSchedule
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.Query
@@ -17,8 +21,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+
 
 @HiltViewModel
 class AppointmentsViewModel @Inject constructor() : ViewModel() {
@@ -31,6 +38,7 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
     init {
         loadAppointments()
         loadUserPets()
+        loadAvailableDays()
     }
 
     fun loadAppointments() {
@@ -77,6 +85,61 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
                 _appointmentsState.value = _appointmentsState.value.copy(
                     isLoading = false, error = "Error al cargar citas: ${e.message}"
                 )
+            }
+        }
+    }
+
+    fun loadAvailableDays() {
+        viewModelScope.launch {
+            try {
+                // Obtener todos los horarios de la veterinaria
+                val schedulesSnapshot = firestore.collection("vetSchedules")
+                    .whereEqualTo("isActive", true)
+                    .get()
+                    .await()
+
+                val schedules = schedulesSnapshot.documents.mapNotNull { doc ->
+                    doc.toObject<VetSchedule>()
+                }
+
+                // Generar los próximos 30 días disponibles
+                val availableDays = mutableListOf<AvailableDay>()
+                val calendar = Calendar.getInstance()
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                val dayFormat = SimpleDateFormat("EEEE", Locale("es"))
+                val displayFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+
+                for (i in 1..30) { // Próximos 30 días
+                    calendar.add(Calendar.DAY_OF_MONTH, 1)
+                    val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+                    // Convertir a nuestro formato (1 = Lunes, 7 = Domingo)
+                    val ourDayOfWeek = if (dayOfWeek == 1) 7 else dayOfWeek - 1
+
+                    // Verificar si hay horario para este día
+                    val daySchedule = schedules.find { it.dayOfWeek == ourDayOfWeek }
+
+                    if (daySchedule != null) {
+                        availableDays.add(
+                            AvailableDay(
+                                date = dateFormat.format(calendar.time),
+                                dayName = dayFormat.format(calendar.time)
+                                    .replaceFirstChar { it.uppercase() },
+                                displayDate = displayFormat.format(calendar.time),
+                                isAvailable = true,
+                                startTime = daySchedule.startTime,
+                                endTime = daySchedule.endTime
+                            )
+                        )
+                    }
+
+                    calendar.time = Date() // Reset para el siguiente día
+                }
+
+                _appointmentsState.value = _appointmentsState.value.copy(
+                    availableDays = availableDays
+                )
+            } catch (e: Exception) {
+                // Error handling silencioso
             }
         }
     }
@@ -150,39 +213,81 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-
     fun loadAvailableTimeSlots(date: String) {
         viewModelScope.launch {
             try {
                 _appointmentsState.value = _appointmentsState.value.copy(isLoadingSlots = true)
 
-                // Obtener citas existentes para esa fecha shceduleada o comfirmed
-                val existingAppointments =
-                    firestore.collection("appointments").whereEqualTo("date", date)
-                        .whereEqualTo("status", AppointmentStatus.SCHEDULED.name)
-                        .whereEqualTo("status", AppointmentStatus.CONFIRMED.name).get().await()
+                // Buscar el día disponible para obtener su horario
+                val selectedDay = _appointmentsState.value.availableDays.find { it.date == date }
+
+                if (selectedDay == null) {
+                    _appointmentsState.value = _appointmentsState.value.copy(
+                        availableTimeSlots = emptyList(),
+                        isLoadingSlots = false
+                    )
+                    return@launch
+                }
+
+                // Obtener citas existentes para esa fecha
+                val existingAppointments = firestore.collection("appointments")
+                    .whereEqualTo("date", date)
+                    .whereIn(
+                        "status",
+                        listOf(AppointmentStatus.SCHEDULED.name, AppointmentStatus.CONFIRMED.name)
+                    )
+                    .get()
+                    .await()
 
                 val bookedTimes = existingAppointments.documents.map {
                     it.getString("time") ?: ""
                 }
+                Log.d("AvailableTimeSlots", "Booked Times: $bookedTimes")
 
-                // Generar slots disponibles (cada 30 minutos de 9:00 a 18:00)
-                val allSlots = generateTimeSlots()
+                // Generar slots disponibles basados en el horario del día
+                val allSlots =
+                    generateTimeSlotsForSchedule(selectedDay.startTime, selectedDay.endTime)
                 val availableSlots = allSlots.map { time ->
                     TimeSlot(
-                        time = time, isAvailable = !bookedTimes.contains(time)
+                        time = time,
+                        isAvailable = !bookedTimes.contains(time)
                     )
                 }
 
                 _appointmentsState.value = _appointmentsState.value.copy(
-                    availableTimeSlots = availableSlots, isLoadingSlots = false
+                    availableTimeSlots = availableSlots,
+                    isLoadingSlots = false
                 )
             } catch (e: Exception) {
                 _appointmentsState.value = _appointmentsState.value.copy(
-                    isLoadingSlots = false, error = "Error al cargar horarios: ${e.message}"
+                    isLoadingSlots = false,
+                    error = "Error al cargar horarios: ${e.message}"
                 )
             }
         }
+    }
+
+    private fun generateTimeSlotsForSchedule(startTime: String, endTime: String): List<String> {
+        val slots = mutableListOf<String>()
+        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+
+        try {
+            val start = timeFormat.parse(startTime) ?: return emptyList()
+            val end = timeFormat.parse(endTime) ?: return emptyList()
+
+            val calendar = Calendar.getInstance()
+            calendar.time = start
+
+            while (calendar.time.before(end) || calendar.time == end) {
+                slots.add(timeFormat.format(calendar.time))
+                calendar.add(Calendar.MINUTE, 30) // Slots de 30 minutos
+            }
+        } catch (e: Exception) {
+            // Si hay error, devolver slots por defecto
+            return generateTimeSlots()
+        }
+
+        return slots
     }
 
     private fun generateTimeSlots(): List<String> {
@@ -227,6 +332,7 @@ data class AppointmentsState(
     val upcomingAppointments: List<Appointment> = emptyList(),
     val pastAppointments: List<Appointment> = emptyList(),
     val userPets: List<Pet> = emptyList(),
+    val availableDays: List<AvailableDay> = emptyList(),
     val availableTimeSlots: List<TimeSlot> = emptyList(),
     val isLoading: Boolean = false,
     val isLoadingSlots: Boolean = false,
@@ -234,6 +340,16 @@ data class AppointmentsState(
     val error: String? = null
 )
 
+data class AvailableDay(
+    val date: String,
+    val dayName: String,
+    val displayDate: String,
+    val isAvailable: Boolean,
+    val startTime: String,
+    val endTime: String
+)
+
 data class TimeSlot(
-    val time: String = "", val isAvailable: Boolean = true
+    val time: String = "",
+    val isAvailable: Boolean = true
 )

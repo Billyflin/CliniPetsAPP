@@ -152,3 +152,14 @@ data class VaccinationRecord(
     val nextDoseDate: Long? = null,
     val veterinarianId: String = ""
 )
+
+// ====================== HORARIOS VETERINARIA ======================
+
+@Serializable
+data class VetSchedule(
+    val id: String = "",
+    val dayOfWeek: Int = 1, // 1 = Lunes, 7 = Domingo
+    val startTime: String = "", // Formato "HH:mm"
+    val endTime: String = "", // Formato "HH:mm"
+    val active: Boolean = true
+)

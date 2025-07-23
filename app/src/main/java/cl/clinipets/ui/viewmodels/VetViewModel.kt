@@ -1,3 +1,5 @@
+// Actualizar el archivo app/src/main/java/cl/clinipets/ui/viewmodels/VetViewModel.kt
+
 // ui/viewmodels/VetViewModel.kt
 package cl.clinipets.ui.viewmodels
 
@@ -7,6 +9,7 @@ import cl.clinipets.data.model.Appointment
 import cl.clinipets.data.model.AppointmentStatus
 import cl.clinipets.data.model.Consultation
 import cl.clinipets.data.model.Pet
+import cl.clinipets.data.model.VetSchedule
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
@@ -96,6 +99,70 @@ class VetViewModel @Inject constructor() : ViewModel() {
         }
     }
 
+    fun loadVetSchedules() {
+        viewModelScope.launch {
+            try {
+                val snapshot = firestore.collection("vetSchedules")
+                    .get()
+                    .await()
+
+                val schedules = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject<VetSchedule>()?.copy(id = doc.id)
+                }
+
+                _vetState.value = _vetState.value.copy(
+                    vetSchedules = schedules
+                )
+            } catch (e: Exception) {
+                _vetState.value = _vetState.value.copy(
+                    error = "Error al cargar horarios: ${e.message}"
+                )
+            }
+        }
+    }
+
+    fun saveVetSchedules(schedules: Map<Int, Any>) {
+        viewModelScope.launch {
+            try {
+                // Primero, eliminar horarios existentes
+                val existingSchedules = firestore.collection("vetSchedules")
+                    .get()
+                    .await()
+
+                existingSchedules.documents.forEach { doc ->
+                    doc.reference.delete().await()
+                }
+
+                // Guardar nuevos horarios
+                schedules.forEach { (dayNumber, schedule) ->
+                    // Convertir el objeto DaySchedule a VetSchedule
+                    val daySchedule = schedule as? cl.clinipets.ui.screens.vet.DaySchedule
+                    if (daySchedule != null) {
+                        val vetSchedule = VetSchedule(
+                            dayOfWeek = dayNumber,
+                            startTime = daySchedule.startTime,
+                            endTime = daySchedule.endTime,
+                            active = daySchedule.isActive
+                        )
+                        firestore.collection("vetSchedules")
+                            .add(vetSchedule)
+                            .await()
+                    }
+                }
+
+                _vetState.value = _vetState.value.copy(
+                    error = null
+                )
+
+                loadVetSchedules()
+            } catch (e: Exception) {
+                _vetState.value = _vetState.value.copy(
+                    error = "Error al guardar horarios: ${e.message}"
+                )
+            }
+        }
+    }
+
     fun loadWeekStats() {
         viewModelScope.launch {
             try {
@@ -135,10 +202,19 @@ data class VetState(
     val currentVetId: String? = null,
     val todayAppointments: List<Pair<Appointment, Pet?>> = emptyList(),
     val weeklyStats: WeeklyStats = WeeklyStats(),
+    val vetSchedules: List<VetSchedule> = emptyList(),
     val error: String? = null
 )
 
 data class WeeklyStats(
     val consultations: Int = 0,
     val revenue: Double = 0.0
+)
+
+// Hacer la clase DaySchedule accesible desde aquí
+data class DaySchedule(
+    val name: String,
+    val isActive: Boolean,
+    val startTime: String,
+    val endTime: String
 )

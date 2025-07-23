@@ -119,6 +119,7 @@ fun AppointmentsScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = when (appointment.status) {
                                         AppointmentStatus.SCHEDULED -> MaterialTheme.colorScheme.primary
+                                        AppointmentStatus.CONFIRMED -> MaterialTheme.colorScheme.secondary
                                         AppointmentStatus.COMPLETED -> Color.Gray
                                         AppointmentStatus.CANCELLED -> MaterialTheme.colorScheme.error
                                         else -> Color.Unspecified
