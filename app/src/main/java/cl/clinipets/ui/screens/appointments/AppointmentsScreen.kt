@@ -1,4 +1,3 @@
-// ui/screens/appointments/AppointmentsScreen.kt
 package cl.clinipets.ui.screens.appointments
 
 import androidx.compose.foundation.layout.Arrangement
@@ -29,9 +28,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,10 +40,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import cl.clinipets.data.model.Appointment
 import cl.clinipets.data.model.AppointmentStatus
 import cl.clinipets.ui.viewmodels.AppointmentsViewModel
-
-// package cl.clinipets.ui.screens.appointments
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,8 +51,20 @@ fun AppointmentsScreen(
     onNavigateToAddAppointment: () -> Unit,
     viewModel: AppointmentsViewModel = hiltViewModel()
 ) {
-    val appointmentsState by viewModel.appointmentsState.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) }
+    val state by viewModel.appointmentsState.collectAsState()
+
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+
+    // Derivar la lista según pestaña para evitar recompos innecesarias / NPE
+    val currentAppointments by remember(
+        selectedTab,
+        state.upcomingAppointments,
+        state.pastAppointments
+    ) {
+        derivedStateOf<List<Appointment>> {
+            if (selectedTab == 0) state.upcomingAppointments else state.pastAppointments
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -71,7 +83,11 @@ fun AppointmentsScreen(
             }
         }
     ) { paddingValues ->
-        Column(Modifier.padding(paddingValues)) {
+        Column(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize()
+        ) {
             TabRow(selectedTabIndex = selectedTab) {
                 Tab(
                     selected = selectedTab == 0,
@@ -85,55 +101,34 @@ fun AppointmentsScreen(
                 )
             }
 
-            val appointments = if (selectedTab == 0)
-                appointmentsState.upcomingAppointments
-            else
-                appointmentsState.pastAppointments
-
-            if (appointmentsState.isLoading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+            when {
+                state.isLoading -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
-            } else if (appointments.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No hay citas")
-                }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(appointments) { appointment ->
-                        Card(Modifier.fillMaxWidth()) {
-                            Column(Modifier.padding(16.dp)) {
-                                Row(
-                                    Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(appointment.date, fontWeight = FontWeight.Bold)
-                                    Text(appointment.time)
-                                }
-                                Text(appointment.reason)
-                                Text(
-                                    appointment.status.name,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = when (appointment.status) {
-                                        AppointmentStatus.SCHEDULED -> MaterialTheme.colorScheme.primary
-                                        AppointmentStatus.CONFIRMED -> MaterialTheme.colorScheme.secondary
-                                        AppointmentStatus.COMPLETED -> Color.Gray
-                                        AppointmentStatus.CANCELLED -> MaterialTheme.colorScheme.error
-                                        else -> Color.Unspecified
-                                    }
-                                )
 
-                                if (selectedTab == 0 && appointment.status == AppointmentStatus.SCHEDULED) {
-                                    TextButton(
-                                        onClick = { viewModel.cancelAppointment(appointment.id) }
-                                    ) {
-                                        Text("Cancelar", color = MaterialTheme.colorScheme.error)
-                                    }
-                                }
-                            }
+                currentAppointments.isEmpty() -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No hay citas")
+                    }
+                }
+
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(
+                            items = currentAppointments,
+                            key = { it.id }
+                        ) { appointment ->
+                            AppointmentCard(
+                                appointment = appointment,
+                                showCancel = (selectedTab == 0 && appointment.status == AppointmentStatus.SCHEDULED),
+                                onCancel = { viewModel.cancelAppointment(appointment.id) }
+                            )
                         }
                     }
                 }
@@ -141,3 +136,57 @@ fun AppointmentsScreen(
         }
     }
 }
+
+@Composable
+private fun AppointmentCard(
+    appointment: Appointment,
+    showCancel: Boolean,
+    onCancel: () -> Unit
+) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(appointment.date, fontWeight = FontWeight.Bold)
+                Text(appointment.time)
+            }
+            if (appointment.reason.isNotBlank()) {
+                Text(appointment.reason)
+            }
+            Text(
+                text = statusLabel(appointment.status),
+                style = MaterialTheme.typography.bodySmall,
+                color = statusColor(appointment.status)
+            )
+
+            if (showCancel) {
+                TextButton(onClick = onCancel) {
+                    Text("Cancelar", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+    }
+}
+
+/* Helpers */
+
+private fun statusLabel(status: AppointmentStatus?): String =
+    when (status) {
+        AppointmentStatus.SCHEDULED -> "Agendada"
+        AppointmentStatus.CONFIRMED -> "Confirmada"
+        AppointmentStatus.COMPLETED -> "Completada"
+        AppointmentStatus.CANCELLED -> "Cancelada"
+        null -> "Desconocido"
+    }
+
+@Composable
+private fun statusColor(status: AppointmentStatus?): Color =
+    when (status) {
+        AppointmentStatus.SCHEDULED -> MaterialTheme.colorScheme.primary
+        AppointmentStatus.CONFIRMED -> MaterialTheme.colorScheme.secondary
+        AppointmentStatus.COMPLETED -> Color.Gray
+        AppointmentStatus.CANCELLED -> MaterialTheme.colorScheme.error
+        null -> Color.Unspecified
+    }

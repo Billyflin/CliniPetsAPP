@@ -1,9 +1,6 @@
-// Modificar el archivo app/src/main/java/cl/clinipets/ui/viewmodels/AppointmentsViewModel.kt
-
 // ui/viewmodels/AppointmentsViewModel.kt
 package cl.clinipets.ui.viewmodels
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.data.model.Appointment
@@ -22,10 +19,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
-
 
 @HiltViewModel
 class AppointmentsViewModel @Inject constructor() : ViewModel() {
@@ -35,6 +30,7 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
     private val _appointmentsState = MutableStateFlow(AppointmentsState())
     val appointmentsState: StateFlow<AppointmentsState> = _appointmentsState
 
+    /* ---------- CARGAR Citas ---------- */
     init {
         loadAppointments()
         loadUserPets()
@@ -48,31 +44,33 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
             try {
                 _appointmentsState.value = _appointmentsState.value.copy(isLoading = true)
 
-                // Para usuarios normales, cargar sus citas
-                // Para veterinarios, cargar todas las citas
-                val userDoc = firestore.collection("users").document(userId).get().await()
-                val isVet = userDoc.getBoolean("isVet") ?: false
+                val isVet = firestore.collection("users")
+                    .document(userId).get().await()
+                    .getBoolean("isVet") ?: false
 
                 val query = if (isVet) {
                     firestore.collection("appointments")
                         .orderBy("dateTime", Query.Direction.DESCENDING)
                 } else {
-                    firestore.collection("appointments").whereEqualTo("ownerId", userId)
+                    firestore.collection("appointments")
+                        .whereEqualTo("ownerId", userId)
                         .orderBy("dateTime", Query.Direction.DESCENDING)
                 }
 
-                val snapshot = query.get().await()
-
-                val appointments = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject<Appointment>()?.copy(id = doc.id)
+                val appointments = query.get().await().documents.mapNotNull { d ->
+                    d.toObject<Appointment>()?.copy(id = d.id)
                 }
 
+                val now = System.currentTimeMillis()
                 val upcoming = appointments.filter {
-                    it.dateTime > System.currentTimeMillis() && it.status == AppointmentStatus.SCHEDULED || it.status == AppointmentStatus.CONFIRMED
+                    it.dateTime > now &&
+                            (it.status == AppointmentStatus.SCHEDULED ||
+                                    it.status == AppointmentStatus.CONFIRMED)
                 }
-
                 val past = appointments.filter {
-                    it.dateTime <= System.currentTimeMillis() || it.status == AppointmentStatus.COMPLETED
+                    it.dateTime <= now ||
+                            it.status == AppointmentStatus.COMPLETED ||
+                            it.status == AppointmentStatus.CANCELLED
                 }
 
                 _appointmentsState.value = _appointmentsState.value.copy(
@@ -83,250 +81,194 @@ class AppointmentsViewModel @Inject constructor() : ViewModel() {
                 )
             } catch (e: Exception) {
                 _appointmentsState.value = _appointmentsState.value.copy(
-                    isLoading = false, error = "Error al cargar citas: ${e.message}"
+                    isLoading = false,
+                    error = "Error al cargar citas: ${e.message}"
                 )
             }
         }
     }
 
+    /* ---------- DÍAS DISPONIBLES ---------- */
     fun loadAvailableDays() {
         viewModelScope.launch {
             try {
-                // Obtener todos los horarios de la veterinaria
-                val schedulesSnapshot = firestore.collection("vetSchedules")
-                    .whereEqualTo("isActive", true)
-                    .get()
-                    .await()
+                val schedules = firestore.collection("vetSchedules")
+                    .whereEqualTo("active", true)
+                    .get().await().documents.mapNotNull { it.toObject<VetSchedule>() }
 
-                val schedules = schedulesSnapshot.documents.mapNotNull { doc ->
-                    doc.toObject<VetSchedule>()
-                }
-
-                // Generar los próximos 30 días disponibles
                 val availableDays = mutableListOf<AvailableDay>()
                 val calendar = Calendar.getInstance()
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                val dayFormat = SimpleDateFormat("EEEE", Locale("es"))
-                val displayFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                val dateFmt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                val dayFmt = SimpleDateFormat("EEEE", Locale("es"))
+                val viewFmt = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
-                for (i in 1..30) { // Próximos 30 días
-                    calendar.add(Calendar.DAY_OF_MONTH, 1)
-                    val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
-                    // Convertir a nuestro formato (1 = Lunes, 7 = Domingo)
-                    val ourDayOfWeek = if (dayOfWeek == 1) 7 else dayOfWeek - 1
+                for (i in 0 until 30) {
+                    if (i > 0) calendar.add(Calendar.DAY_OF_MONTH, 1)
 
-                    // Verificar si hay horario para este día
-                    val daySchedule = schedules.find { it.dayOfWeek == ourDayOfWeek }
+                    val wk = calendar.get(Calendar.DAY_OF_WEEK)
+                    val ourDay = if (wk == Calendar.SUNDAY) 7 else wk - 1
+                    val sch = schedules.find { it.dayOfWeek == ourDay } ?: continue
 
-                    if (daySchedule != null) {
-                        availableDays.add(
-                            AvailableDay(
-                                date = dateFormat.format(calendar.time),
-                                dayName = dayFormat.format(calendar.time)
-                                    .replaceFirstChar { it.uppercase() },
-                                displayDate = displayFormat.format(calendar.time),
-                                isAvailable = true,
-                                startTime = daySchedule.startTime,
-                                endTime = daySchedule.endTime
-                            )
-                        )
-                    }
-
-                    calendar.time = Date() // Reset para el siguiente día
+                    availableDays += AvailableDay(
+                        date = dateFmt.format(calendar.time),
+                        dayName = dayFmt.format(calendar.time).replaceFirstChar { it.uppercase() },
+                        displayDate = viewFmt.format(calendar.time),
+                        isAvailable = true,
+                        startTime = sch.startTime,
+                        endTime = sch.endTime
+                    )
                 }
 
-                _appointmentsState.value = _appointmentsState.value.copy(
-                    availableDays = availableDays
-                )
+                _appointmentsState.value =
+                    _appointmentsState.value.copy(availableDays = availableDays)
+
             } catch (e: Exception) {
-                // Error handling silencioso
+                _appointmentsState.value =
+                    _appointmentsState.value.copy(error = "Error al cargar días: ${e.message}")
             }
         }
     }
 
-    fun createAppointment(
-        petId: String, date: String, time: String, reason: String
-    ) {
-        val userId = auth.currentUser?.uid ?: return
-
-        viewModelScope.launch {
-            try {
-                _appointmentsState.value = _appointmentsState.value.copy(isLoading = true)
-
-                val dateTimeStr = "$date $time"
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-                val dateTime = dateFormat.parse(dateTimeStr)?.time ?: System.currentTimeMillis()
-
-                val appointment = Appointment(
-                    petId = petId,
-                    ownerId = userId,
-                    date = date,
-                    time = time,
-                    dateTime = dateTime,
-                    reason = reason,
-                    status = AppointmentStatus.SCHEDULED,
-                    createdAt = System.currentTimeMillis()
-                )
-
-                firestore.collection("appointments").add(appointment).await()
-
-                _appointmentsState.value = _appointmentsState.value.copy(
-                    isLoading = false, isAppointmentCreated = true
-                )
-
-                loadAppointments()
-            } catch (e: Exception) {
-                _appointmentsState.value = _appointmentsState.value.copy(
-                    isLoading = false, error = "Error al crear cita: ${e.message}"
-                )
-            }
-        }
-    }
-
-    fun cancelAppointment(appointmentId: String) {
-        viewModelScope.launch {
-            try {
-                firestore.collection("appointments").document(appointmentId)
-                    .update("status", AppointmentStatus.CANCELLED.name).await()
-
-                loadAppointments()
-            } catch (e: Exception) {
-                _appointmentsState.value = _appointmentsState.value.copy(
-                    error = "Error al cancelar cita: ${e.message}"
-                )
-            }
-        }
-    }
-
-    fun confirmAppointment(appointmentId: String) {
-        viewModelScope.launch {
-            try {
-                firestore.collection("appointments").document(appointmentId)
-                    .update("status", AppointmentStatus.CONFIRMED.name).await()
-
-                loadAppointments()
-            } catch (e: Exception) {
-                _appointmentsState.value = _appointmentsState.value.copy(
-                    error = "Error al confirmar cita: ${e.message}"
-                )
-            }
-        }
-    }
-
+    /* ---------- SLOTS HORARIOS ---------- */
     fun loadAvailableTimeSlots(date: String) {
         viewModelScope.launch {
             try {
-                _appointmentsState.value = _appointmentsState.value.copy(isLoadingSlots = true)
+                _appointmentsState.value =
+                    _appointmentsState.value.copy(isLoadingSlots = true)
 
-                // Buscar el día disponible para obtener su horario
-                val selectedDay = _appointmentsState.value.availableDays.find { it.date == date }
-
-                if (selectedDay == null) {
-                    _appointmentsState.value = _appointmentsState.value.copy(
-                        availableTimeSlots = emptyList(),
-                        isLoadingSlots = false
-                    )
+                val day = _appointmentsState.value.availableDays.find { it.date == date }
+                if (day == null) {
+                    _appointmentsState.value =
+                        _appointmentsState.value.copy(
+                            availableTimeSlots = emptyList(),
+                            isLoadingSlots = false
+                        )
                     return@launch
                 }
 
-                // Obtener citas existentes para esa fecha
-                val existingAppointments = firestore.collection("appointments")
+                val booked = firestore.collection("appointments")
                     .whereEqualTo("date", date)
                     .whereIn(
                         "status",
-                        listOf(AppointmentStatus.SCHEDULED.name, AppointmentStatus.CONFIRMED.name)
+                        listOf(
+                            AppointmentStatus.SCHEDULED.name,
+                            AppointmentStatus.CONFIRMED.name
+                        )
                     )
-                    .get()
-                    .await()
+                    .get().await().documents.mapNotNull { it.getString("time") }
 
-                val bookedTimes = existingAppointments.documents.map {
-                    it.getString("time") ?: ""
-                }
-                Log.d("AvailableTimeSlots", "Booked Times: $bookedTimes")
+                val allSlots = generateTimeSlotsForSchedule(day.startTime, day.endTime)
+                val free = allSlots.map { t -> TimeSlot(t, !booked.contains(t)) }
 
-                // Generar slots disponibles basados en el horario del día
-                val allSlots =
-                    generateTimeSlotsForSchedule(selectedDay.startTime, selectedDay.endTime)
-                val availableSlots = allSlots.map { time ->
-                    TimeSlot(
-                        time = time,
-                        isAvailable = !bookedTimes.contains(time)
+                _appointmentsState.value =
+                    _appointmentsState.value.copy(
+                        availableTimeSlots = free,
+                        isLoadingSlots = false
                     )
-                }
 
-                _appointmentsState.value = _appointmentsState.value.copy(
-                    availableTimeSlots = availableSlots,
-                    isLoadingSlots = false
-                )
             } catch (e: Exception) {
-                _appointmentsState.value = _appointmentsState.value.copy(
-                    isLoadingSlots = false,
-                    error = "Error al cargar horarios: ${e.message}"
-                )
+                _appointmentsState.value =
+                    _appointmentsState.value.copy(
+                        isLoadingSlots = false,
+                        error = "Error al cargar horarios: ${e.message}"
+                    )
             }
         }
     }
 
     private fun generateTimeSlotsForSchedule(startTime: String, endTime: String): List<String> {
-        val slots = mutableListOf<String>()
-        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-
-        try {
-            val start = timeFormat.parse(startTime) ?: return emptyList()
-            val end = timeFormat.parse(endTime) ?: return emptyList()
-
-            val calendar = Calendar.getInstance()
-            calendar.time = start
-
-            while (calendar.time.before(end) || calendar.time == end) {
-                slots.add(timeFormat.format(calendar.time))
-                calendar.add(Calendar.MINUTE, 30) // Slots de 30 minutos
+        val fmt = SimpleDateFormat("HH:mm", Locale.getDefault())
+        return try {
+            val start = fmt.parse(startTime) ?: return emptyList()
+            val end = fmt.parse(endTime) ?: return emptyList()
+            val cal = Calendar.getInstance().apply { time = start }
+            buildList {
+                while (cal.time.before(end)) {
+                    add(fmt.format(cal.time))
+                    cal.add(Calendar.MINUTE, 30)
+                }
             }
-        } catch (e: Exception) {
-            // Si hay error, devolver slots por defecto
-            return generateTimeSlots()
+        } catch (_: Exception) {
+            generateDefaultSlots()
         }
-
-        return slots
     }
 
-    private fun generateTimeSlots(): List<String> {
-        val slots = mutableListOf<String>()
-        for (hour in 9..17) {
-            slots.add(String.format("%02d:00", hour))
-            slots.add(String.format("%02d:30", hour))
-        }
-        return slots
-    }
+    private fun generateDefaultSlots(): List<String> =
+        (9..17).flatMap { listOf("%02d:00".format(it), "%02d:30".format(it)) }
 
-    fun loadUserPets() {
+    /* ---------- CREAR / ACTUALIZAR CITAS ---------- */
+    fun createAppointment(petId: String, date: String, time: String, reason: String) {
         val userId = auth.currentUser?.uid ?: return
-
         viewModelScope.launch {
             try {
-                val snapshot = firestore.collection("pets").whereEqualTo("ownerId", userId)
-                    .whereEqualTo("active", true).get().await()
+                _appointmentsState.value = _appointmentsState.value.copy(isLoading = true)
 
-                val pets = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject<Pet>()?.copy(id = doc.id)
-                }
+                val dtStr = "$date $time"
+                val dt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                    .parse(dtStr)?.time ?: System.currentTimeMillis()
 
-                _appointmentsState.value = _appointmentsState.value.copy(
-                    userPets = pets
+                val appt = Appointment(
+                    petId = petId,
+                    ownerId = userId,
+                    date = date,
+                    time = time,
+                    dateTime = dt,
+                    reason = reason,
+                    status = AppointmentStatus.SCHEDULED,
+                    createdAt = System.currentTimeMillis()
                 )
+
+                firestore.collection("appointments").add(appt).await()
+                _appointmentsState.value =
+                    _appointmentsState.value.copy(isLoading = false, isAppointmentCreated = true)
+                loadAppointments()
             } catch (e: Exception) {
-                // Error handling silencioso
+                _appointmentsState.value =
+                    _appointmentsState.value.copy(
+                        isLoading = false,
+                        error = "Error al crear cita: ${e.message}"
+                    )
             }
         }
     }
 
+    fun cancelAppointment(id: String) = updateStatus(id, AppointmentStatus.CANCELLED)
+    fun confirmAppointment(id: String) = updateStatus(id, AppointmentStatus.CONFIRMED)
+
+    private fun updateStatus(id: String, status: AppointmentStatus) {
+        viewModelScope.launch {
+            try {
+                firestore.collection("appointments").document(id)
+                    .update("status", status.name).await()
+                loadAppointments()
+            } catch (e: Exception) {
+                _appointmentsState.value =
+                    _appointmentsState.value.copy(error = "Error al actualizar cita: ${e.message}")
+            }
+        }
+    }
+
+    /* ---------- MASCOTAS ---------- */
+    fun loadUserPets() {
+        val userId = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            val pets = firestore.collection("pets")
+                .whereEqualTo("ownerId", userId)
+                .whereEqualTo("active", true)
+                .get().await().documents.mapNotNull { it.toObject<Pet>()?.copy(id = it.id) }
+
+            _appointmentsState.value = _appointmentsState.value.copy(userPets = pets)
+        }
+    }
+
+    /* ---------- LIMPIEZA DE ESTADO ---------- */
     fun clearState() {
-        _appointmentsState.value = _appointmentsState.value.copy(
-            isAppointmentCreated = false, error = null
-        )
+        _appointmentsState.value =
+            _appointmentsState.value.copy(isAppointmentCreated = false, error = null)
     }
 }
 
+/* ---------- STATE ---------- */
 data class AppointmentsState(
     val appointments: List<Appointment> = emptyList(),
     val upcomingAppointments: List<Appointment> = emptyList(),

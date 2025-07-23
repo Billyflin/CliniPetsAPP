@@ -76,7 +76,7 @@ fun VetScheduleScreen(
             vetState.vetSchedules.forEach { schedule ->
                 updatedSchedules[schedule.dayOfWeek] = DaySchedule(
                     name = getDayName(schedule.dayOfWeek),
-                    isActive = schedule.active,
+                    active = schedule.active,
                     startTime = schedule.startTime,
                     endTime = schedule.endTime
                 )
@@ -114,9 +114,9 @@ fun VetScheduleScreen(
             schedules.forEach { (dayNumber, schedule) ->
                 DayScheduleCard(
                     daySchedule = schedule,
-                    onToggleActive = { isActive ->
+                    onToggleActive = { active ->
                         schedules = schedules.toMutableMap().apply {
-                            this[dayNumber] = schedule.copy(isActive = isActive)
+                            this[dayNumber] = schedule.copy(active = active)
                         }
                     },
                     onTimeChange = { start, end ->
@@ -166,12 +166,12 @@ private fun DayScheduleCard(
                     fontWeight = FontWeight.Bold
                 )
                 Switch(
-                    checked = daySchedule.isActive,
+                    checked = daySchedule.active,
                     onCheckedChange = onToggleActive
                 )
             }
 
-            if (daySchedule.isActive) {
+            if (daySchedule.active) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically
@@ -278,7 +278,7 @@ private fun TimeRangeDialog(
 
 internal data class DaySchedule(
     val name: String,
-    val isActive: Boolean,
+    val active: Boolean,
     val startTime: String,
     val endTime: String
 )

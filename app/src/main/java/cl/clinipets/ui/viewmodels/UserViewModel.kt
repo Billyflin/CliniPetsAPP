@@ -66,6 +66,7 @@ class UserViewModel @Inject constructor() : ViewModel() {
                             memberSince
                         )
                     ),
+                    photoUrl = auth.currentUser?.photoUrl?.toString() ?: "",
                     petsCount = petsCount,
                     appointmentsCount = appointmentsCount,
                     isVet = isVet
@@ -83,6 +84,7 @@ class UserViewModel @Inject constructor() : ViewModel() {
 data class UserState(
     val userName: String = "",
     val userEmail: String = "",
+    val photoUrl: String = "",
     val memberSince: String = "",
     val petsCount: Int = 0,
     val appointmentsCount: Int = 0,

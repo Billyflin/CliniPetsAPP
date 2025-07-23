@@ -1,6 +1,3 @@
-// Actualizar el archivo app/src/main/java/cl/clinipets/ui/viewmodels/VetViewModel.kt
-
-// ui/viewmodels/VetViewModel.kt
 package cl.clinipets.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
@@ -142,7 +139,7 @@ class VetViewModel @Inject constructor() : ViewModel() {
                             dayOfWeek = dayNumber,
                             startTime = daySchedule.startTime,
                             endTime = daySchedule.endTime,
-                            active = daySchedule.isActive
+                            active = daySchedule.active
                         )
                         firestore.collection("vetSchedules")
                             .add(vetSchedule)
@@ -209,12 +206,4 @@ data class VetState(
 data class WeeklyStats(
     val consultations: Int = 0,
     val revenue: Double = 0.0
-)
-
-// Hacer la clase DaySchedule accesible desde aquí
-data class DaySchedule(
-    val name: String,
-    val isActive: Boolean,
-    val startTime: String,
-    val endTime: String
 )
