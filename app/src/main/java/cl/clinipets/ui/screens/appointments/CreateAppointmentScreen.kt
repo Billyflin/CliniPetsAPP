@@ -1,5 +1,6 @@
 package cl.clinipets.ui.screens.appointments
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -160,7 +161,9 @@ fun CreateAppointmentScreen(
                             val pet = appointmentsState.userPets.find { it.id == petId }
                             pet?.let {
                                 SelectedPetCard(pet = it, color = extColors.pink)
+                                currentStep = 2 // Avanzar automáticamente al siguiente paso
                             }
+                            Log.d("CreateAppointmentScreen", "Pet ID: $selectedPetId")
                         } else {
                             // Lista de mascotas para seleccionar
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -247,7 +250,13 @@ fun CreateAppointmentScreen(
                 }
 
                 // PASO 3: Seleccionar hora
+                Log.d("CreateAppointmentScreen", "selectedDate: $selectedDate")
+                Log.d("CreateAppointmentScreen", "currentStep: $currentStep")
+                if (selectedDate.isNotEmpty() && currentStep < 3) {
+                    currentStep = 3
+                }
                 if (selectedDate.isNotEmpty()) {
+                    Log.d("CreateAppointmentScreen", "selectedDate: $selectedDate")
                     item {
                         StepCard(
                             stepNumber = 3,
