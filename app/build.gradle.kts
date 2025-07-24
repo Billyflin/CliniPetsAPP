@@ -76,7 +76,8 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
-
+    runtimeOnly("androidx.compose.animation:animation:1.9.0-beta03")
+    implementation("androidx.compose.animation:animation-core:1.9.0-beta03")
     implementation("com.facebook.android:facebook-login:18.0.3")
 
 

@@ -107,11 +107,10 @@ fun AppNavigation() {
         composable("appointments") {
             AppointmentsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToAddAppointment = { navController.navigate("create_appointment") }
-
-//               , onNavigateToAppointmentDetail = { appointmentId ->
-//                    navController.navigate("appointment_detail/$appointmentId")
-//                }
+                onNavigateToAddAppointment = { navController.navigate("create_appointment") },
+                onNavigateToAppointmentDetail = { appointmentId ->
+                    navController.navigate("appointment_detail/$appointmentId")
+                }
             )
         }
 
