@@ -3,6 +3,8 @@
 */
 package cl.clinipets.ui.components
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType
@@ -19,23 +21,40 @@ val clinipetsLogo: ImageVector
         if (_clinipetsLogo != null) return _clinipetsLogo!!
 
         val extColors = LocalExtendedColors.current
-
+        val isDark = isSystemInDarkTheme()
 
 // GATO
-        val bigote_gato = extColors.lavander.color
-        val cara_gato = extColors.lavander.onColorContainer
-        val cuerpo_gato = extColors.pink.colorContainer
-        val cuerpo_gato2 = extColors.lavander.color
-        val collar_gato = extColors.mint.onColorContainer
-        val mancha_gato = extColors.pink.color
+        val bigote_gato = if (isDark) extColors.lavander.onColor else extColors.lavander.color
+        val cara_gato =
+            if (isDark) extColors.lavander.colorContainer else extColors.lavander.onColorContainer
+        val cuerpo_gato =
+            if (isDark) extColors.pink.onColorContainer else extColors.pink.colorContainer
+        val cuerpo_gato2 = if (isDark) extColors.lavander.onColor else extColors.lavander.color
+        val collar_gato =
+            if (isDark) extColors.mint.colorContainer else extColors.mint.onColorContainer
+        val mancha_gato = if (isDark) extColors.pink.onColor else extColors.pink.color
 
 // PERRO
-        val oreja_perro = extColors.peach.color
-        val cara_perro = extColors.peach.onColorContainer
-        val cuerpo_perro = extColors.peach.colorContainer
-        val hocico_perro = extColors.peach.onColor
-        val collar_perro = extColors.mint.color
-        val mancha_perro = extColors.peach.color
+        val oreja_perro = if (isDark) extColors.peach.onColor else extColors.peach.color
+        val cara_perro =
+            if (isDark) extColors.peach.colorContainer else extColors.peach.onColorContainer
+        val cuerpo_perro =
+            if (isDark) extColors.peach.onColorContainer else extColors.peach.colorContainer
+        val hocico_perro = if (isDark) extColors.peach.color else extColors.peach.onColor
+        val collar_perro = if (isDark) extColors.mint.onColor else extColors.mint.color
+        val mancha_perro = if (isDark) extColors.peach.onColor else extColors.peach.color
+
+
+// textos
+        val texto = if (isDark) extColors.lavander.onColor else extColors.lavander.color
+        val texto2 = if (isDark) extColors.pink.color else extColors.pink.onColor
+        val cruz =
+            if (isDark) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.error
+        val patita =
+            if (isDark) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onError
+        val borde_patita =
+            if (isDark) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.errorContainer
+
 
 
         _clinipetsLogo = ImageVector.Builder(
@@ -53,7 +72,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFF9bc36a)),
+                    fill = SolidColor(texto2),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(346.259f, 237.607f)
@@ -354,7 +373,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFF0a3459)),
+                    fill = SolidColor(texto),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(220.653f, 253.569f)
@@ -372,7 +391,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFF0a3459)),
+                    fill = SolidColor(texto),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(153.613f, 235.651f)
@@ -383,7 +402,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFF0a3459)),
+                    fill = SolidColor(texto),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(382.578f, 248.595f)
@@ -407,7 +426,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFF0a3459)),
+                    fill = SolidColor(texto),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(99.275f, 233.55f)
@@ -449,7 +468,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFF0a3459)),
+                    fill = SolidColor(texto),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(185.613f, 249.87f)
@@ -473,7 +492,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFF0a3459)),
+                    fill = SolidColor(texto),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(134.753f, 233.667f)
@@ -490,7 +509,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFF0a3459)),
+                    fill = SolidColor(texto),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(153.167f, 252.874f)
@@ -505,7 +524,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFFfdf2d9)),
+                    fill = SolidColor(borde_patita),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(228.601f, 235.51f)
@@ -532,7 +551,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFFfdf2d9)),
+                    fill = SolidColor(borde_patita),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(222.207f, 230.48f)
@@ -543,7 +562,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFFfdf2d9)),
+                    fill = SolidColor(borde_patita),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(218.268f, 232.185f)
@@ -554,7 +573,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFFfdf2d9)),
+                    fill = SolidColor(borde_patita),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(223.977f, 240.128f)
@@ -568,7 +587,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFFfdf2d9)),
+                    fill = SolidColor(borde_patita),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(231.454f, 235.943f)
@@ -579,7 +598,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFFfdf2d9)),
+                    fill = SolidColor(borde_patita),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(215.555f, 230.919f)
@@ -592,7 +611,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFFfdf2d9)),
+                    fill = SolidColor(borde_patita),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(213.795f, 238.248f)
@@ -603,7 +622,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFF7fc7cd)),
+                    fill = SolidColor(cruz),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(257.083f, 263.341f)
@@ -622,7 +641,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFFfdf2d9)),
+                    fill = SolidColor(borde_patita),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(226.084f, 231.14f)
@@ -633,7 +652,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFFfbb949)),
+                    fill = SolidColor(patita),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(210.623f, 238.424f)
@@ -644,7 +663,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFFfbb949)),
+                    fill = SolidColor(patita),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(220.222f, 239.661f)
@@ -659,7 +678,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFFfbb949)),
+                    fill = SolidColor(patita),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(222.682f, 230.73f)
@@ -670,7 +689,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFFfbb949)),
+                    fill = SolidColor(patita),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(228.269f, 236.265f)
@@ -681,7 +700,7 @@ val clinipetsLogo: ImageVector
             }
             group {
                 path(
-                    fill = SolidColor(Color(0xFFfbb949)),
+                    fill = SolidColor(patita),
                     pathFillType = PathFillType.EvenOdd
                 ) {
                     moveTo(214.864f, 231.943f)
