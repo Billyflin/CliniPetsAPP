@@ -11,6 +11,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import cl.clinipets.ui.screens.LoginScreen
+import cl.clinipets.ui.screens.appointments.AppointmentsDetailScreen
 import cl.clinipets.ui.screens.appointments.AppointmentsScreen
 import cl.clinipets.ui.screens.appointments.CreateAppointmentScreen
 import cl.clinipets.ui.screens.home.HomeScreen
@@ -124,6 +125,10 @@ fun AppNavigation() {
 
         composable("appointment_detail/{appointmentId}") { backStackEntry ->
             val appointmentId = backStackEntry.arguments?.getString("appointmentId") ?: ""
+            AppointmentsDetailScreen(
+                appointmentId = appointmentId,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         // ====================== PERFIL Y CONFIGURACIÓN ======================
