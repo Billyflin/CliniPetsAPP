@@ -147,7 +147,12 @@ fun HomeScreen(
                         }
                     }, actions = {
                         // Notificaciones
-                        IconButton(onClick = { /* TODO */ }) {
+                        IconButton(onClick = {
+
+                            // Acción de notificaciones
+
+
+                        }) {
                             BadgedBox(
                                 badge = {
                                     Badge(

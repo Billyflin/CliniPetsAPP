@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -453,10 +454,13 @@ private fun AppointmentCard(
                 }
 
                 // Pet emoji basado en el ID (simulado)
-                Text(
-                    text = "🐾",
-                    style = MaterialTheme.typography.headlineMedium
+                Icon(
+                    imageVector = Icons.Default.Pets, // o usa uno personalizado si querés una huella real
+                    contentDescription = "Huella",
+                    tint = statusColor.color,
+                    modifier = Modifier.size(24.dp)
                 )
+
             }
 
             // Razón de la cita
