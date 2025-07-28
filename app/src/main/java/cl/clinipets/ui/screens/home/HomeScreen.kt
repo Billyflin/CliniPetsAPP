@@ -72,12 +72,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.clinipets.data.model.Appointment
 import cl.clinipets.data.model.Pet
 import cl.clinipets.data.model.PetSpecies
+import cl.clinipets.ui.components.textLogo
 import cl.clinipets.ui.theme.ColorFamily
 import cl.clinipets.ui.theme.ExtendedColorScheme
 import cl.clinipets.ui.theme.LocalExtendedColors
@@ -128,6 +130,14 @@ fun HomeScreen(
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface, topBar = {
+            Icon(
+                imageVector = textLogo,
+                contentDescription = "Clinipets Logo",
+                modifier = Modifier
+                    .padding(start = 16.dp)
+                    .size(width = 160.dp, height = 64.dp),
+                tint = extColors.mint.color
+            )
             Surface(
                 color = MaterialTheme.colorScheme.surface.copy(
                     alpha = scrollProgress.value
@@ -140,10 +150,10 @@ fun HomeScreen(
                             enter = fadeIn() + slideInVertically(),
                             exit = fadeOut() + slideOutVertically()
                         ) {
-                        Text(
-                            "Hola, ${userState.userName.split(" ").first()} 👋",
-                            style = MaterialTheme.typography.titleMedium
-                        )
+                            Text(
+                                "Hola, ${userState.userName.split(" ").first()} 👋",
+                                style = MaterialTheme.typography.titleMedium
+                            )
                         }
                     }, actions = {
                         // Notificaciones
@@ -169,30 +179,30 @@ fun HomeScreen(
                             }
                         }
                         // Perfil
-                    Surface(
-                        shape = CircleShape,
-                        color = extColors.lavander.colorContainer,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clickable { onNavigateToProfile() }) {
-                        Box(contentAlignment = Alignment.Center) {
-                            if (userState.photoUrl.isNotEmpty()) {
-                                // AsyncImage aquí
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = "Perfil",
-                                    tint = extColors.lavander.onColorContainer,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            } else {
-                                Text(
-                                    userState.userName.firstOrNull()?.toString() ?: "?",
-                                    fontWeight = FontWeight.Bold,
-                                    color = extColors.lavander.onColorContainer
-                                )
+                        Surface(
+                            shape = CircleShape,
+                            color = extColors.lavander.colorContainer,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clickable { onNavigateToProfile() }) {
+                            Box(contentAlignment = Alignment.Center) {
+                                if (userState.photoUrl.isNotEmpty()) {
+                                    // AsyncImage aquí
+                                    Icon(
+                                        Icons.Default.Person,
+                                        contentDescription = "Perfil",
+                                        tint = extColors.lavander.onColorContainer,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                } else {
+                                    Text(
+                                        userState.userName.firstOrNull()?.toString() ?: "?",
+                                        fontWeight = FontWeight.Bold,
+                                        color = extColors.lavander.onColorContainer
+                                    )
+                                }
                             }
                         }
-                    }
                     }, colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent
                     ), modifier = Modifier.height(toolbarHeight)
@@ -663,8 +673,7 @@ private fun MorePetsCard(
         modifier = Modifier.size(100.dp),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(
-            width = 2.dp,
-            color = color.color.copy(alpha = 0.3f)
+            width = 2.dp, color = color.color.copy(alpha = 0.3f)
         ),
         colors = CardDefaults.cardColors(
             containerColor = color.colorContainer.copy(alpha = 0.5f)
@@ -859,4 +868,14 @@ private fun formatDateShort(dateString: String): String {
     } catch (e: Exception) {
         dateString
     }
+}
+
+@Composable
+@Preview
+private fun HomeScreenPreview() {
+    HomeScreen(
+        onNavigateToPets = {},
+        onNavigateToAppointments = {},
+        onNavigateToVetDashboard = {},
+        onNavigateToProfile = {})
 }

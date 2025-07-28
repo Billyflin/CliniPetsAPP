@@ -148,30 +148,14 @@ fun LoginScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Logo o título
-        Text(
-            text = "Clinipets",
-            style = MaterialTheme.typography.displayMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
+
         Icon(
             imageVector = clinipetsLogo,
             contentDescription = "Clinipets Logo",
             tint = Color.Unspecified // No aplicar tint adicional
         )
 
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Tu clínica veterinaria de confianza",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(48.dp))
-
+        Spacer(modifier = Modifier.height(46.dp))
         if (authState.isLoading) {
             CircularProgressIndicator()
         } else {

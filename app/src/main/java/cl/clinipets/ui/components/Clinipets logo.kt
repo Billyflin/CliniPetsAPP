@@ -46,16 +46,13 @@ val clinipetsLogo: ImageVector
 
 
 // textos
-        val texto = if (isDark) extColors.lavander.onColor else extColors.lavander.color
-        val texto2 = if (isDark) extColors.pink.color else extColors.pink.onColor
-        val cruz =
-            if (isDark) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.error
-        val patita =
-            if (isDark) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onError
-        val borde_patita =
-            if (isDark) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.errorContainer
-
-
+        val texto = MaterialTheme.colorScheme.primary
+        val texto2 = if (isDark) extColors.mint.onColorContainer else extColors.mint.color
+        val cruz = if (isDark) extColors.mint.onColorContainer else extColors.mint.color
+        val patita = MaterialTheme.colorScheme.primary
+        val borde_patita = MaterialTheme.colorScheme.onPrimaryContainer
+        val textDx = -20f   // negativo = mueve a la izquierda, positivo = a la derecha
+        val textDy = 0f    // negativo = mueve hacia arriba, positivo = hacia abajo
 
         _clinipetsLogo = ImageVector.Builder(
             name = "clinipetsLogo",
@@ -70,7 +67,7 @@ val clinipetsLogo: ImageVector
                 ) {
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(texto2),
                     pathFillType = PathFillType.EvenOdd
@@ -371,7 +368,7 @@ val clinipetsLogo: ImageVector
                     curveTo(258.223f, 258.76f, 260.601f, 258.655f, 261.657f, 258.928f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(texto),
                     pathFillType = PathFillType.EvenOdd
@@ -389,7 +386,7 @@ val clinipetsLogo: ImageVector
                     curveTo(225.961f, 253.117f, 223.02f, 252.481f, 220.653f, 253.569f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(texto),
                     pathFillType = PathFillType.EvenOdd
@@ -400,7 +397,7 @@ val clinipetsLogo: ImageVector
                     curveTo(161.819f, 237.167f, 157.754f, 234.15f, 153.613f, 235.651f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(texto),
                     pathFillType = PathFillType.EvenOdd
@@ -424,7 +421,7 @@ val clinipetsLogo: ImageVector
                     curveTo(402.138f, 254.732f, 391.786f, 247.272f, 382.578f, 248.595f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(texto),
                     pathFillType = PathFillType.EvenOdd
@@ -466,7 +463,7 @@ val clinipetsLogo: ImageVector
                     curveTo(100.355f, 233.448f, 99.809f, 233.504f, 99.275f, 233.55f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(texto),
                     pathFillType = PathFillType.EvenOdd
@@ -490,7 +487,7 @@ val clinipetsLogo: ImageVector
                     curveTo(187.771f, 249.204f, 187.249f, 249.273f, 185.613f, 249.87f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(texto),
                     pathFillType = PathFillType.EvenOdd
@@ -507,7 +504,7 @@ val clinipetsLogo: ImageVector
                     curveTo(135.947f, 233.431f, 135.41f, 233.541f, 134.753f, 233.667f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(texto),
                     pathFillType = PathFillType.EvenOdd
@@ -522,7 +519,7 @@ val clinipetsLogo: ImageVector
                     curveTo(158.813f, 251.969f, 155.372f, 251.389f, 153.167f, 252.874f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(borde_patita),
                     pathFillType = PathFillType.EvenOdd
@@ -549,7 +546,7 @@ val clinipetsLogo: ImageVector
                     curveTo(234.557f, 238.661f, 232.213f, 233.705f, 228.601f, 235.51f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(borde_patita),
                     pathFillType = PathFillType.EvenOdd
@@ -560,7 +557,7 @@ val clinipetsLogo: ImageVector
                     curveTo(227.881f, 231.399f, 224.967f, 228.309f, 222.207f, 230.48f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(borde_patita),
                     pathFillType = PathFillType.EvenOdd
@@ -571,7 +568,7 @@ val clinipetsLogo: ImageVector
                     curveTo(215.91f, 230.851f, 216.896f, 230.921f, 218.268f, 232.185f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(borde_patita),
                     pathFillType = PathFillType.EvenOdd
@@ -585,7 +582,7 @@ val clinipetsLogo: ImageVector
                     curveTo(220.328f, 239.117f, 221.629f, 238.953f, 223.977f, 240.128f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(borde_patita),
                     pathFillType = PathFillType.EvenOdd
@@ -596,7 +593,7 @@ val clinipetsLogo: ImageVector
                     curveTo(226.273f, 237.553f, 229.071f, 234.274f, 231.454f, 235.943f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(borde_patita),
                     pathFillType = PathFillType.EvenOdd
@@ -609,7 +606,7 @@ val clinipetsLogo: ImageVector
                     curveTo(216.239f, 230.805f, 215.851f, 230.833f, 215.555f, 230.919f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(borde_patita),
                     pathFillType = PathFillType.EvenOdd
@@ -620,7 +617,7 @@ val clinipetsLogo: ImageVector
                     curveTo(208.557f, 240.636f, 210.7f, 236.044f, 213.795f, 238.248f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(cruz),
                     pathFillType = PathFillType.EvenOdd
@@ -639,7 +636,7 @@ val clinipetsLogo: ImageVector
                     curveTo(263.341f, 268.843f, 263.738f, 263.294f, 263.525f, 263.304f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(borde_patita),
                     pathFillType = PathFillType.EvenOdd
@@ -650,7 +647,7 @@ val clinipetsLogo: ImageVector
                     curveTo(223.641f, 229.973f, 225.309f, 230.174f, 226.084f, 231.14f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(patita),
                     pathFillType = PathFillType.EvenOdd
@@ -661,7 +658,7 @@ val clinipetsLogo: ImageVector
                     curveTo(213.9f, 237.716f, 211.77f, 236.969f, 210.623f, 238.424f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(patita),
                     pathFillType = PathFillType.EvenOdd
@@ -676,7 +673,7 @@ val clinipetsLogo: ImageVector
                     curveTo(224.215f, 239.776f, 221.886f, 238.879f, 220.222f, 239.661f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(patita),
                     pathFillType = PathFillType.EvenOdd
@@ -687,7 +684,7 @@ val clinipetsLogo: ImageVector
                     curveTo(226.369f, 230.578f, 224.116f, 229.598f, 222.682f, 230.73f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(patita),
                     pathFillType = PathFillType.EvenOdd
@@ -698,7 +695,7 @@ val clinipetsLogo: ImageVector
                     curveTo(231.758f, 235.466f, 229.584f, 234.892f, 228.269f, 236.265f)
                 }
             }
-            group {
+            group(translationX = textDx, translationY = textDy) {
                 path(
                     fill = SolidColor(patita),
                     pathFillType = PathFillType.EvenOdd
