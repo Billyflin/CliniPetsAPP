@@ -23,24 +23,19 @@ val clinipetsLogo: ImageVector
 
 // GATO
         val bigote_gato = extColors.lavander.color
-        val cara_gato = extColors.lavander.colorContainer
-        val cuerpo_gato = extColors.lavander.colorContainer
+        val cara_gato = extColors.lavander.onColorContainer
+        val cuerpo_gato = extColors.pink.colorContainer
         val cuerpo_gato2 = extColors.lavander.color
-        val collar_gato = extColors.peach.color
+        val collar_gato = extColors.mint.onColorContainer
         val mancha_gato = extColors.pink.color
 
-// PERRO (ajustado para mejor contraste en fondo claro)
-        val oreja_perro = extColors.lavander.color // oreja fuerte
-        val cara_perro = extColors.peach.color      // rostro principal más sólido
-        val cuerpo_perro = extColors.peach.colorContainer // cuerpo suave
-        val hocico_perro = extColors.mint.colorContainer  // hocico claro
-        val collar_perro = extColors.lavander.color       // tono oscuro para contraste
-        val mancha_perro = extColors.pink.color           // elemento decorativo
-
-// TEST
-        val test = extColors.mint.color
-
-
+// PERRO
+        val oreja_perro = extColors.peach.color
+        val cara_perro = extColors.peach.onColorContainer
+        val cuerpo_perro = extColors.peach.colorContainer
+        val hocico_perro = extColors.peach.onColor
+        val collar_perro = extColors.mint.color
+        val mancha_perro = extColors.peach.color
 
 
         _clinipetsLogo = ImageVector.Builder(
