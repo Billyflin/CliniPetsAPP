@@ -1,5 +1,6 @@
 package cl.clinipets.ui.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.data.model.Appointment
@@ -203,6 +204,8 @@ class VetViewModel @Inject constructor() : ViewModel() {
                     .mapNotNull { it.toObject<Consultation>() }
                     .filter { it.paid }
                     .sumOf { it.total }
+
+                Log.d("VetViewModel", "Consultas de la semana: $totalConsultations")
 
                 _vetState.value = _vetState.value.copy(
                     weeklyStats = WeeklyStats(

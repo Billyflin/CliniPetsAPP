@@ -23,7 +23,7 @@ import cl.clinipets.ui.screens.pets.PetsScreen
 import cl.clinipets.ui.screens.profile.ProfileScreen
 import cl.clinipets.ui.screens.profile.SettingsScreen
 import cl.clinipets.ui.screens.vet.InventoryScreen
-import cl.clinipets.ui.screens.vet.VetScheduleScreen
+import cl.clinipets.ui.screens.vet.VetHorarioScreen
 import cl.clinipets.ui.viewmodels.AuthViewModel
 
 @Composable
@@ -190,7 +190,7 @@ fun AppNavigation() {
         }
 
         composable("vet_schedule") {
-            VetScheduleScreen(
+            VetHorarioScreen(
                 onNavigateBack = { navController.popBackStack() },
 
                 )

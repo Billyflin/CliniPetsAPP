@@ -1,5 +1,6 @@
 // package: cl.clinipets.ui.screens.vet
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -90,6 +91,8 @@ fun VetDashboardScreen(
 
     LaunchedEffect(Unit) {
         vetViewModel.loadTodayAppointments()
+        Log.d("VetDashboardScreen", "Loading today appointments")
+
         vetViewModel.loadWeekStats()
     }
 

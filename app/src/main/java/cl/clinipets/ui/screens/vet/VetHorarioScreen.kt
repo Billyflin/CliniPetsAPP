@@ -45,7 +45,7 @@ import cl.clinipets.ui.viewmodels.VetViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VetScheduleScreen(
+fun VetHorarioScreen(
     onNavigateBack: () -> Unit,
     viewModel: VetViewModel = hiltViewModel()
 ) {
