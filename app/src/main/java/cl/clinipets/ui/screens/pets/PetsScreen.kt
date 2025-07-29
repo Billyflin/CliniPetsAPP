@@ -63,8 +63,11 @@ fun PetsScreen(
     onNavigateToPetDetail: (String) -> Unit,
     viewModel: PetsViewModel = hiltViewModel()
 ) {
+    viewModel.loadPets()
     val petsState by viewModel.petsState.collectAsStateWithLifecycle()
     val extColors = LocalExtendedColors.current
+
+
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,

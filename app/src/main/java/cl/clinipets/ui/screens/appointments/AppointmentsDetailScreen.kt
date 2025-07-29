@@ -1,7 +1,12 @@
 package cl.clinipets.ui.screens.appointments
 
-class AppointmentsDetailScreen(
+import androidx.compose.runtime.Composable
+
+@Composable
+fun AppointmentsDetailScreen(
     onNavigateBack: () -> Boolean,
     appointmentId: String
 ) {
+
+
 }

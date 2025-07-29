@@ -8,10 +8,10 @@ import cl.clinipets.data.model.AppointmentStatus
 import cl.clinipets.data.model.Consultation
 import cl.clinipets.data.model.Pet
 import cl.clinipets.data.model.VetSchedule
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.firestore.ktx.toObject
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
+import com.google.firebase.firestore.firestore
+import com.google.firebase.firestore.toObject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -110,6 +110,7 @@ class VetViewModel @Inject constructor() : ViewModel() {
                         ownerName = ownerName
                     )
                 }
+                Log.d("VetViewModel", "Today appointments: $appointmentDetails")
                 _vetState.value = _vetState.value.copy(
                     todayAppointments = appointmentDetails,
                     error = null
