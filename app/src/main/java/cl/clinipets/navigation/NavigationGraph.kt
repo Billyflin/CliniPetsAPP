@@ -2,6 +2,8 @@
 package cl.clinipets.navigation
 
 import MedicalConsultationScreen
+import VetAgendaScreen
+import VetDashboardScreen
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -21,7 +23,6 @@ import cl.clinipets.ui.screens.pets.PetsScreen
 import cl.clinipets.ui.screens.profile.ProfileScreen
 import cl.clinipets.ui.screens.profile.SettingsScreen
 import cl.clinipets.ui.screens.vet.InventoryScreen
-import cl.clinipets.ui.screens.vet.VetDashboardScreen
 import cl.clinipets.ui.screens.vet.VetScheduleScreen
 import cl.clinipets.ui.viewmodels.AuthViewModel
 
@@ -146,15 +147,34 @@ fun AppNavigation() {
         // ====================== VETERINARIO ======================
         composable("vet_dashboard") {
             VetDashboardScreen(
-                onNavigateBack = { navController.popBackStack() },
+                //   onNavigateBack = { navController.popBackStack() },
                 onNavigateToConsultation = { appointmentId ->
                     navController.navigate("medical_consultation/$appointmentId")
                 },
                 onNavigateToInventory = { navController.navigate("inventory") },
+                onNavigateToAgenda = { navController.navigate("vet_agenda") },
+                onNavigateToCreatePet = { navController.navigate("add_pet") },
                 onNavigateToSchedule = { navController.navigate("vet_schedule") },
-                onNavigateToCreatePet = { navController.navigate("add_pet") }
+                onNavigateToPetDetail = { petId ->
+                    navController.navigate("pet_detail/$petId")
+                }
+
             )
         }
+
+        composable("vet_agenda") {
+            VetAgendaScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToConsultation = { appointmentId ->
+                    navController.navigate("medical_consultation/$appointmentId")
+                },
+                onNavigateToPetDetail = { petId ->
+                    navController.navigate("pet_detail/$petId")
+                }
+            )
+        }
+
+
 
         composable("medical_consultation/{appointmentId}") { backStackEntry ->
             val appointmentId = backStackEntry.arguments?.getString("appointmentId") ?: ""

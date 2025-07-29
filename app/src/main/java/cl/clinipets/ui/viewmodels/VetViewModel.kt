@@ -16,6 +16,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -60,8 +64,8 @@ class VetViewModel @Inject constructor() : ViewModel() {
     fun loadTodayAppointments() {
         viewModelScope.launch {
             try {
-                val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-                    .format(java.util.Date())
+                val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    .format(Date())
 
                 val snapshot = firestore.collection("appointments")
                     .whereEqualTo("date", today)
@@ -85,9 +89,32 @@ class VetViewModel @Inject constructor() : ViewModel() {
                     appointment to pet
                 }
 
+                // Cargar nombres de dueños
+                val appointmentDetails = appointmentsWithPets.map { (appointment, pet) ->
+                    val ownerName = pet?.ownerId?.let { ownerId ->
+                        try {
+                            firestore.collection("users")
+                                .document(ownerId)
+                                .get()
+                                .await()
+                                .getString("name")
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+
+                    AppointmentDetail(
+                        appointment = appointment,
+                        pet = pet,
+                        ownerName = ownerName
+                    )
+                }
                 _vetState.value = _vetState.value.copy(
-                    todayAppointments = appointmentsWithPets
+                    todayAppointments = appointmentDetails,
+                    error = null
                 )
+
+
             } catch (e: Exception) {
                 _vetState.value = _vetState.value.copy(
                     error = "Error al cargar citas: ${e.message}"
@@ -189,6 +216,273 @@ class VetViewModel @Inject constructor() : ViewModel() {
         }
     }
 
+
+    fun loadWeekAppointments(dateStr: String) {
+        viewModelScope.launch {
+            try {
+                val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(dateStr)
+                val calendar = Calendar.getInstance().apply {
+                    time = date ?: Date()
+                    set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+                }
+                val startOfWeek = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    .format(calendar.time)
+
+                calendar.add(Calendar.DAY_OF_WEEK, 6)
+                val endOfWeek = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    .format(calendar.time)
+
+                val snapshot = firestore.collection("appointments")
+                    .whereGreaterThanOrEqualTo("date", startOfWeek)
+                    .whereLessThanOrEqualTo("date", endOfWeek)
+                    .orderBy("date")
+                    .orderBy("time")
+                    .get()
+                    .await()
+
+                val appointments = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject<Appointment>()?.copy(id = doc.id)
+                }
+
+                // Cargar detalles completos
+                val appointmentDetails = appointments.map { appointment ->
+                    val petDoc = firestore.collection("pets")
+                        .document(appointment.petId)
+                        .get()
+                        .await()
+                    val pet = petDoc.toObject<Pet>()?.copy(id = petDoc.id)
+
+                    val ownerName = pet?.ownerId?.let { ownerId ->
+                        try {
+                            firestore.collection("users")
+                                .document(ownerId)
+                                .get()
+                                .await()
+                                .getString("name")
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+
+                    AppointmentDetail(
+                        appointment = appointment,
+                        pet = pet,
+                        ownerName = ownerName
+                    )
+                }
+
+                _vetState.value = _vetState.value.copy(
+                    agendaAppointments = appointmentDetails
+                )
+            } catch (e: Exception) {
+                _vetState.value = _vetState.value.copy(
+                    error = "Error al cargar agenda: ${e.message}"
+                )
+            }
+        }
+    }
+
+    //loadDayAppointments
+    fun loadDayAppointments(dateStr: String) {
+        viewModelScope.launch {
+            try {
+                val snapshot = firestore.collection("appointments")
+                    .whereEqualTo("date", dateStr)
+                    .orderBy("time")
+                    .get()
+                    .await()
+
+                val appointments = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject<Appointment>()?.copy(id = doc.id)
+                }
+
+                // Cargar información de mascotas
+                val appointmentsWithPets = appointments.map { appointment ->
+                    val petDoc = firestore.collection("pets")
+                        .document(appointment.petId)
+                        .get()
+                        .await()
+
+                    val pet = petDoc.toObject<Pet>()?.copy(id = petDoc.id)
+                    appointment to pet
+                }
+                // Cargar nombres de dueños
+                val appointmentDetails = appointmentsWithPets.map { (appointment, pet) ->
+                    val ownerName = pet?.ownerId?.let { ownerId ->
+                        try {
+                            firestore.collection("users")
+                                .document(ownerId)
+                                .get()
+                                .await()
+                                .getString("name")
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+
+                    AppointmentDetail(
+                        appointment = appointment,
+                        pet = pet,
+                        ownerName = ownerName
+                    )
+                }
+                _vetState.value = _vetState.value.copy(
+                    todayAppointments = appointmentDetails,
+                    error = null
+                )
+
+
+            } catch (e: Exception) {
+                _vetState.value = _vetState.value.copy(
+                    error = "Error al cargar citas del día: ${e.message}"
+                )
+            }
+        }
+    }
+
+    //loadMonthAppointments
+
+    fun loadMonthAppointments(dateStr: String) {
+        viewModelScope.launch {
+            try {
+                val snapshot = firestore.collection("appointments")
+                    .whereEqualTo("date", dateStr)
+                    .orderBy("time")
+                    .get()
+                    .await()
+
+                val appointments = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject<Appointment>()?.copy(id = doc.id)
+                }
+
+                // Cargar información de mascotas
+                val appointmentsWithPets = appointments.map { appointment ->
+                    val petDoc = firestore.collection("pets")
+                        .document(appointment.petId)
+                        .get()
+                        .await()
+
+                    val pet = petDoc.toObject<Pet>()?.copy(id = petDoc.id)
+                    appointment to pet
+                }
+
+                // Cargar nombres de dueños
+                val appointmentDetails = appointmentsWithPets.map { (appointment, pet) ->
+                    val ownerName = pet?.ownerId?.let { ownerId ->
+                        try {
+                            firestore.collection("users")
+                                .document(ownerId)
+                                .get()
+                                .await()
+                                .getString("name")
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+
+                    AppointmentDetail(
+                        appointment = appointment,
+                        pet = pet,
+                        ownerName = ownerName
+                    )
+                }
+
+
+            } catch (e: Exception) {
+                _vetState.value = _vetState.value.copy(
+                    error = "Error al cargar citas del mes: ${e.message}"
+                )
+            }
+        }
+    }
+
+
+    fun searchPetsAndOwners(query: String) {
+        if (query.isBlank()) {
+            _vetState.value = _vetState.value.copy(searchResults = emptyList())
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                // Buscar mascotas por nombre
+                val petsSnapshot = firestore.collection("pets")
+                    .whereEqualTo("active", true)
+                    .get()
+                    .await()
+
+                val pets = petsSnapshot.documents.mapNotNull { doc ->
+                    doc.toObject<Pet>()?.copy(id = doc.id)
+                }.filter {
+                    it.name.contains(query, ignoreCase = true)
+                }
+
+                // Buscar dueños por nombre, email o teléfono
+                val ownersSnapshot = firestore.collection("users")
+                    .get()
+                    .await()
+
+                val ownerMatches = ownersSnapshot.documents.filter { doc ->
+                    val name = doc.getString("name") ?: ""
+                    val email = doc.getString("email") ?: ""
+                    val phone = doc.getString("phone") ?: ""
+
+                    name.contains(query, ignoreCase = true) ||
+                            email.contains(query, ignoreCase = true) ||
+                            phone.contains(query, ignoreCase = true)
+                }
+
+                // Si hay dueños que coinciden, buscar sus mascotas
+                val ownerIds = ownerMatches.map { it.id }
+                val petsByOwner = if (ownerIds.isNotEmpty()) {
+                    firestore.collection("pets")
+                        .whereIn("ownerId", ownerIds)
+                        .whereEqualTo("active", true)
+                        .get()
+                        .await()
+                        .documents.mapNotNull { doc ->
+                            doc.toObject<Pet>()?.copy(id = doc.id)
+                        }
+                } else emptyList()
+
+                // Combinar resultados únicos
+                val allPets = (pets + petsByOwner).distinctBy { it.id }
+
+                // Crear resultados de búsqueda con información del dueño
+                val searchResults = allPets.map { pet ->
+                    val ownerName = pet.ownerId?.let { ownerId ->
+                        ownerMatches.find { it.id == ownerId }?.getString("name")
+                            ?: ownersSnapshot.documents
+                                .find { it.id == ownerId }
+                                ?.getString("name")
+                    }
+
+                    SearchResult(
+                        pet = pet,
+                        ownerName = ownerName,
+                        matchType = when {
+                            pets.contains(pet) -> "Mascota"
+                            else -> "Dueño"
+                        }
+                    )
+                }
+
+                _vetState.value = _vetState.value.copy(
+                    searchResults = searchResults.take(10)
+                )
+            } catch (e: Exception) {
+                _vetState.value = _vetState.value.copy(
+                    error = "Error en búsqueda: ${e.message}"
+                )
+            }
+        }
+    }
+
+    fun refreshData() {
+        loadTodayAppointments()
+        loadWeekStats()
+    }
+
     fun clearError() {
         _vetState.value = _vetState.value.copy(error = null)
     }
@@ -197,13 +491,31 @@ class VetViewModel @Inject constructor() : ViewModel() {
 data class VetState(
     val isVeterinarian: Boolean = false,
     val currentVetId: String? = null,
-    val todayAppointments: List<Pair<Appointment, Pet?>> = emptyList(),
+    val todayAppointments: List<AppointmentDetail> = emptyList(),
     val weeklyStats: WeeklyStats = WeeklyStats(),
     val vetSchedules: List<VetSchedule> = emptyList(),
+    val agendaAppointments: List<AppointmentDetail> = emptyList(),
+    val weekAppointments: Int = 0,
+    val pendingConsultations: Int = 0,
+    val alerts: List<String> = emptyList(),
+    val searchResults: List<SearchResult> = emptyList(),
+    val isLoading: Boolean = false,
     val error: String? = null
 )
 
 data class WeeklyStats(
     val consultations: Int = 0,
     val revenue: Double = 0.0
+)
+
+data class AppointmentDetail(
+    val appointment: Appointment,
+    val pet: Pet?,
+    val ownerName: String? = null
+)
+
+data class SearchResult(
+    val pet: Pet,
+    val ownerName: String? = null,
+    val matchType: String = ""
 )
