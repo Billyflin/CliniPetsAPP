@@ -2,8 +2,10 @@
 package cl.clinipets.ui.theme
 
 
+import android.content.Context
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
@@ -439,8 +441,9 @@ private val HAS_EXPRESSIVE: Boolean = runCatching {
     Class.forName("androidx.compose.material3.MaterialExpressiveKt")
 }.isSuccess
 
-/* ---------- MAIN THEME ---------- */
+/* ---------- MAIN THEME (refactor) ---------- */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Suppress("FunctionNaming")
 @Composable
 fun ClinipetsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -448,69 +451,108 @@ fun ClinipetsTheme(
     contrast: Contrast = Contrast.Standard,
     content: @Composable () -> Unit,
 ) {
-    /* ----- Baseline Material color scheme ----- */
+    val context = LocalContext.current
+
+    // 1) Resolver esquema base (estable)
     val baseScheme = remember(darkTheme, contrast) {
-        when (darkTheme) {
-            true -> when (contrast) {
-                Contrast.Standard -> darkScheme
-                Contrast.Medium -> mediumContrastDarkColorScheme
-                Contrast.High -> highContrastDarkColorScheme
-            }
-
-            false -> when (contrast) {
-                Contrast.Standard -> lightScheme
-                Contrast.Medium -> mediumContrastLightColorScheme
-                Contrast.High -> highContrastLightColorScheme
-            }
-        }
+        baseSchemeFor(darkTheme, contrast)
     }
 
-    /* ----- Dynamic override if requested and available (only STANDARD) ----- */
-    val colorScheme = when {
-        dynamicColor &&
-                contrast == Contrast.Standard &&
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val ctx = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
-        }
-
-        else -> baseScheme
+    // 2) Resolver esquema final (dinámico solo si aplica)
+    val colorScheme = remember(context, darkTheme, contrast, dynamicColor, baseScheme) {
+        resolveColorScheme(context, darkTheme, contrast, dynamicColor, baseScheme)
     }
 
-    /* ----- Extended color families ----- */
-    val extended = remember(darkTheme, contrast) {
-        when (darkTheme) {
-            true -> when (contrast) {
-                Contrast.Standard -> extendedDark
-                Contrast.Medium -> extendedDarkMediumContrast
-                Contrast.High -> extendedDarkHighContrast
-            }
-
-            false -> when (contrast) {
-                Contrast.Standard -> extendedLight
-                Contrast.Medium -> extendedLightMediumContrast
-                Contrast.High -> extendedLightHighContrast
-            }
-        }
+    // 3) Resolver paleta extendida (estable)
+    val extendedColors = remember(key1 = darkTheme, key2 = contrast) {
+        extendedColorsFor(darkTheme, contrast)
     }
 
-    /* ----- Apply theme ----- */
-    CompositionLocalProvider(LocalExtendedColors provides extended) {
-        if (HAS_EXPRESSIVE) {
-            MaterialExpressiveTheme(
-                colorScheme = colorScheme,
-                typography = Typography(),
-                shapes = Shapes(),
-                motionScheme = MotionScheme.expressive(),
-                content = content,
-            )
-        } else {
-            MaterialTheme(
-                colorScheme = colorScheme,
-                typography = Typography(),
-                shapes = Shapes(),
-                content = content,
-            )
-        }
+    // 4) Aplicar tema (una sola decisión)
+    CompositionLocalProvider(LocalExtendedColors provides extendedColors) {
+        ApplyMaterialTheme(
+            colorScheme = colorScheme,
+            content = content
+        )
+    }
+}
+
+/* ---------- Helpers puros (bajan la complejidad del composable) ---------- */
+
+private fun baseSchemeFor(
+    darkTheme: Boolean,
+    contrast: Contrast,
+): ColorScheme = if (darkTheme) {
+    when (contrast) {
+        Contrast.Standard -> darkScheme
+        Contrast.Medium  -> mediumContrastDarkColorScheme
+        Contrast.High    -> highContrastDarkColorScheme
+    }
+} else {
+    when (contrast) {
+        Contrast.Standard -> lightScheme
+        Contrast.Medium  -> mediumContrastLightColorScheme
+        Contrast.High    -> highContrastLightColorScheme
+    }
+}
+
+private fun extendedColorsFor(
+    darkTheme: Boolean,
+    contrast: Contrast,
+): ExtendedColors = if (darkTheme) {
+    when (contrast) {
+        Contrast.Standard -> extendedDark
+        Contrast.Medium  -> extendedDarkMediumContrast
+        Contrast.High    -> extendedDarkHighContrast
+    }
+} else {
+    when (contrast) {
+        Contrast.Standard -> extendedLight
+        Contrast.Medium  -> extendedLightMediumContrast
+        Contrast.High    -> extendedLightHighContrast
+    }
+}
+private typealias ExtendedColors = ExtendedColorScheme
+
+private fun isDynamicEligible(
+    dynamicColor: Boolean,
+    contrast: Contrast,
+): Boolean = dynamicColor && contrast == Contrast.Standard
+
+private fun resolveColorScheme(
+    context: Context,
+    darkTheme: Boolean,
+    contrast: Contrast,
+    dynamicColor: Boolean,
+    fallback: ColorScheme,
+): ColorScheme {
+    if (!isDynamicEligible(dynamicColor, contrast)) return fallback
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return fallback
+    return if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+}
+
+/* ---------- Capa de aplicación del tema (aisla el if) ---------- */
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ApplyMaterialTheme(
+    colorScheme: ColorScheme,
+    content: @Composable () -> Unit,
+) {
+    if (HAS_EXPRESSIVE) {
+        MaterialExpressiveTheme(
+            colorScheme = colorScheme,
+            typography = Typography(),
+            shapes = Shapes(),
+            motionScheme = MotionScheme.expressive(),
+            content = content,
+        )
+    } else {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography(),
+            shapes = Shapes(),
+            content = content,
+        )
     }
 }
