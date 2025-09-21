@@ -2,7 +2,9 @@
 # Build / Lang
 agp = "8.13.0"
 kotlin = "2.2.20"
+kotlinxCoroutinesTest = "1.10.2"
 ksp = "2.2.20-2.0.3"
+kover = "0.8.3"
 
 # Compose / AndroidX
 composeBom = "2025.09.00"
@@ -51,7 +53,7 @@ espressoCore = "3.7.0"
 # Kotlinx Serialization
 kotlinSerialization = "2.2.20"
 kotlinxSerializationCore = "1.9.0"
-junitJupiterVersion = "5.8.1"
+junitJupiterVersion = "5.13.4"
 
 [libraries]
 # Compose (con BOM)
@@ -117,9 +119,10 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "a
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 
 # Kotlinx Serialization
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerializationCore" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationCore" }
-jupiter-junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junitJupiterVersion" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

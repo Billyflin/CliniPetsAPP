@@ -1,4 +1,5 @@
 // app/build.gradle.kts
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -9,11 +10,6 @@ plugins {
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.google.firebase.crashlytics)
     alias(libs.plugins.google.firebase.firebase.perf)
-    id("jacoco")
-}
-
-jacoco {
-    toolVersion = "0.8.13"
 }
 
 android {
@@ -26,7 +22,6 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         signingConfig = signingConfigs.getByName("debug")
     }
@@ -40,15 +35,13 @@ android {
             )
         }
         getByName("debug") {
-            isTestCoverageEnabled = true
+            enableAndroidTestCoverage = true
         }
     }
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
-        unitTests.all {
-            it.useJUnitPlatform()
-        }
+        unitTests.all { it.useJUnitPlatform() }
     }
 
     compileOptions {
@@ -56,9 +49,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures { compose = true }
-    kotlinOptions {
-        freeCompilerArgs = listOf("-XXLanguage:+PropertyParamAnnotationDefaultTargetMode")
-    }
 }
 
 dependencies {
@@ -80,7 +70,6 @@ dependencies {
 
     // Hilt (KSP)
     implementation(libs.hilt.android)
-    testImplementation(libs.jupiter.junit.jupiter)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
@@ -120,62 +109,6 @@ dependencies {
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
 
-    // tooling de debug
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-    testImplementation(kotlin("test"))
-}
-
-tasks.register<JacocoReport>("jacocoTestReport") {
-    group = "Reporting"
-    description = "Generate Jacoco coverage reports after running tests."
-
-    // Unir cobertura de unit tests y androidTest
-    dependsOn("testDebugUnitTest", "connectedDebugAndroidTest")
-
-    reports {
-        xml.required.set(true)
-        html.required.set(true)
-        csv.required.set(false)
-    }
-
-    val fileFilter = listOf(
-        "**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*",
-        "**/*Test*.*", "android/**/*.*",
-        "**/*Hilt*.*", "**/*_Factory.*", "**/*_HiltModules*.*",
-        "**/*ComposableSingletons*.*"
-    )
-
-    val debugJavaClasses = layout.buildDirectory
-        .dir("intermediates/javac/debug/classes")
-        .map { dir -> fileTree(dir) { exclude(fileFilter) } }
-
-    val debugKotlinClasses = layout.buildDirectory
-        .dir("tmp/kotlin-classes/debug")
-        .map { dir -> fileTree(dir) { exclude(fileFilter) } }
-
-    val mainJava = layout.projectDirectory.dir("src/main/java")
-    val mainKotlin = layout.projectDirectory.dir("src/main/kotlin")
-
-    sourceDirectories.setFrom(mainJava, mainKotlin)
-    classDirectories.setFrom(debugJavaClasses, debugKotlinClasses)
-
-    // Incluye .exec de unit tests y .ec de androidTest
-    val androidTestCoverage = layout.buildDirectory
-        .dir("outputs/code_coverage/debugAndroidTest/connected")
-        .map { dir -> fileTree(dir) { include("*.ec") } }
-
-    executionData.setFrom(
-        layout.buildDirectory.file("jacoco/testDebugUnitTest.exec"),
-        layout.buildDirectory.file("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"),
-        androidTestCoverage
-    )
-}
-
-tasks.withType<Test>().configureEach {
-    useJUnitPlatform()
-    extensions.configure(JacocoTaskExtension::class) {
-        isIncludeNoLocationClasses = true
-        excludes = listOf("jdk.internal.*")
-    }
 }

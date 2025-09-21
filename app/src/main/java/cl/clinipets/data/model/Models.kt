@@ -5,6 +5,16 @@ import kotlinx.serialization.Serializable
 
 // ====================== USUARIOS ======================
 
+/**
+ * Represents a user in the system.
+ *
+ * @property id The unique identifier for the user.
+ * @property email The email address of the user, used for login and communication.
+ * @property name The full name of the user.
+ * @property phone The phone number of the user (optional).
+ * @property isVet A boolean flag indicating whether the user is a veterinarian.
+ * @property createdAt The timestamp indicating when the user account was created, in milliseconds since the epoch.
+ */
 @Serializable
 data class User(
     val id: String = "",
