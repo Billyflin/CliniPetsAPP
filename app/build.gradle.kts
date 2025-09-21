@@ -1,9 +1,10 @@
+// app/build.gradle.kts
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.hilt)                       // plugin de Hilt
-    alias(libs.plugins.ksp)                        // KSP para annotation processing
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.ksp)
     alias(libs.plugins.jetbrains.kotlin.serialization)
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.google.firebase.crashlytics)
@@ -12,7 +13,7 @@ plugins {
 }
 
 jacoco {
-    toolVersion = "0.8.12"
+    toolVersion = "0.8.13"
 }
 
 android {
@@ -32,43 +33,55 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
         getByName("debug") {
-            // enableUnitTestCoverage está deprecado → no usar
-            // Para androidTest coverage: isTestCoverageEnabled = true
+            isTestCoverageEnabled = true
         }
     }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all {
+            it.useJUnitPlatform()
+        }
+    }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
+    buildFeatures { compose = true }
     kotlinOptions {
-        jvmTarget = "17"
-    }
-    buildFeatures {
-        compose = true
+        freeCompilerArgs = listOf("-XXLanguage:+PropertyParamAnnotationDefaultTargetMode")
     }
 }
 
 dependencies {
+    // AndroidX base
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
+    // Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.compose.animation.core)
+    implementation(libs.androidx.compose.animation)
+    implementation(libs.androidx.compose.material3)
 
-    // Hilt
-    implementation(libs.hilt.android)               // <- obligatorio en este módulo
-    ksp(libs.hilt.compiler)                         // annotation processing
+    // Hilt (KSP)
+    implementation(libs.hilt.android)
+    testImplementation(libs.jupiter.junit.jupiter)
+    ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
     // Otros
@@ -84,12 +97,10 @@ dependencies {
     implementation(libs.firebase.perf)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
-    implementation("io.coil-kt.coil3:coil-compose:3.3.0")
-    runtimeOnly("androidx.compose.animation:animation:1.9.1")
-    implementation("androidx.compose.animation:animation-core:1.9.1")
-    implementation("com.facebook.android:facebook-login:18.1.3")
+    implementation(libs.coil.compose)
+    implementation(libs.facebook.login)
 
-    // Navigation Compose
+    // Navigation 3 (experimental)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
@@ -98,50 +109,73 @@ dependencies {
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.kotlinx.serialization.json)
 
-    // Test
-    testImplementation(libs.junit)
+    // Unit tests (JUnit 5/Jupiter)
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+
+    // androidTest (JUnit4 + AndroidX Test/Espresso)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+
+    // tooling de debug
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    testImplementation(kotlin("test"))
 }
 
-// Reporte JaCoCo para unit tests
 tasks.register<JacocoReport>("jacocoTestReport") {
-    dependsOn("testDebugUnitTest")
+    group = "Reporting"
+    description = "Generate Jacoco coverage reports after running tests."
+
+    // Unir cobertura de unit tests y androidTest
+    dependsOn("testDebugUnitTest", "connectedDebugAndroidTest")
 
     reports {
         xml.required.set(true)
         html.required.set(true)
+        csv.required.set(false)
     }
 
     val fileFilter = listOf(
-        "**/R.class", "**/R$*.class", "**/BuildConfig.*",
-        "**/Manifest*.*", "**/*Test*.*", "android/**/*.*",
+        "**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*",
+        "**/*Test*.*", "android/**/*.*",
         "**/*Hilt*.*", "**/*_Factory.*", "**/*_HiltModules*.*",
         "**/*ComposableSingletons*.*"
     )
 
-    val debugJavaClasses = fileTree("${buildDir}/intermediates/javac/debug/classes") {
-        exclude(fileFilter)
-    }
-    val debugKotlinClasses = fileTree("${buildDir}/tmp/kotlin-classes/debug") {
-        exclude(fileFilter)
-    }
+    val debugJavaClasses = layout.buildDirectory
+        .dir("intermediates/javac/debug/classes")
+        .map { dir -> fileTree(dir) { exclude(fileFilter) } }
 
-    val mainSrc = files(
-        "${project.projectDir}/src/main/java",
-        "${project.projectDir}/src/main/kotlin"
+    val debugKotlinClasses = layout.buildDirectory
+        .dir("tmp/kotlin-classes/debug")
+        .map { dir -> fileTree(dir) { exclude(fileFilter) } }
+
+    val mainJava = layout.projectDirectory.dir("src/main/java")
+    val mainKotlin = layout.projectDirectory.dir("src/main/kotlin")
+
+    sourceDirectories.setFrom(mainJava, mainKotlin)
+    classDirectories.setFrom(debugJavaClasses, debugKotlinClasses)
+
+    // Incluye .exec de unit tests y .ec de androidTest
+    val androidTestCoverage = layout.buildDirectory
+        .dir("outputs/code_coverage/debugAndroidTest/connected")
+        .map { dir -> fileTree(dir) { include("*.ec") } }
+
+    executionData.setFrom(
+        layout.buildDirectory.file("jacoco/testDebugUnitTest.exec"),
+        layout.buildDirectory.file("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"),
+        androidTestCoverage
     )
+}
 
-    sourceDirectories.setFrom(mainSrc)
-    classDirectories.setFrom(files(debugJavaClasses, debugKotlinClasses))
-    executionData.setFrom(fileTree(buildDir) {
-        include(
-            "jacoco/testDebugUnitTest.exec",
-            "outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"
-        )
-    })
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+    extensions.configure(JacocoTaskExtension::class) {
+        isIncludeNoLocationClasses = true
+        excludes = listOf("jdk.internal.*")
+    }
 }

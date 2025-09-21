@@ -1,4 +1,4 @@
-// data/preferences/UserPreferences.kt (CORREGIDO)
+// data/preferences/UserPreferences.kt
 package cl.clinipets.data.preferences
 
 import android.content.Context
