@@ -10,6 +10,11 @@ plugins {
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.google.firebase.crashlytics)
     alias(libs.plugins.google.firebase.firebase.perf)
+    id("jacoco")
+
+}
+jacoco{
+    toolVersion = "0.8.10"
 }
 
 android {
@@ -42,7 +47,7 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
         unitTests.all { it.useJUnitPlatform() }
-
+        animationsDisabled = true
     }
 
 
@@ -72,6 +77,7 @@ dependencies {
     // Hilt (KSP)
     implementation(libs.hilt.android)
     implementation(libs.androidx.monitor)
+    implementation(libs.androidx.junit.ktx)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
@@ -100,7 +106,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.kotlinx.serialization.json)
 
-
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     testImplementation(kotlin("test"))
 
 
@@ -110,4 +116,56 @@ dependencies {
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+// Kotlin
+tasks.withType<Test>().configureEach {
+    maxParallelForks = 1
+    systemProperty("junit.jupiter.execution.parallel.enabled", "false")
+}
+tasks.register<JacocoReport>("mergedDebugCoverage") {
+    group = "verification"
+    description = "Genera cobertura combinada (unit + androidTest) con API moderna"
+
+    dependsOn("testDebugUnitTest")
+    dependsOn("connectedDebugAndroidTest")
+
+    // 🔽 directorios de clases
+    val kotlinClasses = fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) {
+        exclude(
+            "**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*",
+            "**/*MembersInjector*.*", "**/*_Factory*.*", "**/*_Hilt*.*",
+            "**/*_Component*.*", "**/*_Impl*.*", "**/hilt_*/**", "**/*Binding*.*"
+        )
+    }
+    val javaClasses = fileTree(layout.buildDirectory.dir("intermediates/javac/debug/classes")) {
+        exclude(
+            "**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*",
+            "**/*MembersInjector*.*", "**/*_Factory*.*", "**/*_Hilt*.*",
+            "**/*_Component*.*", "**/*_Impl*.*", "**/hilt_*/**", "**/*Binding*.*"
+        )
+    }
+    classDirectories.setFrom(kotlinClasses, javaClasses)
+
+    // 🔽 directorios de código fuente
+    sourceDirectories.setFrom(files("src/main/java", "src/main/kotlin"))
+
+    // 🔽 archivos de cobertura: usa layout.buildDirectory
+    executionData.setFrom(
+        fileTree(layout.buildDirectory) {
+            include(
+                "outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec",
+                "jacoco/testDebugUnitTest.exec",
+                "outputs/code_coverage/connected/**/coverage.ec"
+            )
+        }
+    )
+
+    reports {
+        html.required.set(true)
+        html.outputLocation.set(layout.buildDirectory.dir("reports/jacoco/mergedDebug"))
+        xml.required.set(true)
+        xml.outputLocation.set(layout.buildDirectory.file("reports/jacoco/mergedDebug.xml"))
+        csv.required.set(false)
+    }
 }

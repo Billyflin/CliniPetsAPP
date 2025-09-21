@@ -1,5 +1,5 @@
 // ui/theme/Color.kt
-package cl.clinipets.ui.theme
+package cl.clinipets.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

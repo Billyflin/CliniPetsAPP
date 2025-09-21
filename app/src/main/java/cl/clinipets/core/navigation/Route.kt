@@ -1,5 +1,5 @@
 // navigation/Route.kt
-package cl.clinipets.navigation
+package cl.clinipets.core.navigation
 
 import kotlinx.serialization.Serializable
 

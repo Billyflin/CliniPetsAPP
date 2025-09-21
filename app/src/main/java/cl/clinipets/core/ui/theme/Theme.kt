@@ -1,5 +1,5 @@
 // ui/theme/AppTheme.kt
-package cl.clinipets.ui.theme
+package cl.clinipets.core.ui.theme
 
 
 import android.content.Context

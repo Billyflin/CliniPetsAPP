@@ -1,5 +1,5 @@
 // data/model/Models.kt
-package cl.clinipets.data.model
+package cl.clinipets.core.data.model
 
 import kotlinx.serialization.Serializable
 
