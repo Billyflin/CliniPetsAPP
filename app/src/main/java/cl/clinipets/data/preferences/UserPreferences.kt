@@ -1,4 +1,4 @@
-// data/preferences/UserPreferences.kt
+// data/preferences/UserPreferences.kt  (asegúrate de este ctor para inyectar DataStore en tests)
 package cl.clinipets.data.preferences
 
 import android.content.Context
@@ -21,12 +21,12 @@ import javax.inject.Singleton
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
 
 @Singleton
-class UserPreferences @Inject constructor(
-    @ApplicationContext private val context: Context
+class UserPreferences private constructor(
+    private val dataStore: DataStore<Preferences>
 ) {
-    private val dataStore = context.dataStore
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(context.dataStore)
 
-    // Keys
     private object Keys {
         val IS_DARK_MODE = booleanPreferencesKey("is_dark_mode")
         val IS_DYNAMIC_COLOR = booleanPreferencesKey("is_dynamic_color")
@@ -38,102 +38,47 @@ class UserPreferences @Inject constructor(
         val USER_PHOTO_URL = stringPreferencesKey("user_photo_url")
     }
 
-    // Theme preferences
     val isDarkMode: Flow<Boolean> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) emit(emptyPreferences())
-            else throw exception
-        }
-        .map { preferences ->
-            preferences[Keys.IS_DARK_MODE] == true
-        }
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { it[Keys.IS_DARK_MODE] == true }
 
     val isDynamicColor: Flow<Boolean> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) emit(emptyPreferences())
-            else throw exception
-        }
-        .map { preferences ->
-            preferences[Keys.IS_DYNAMIC_COLOR] != false
-        }
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { it[Keys.IS_DYNAMIC_COLOR] != false }
 
     val contrast: Flow<Contrast> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) emit(emptyPreferences())
-            else throw exception
-        }
-        .map { preferences ->
-            val contrastString = preferences[Keys.CONTRAST] ?: Contrast.Standard.name
-            Contrast.valueOf(contrastString)
-        }
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { Contrast.valueOf(it[Keys.CONTRAST] ?: Contrast.Standard.name) }
 
     val hasCompletedOnboarding: Flow<Boolean> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) emit(emptyPreferences())
-            else throw exception
-        }
-        .map { preferences ->
-            preferences[Keys.HAS_COMPLETED_ONBOARDING] == true
-        }
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { it[Keys.HAS_COMPLETED_ONBOARDING] == true }
 
-    // User data
-    val userId: Flow<String?> = dataStore.data
-        .map { preferences -> preferences[Keys.USER_ID] }
+    val userId: Flow<String?> = dataStore.data.map { it[Keys.USER_ID] }
+    val userEmail: Flow<String?> = dataStore.data.map { it[Keys.USER_EMAIL] }
+    val userDisplayName: Flow<String?> = dataStore.data.map { it[Keys.USER_DISPLAY_NAME] }
+    val userPhotoUrl: Flow<String?> = dataStore.data.map { it[Keys.USER_PHOTO_URL] }
 
-    val userEmail: Flow<String?> = dataStore.data
-        .map { preferences -> preferences[Keys.USER_EMAIL] }
+    suspend fun setDarkMode(value: Boolean) { dataStore.edit { it[Keys.IS_DARK_MODE] = value } }
+    suspend fun setDynamicColor(value: Boolean) { dataStore.edit { it[Keys.IS_DYNAMIC_COLOR] = value } }
+    suspend fun setContrast(value: Contrast) { dataStore.edit { it[Keys.CONTRAST] = value.name } }
+    suspend fun setOnboardingCompleted(value: Boolean) { dataStore.edit { it[Keys.HAS_COMPLETED_ONBOARDING] = value } }
 
-    val userDisplayName: Flow<String?> = dataStore.data
-        .map { preferences -> preferences[Keys.USER_DISPLAY_NAME] }
-
-    val userPhotoUrl: Flow<String?> = dataStore.data
-        .map { preferences -> preferences[Keys.USER_PHOTO_URL] }
-
-    // Update functions
-    suspend fun setDarkMode(value: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[Keys.IS_DARK_MODE] = value
-        }
-    }
-
-    suspend fun setDynamicColor(value: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[Keys.IS_DYNAMIC_COLOR] = value
-        }
-    }
-
-    suspend fun setContrast(value: Contrast) {
-        dataStore.edit { preferences ->
-            preferences[Keys.CONTRAST] = value.name
-        }
-    }
-
-    suspend fun setOnboardingCompleted(value: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[Keys.HAS_COMPLETED_ONBOARDING] = value
-        }
-    }
-
-    suspend fun updateUserData(
-        userId: String?,
-        email: String?,
-        displayName: String?,
-        photoUrl: String?
-    ) {
-        dataStore.edit { preferences ->
-            userId?.let { preferences[Keys.USER_ID] = it }
-            email?.let { preferences[Keys.USER_EMAIL] = it }
-            displayName?.let { preferences[Keys.USER_DISPLAY_NAME] = it }
-            photoUrl?.let { preferences[Keys.USER_PHOTO_URL] = it }
+    suspend fun updateUserData(userId: String?, email: String?, displayName: String?, photoUrl: String?) {
+        dataStore.edit { p ->
+            userId?.let { p[Keys.USER_ID] = it }
+            email?.let { p[Keys.USER_EMAIL] = it }
+            displayName?.let { p[Keys.USER_DISPLAY_NAME] = it }
+            photoUrl?.let { p[Keys.USER_PHOTO_URL] = it }
         }
     }
 
     suspend fun clearUserData() {
-        dataStore.edit { preferences ->
-            preferences.remove(Keys.USER_ID)
-            preferences.remove(Keys.USER_EMAIL)
-            preferences.remove(Keys.USER_DISPLAY_NAME)
-            preferences.remove(Keys.USER_PHOTO_URL)
+        dataStore.edit {
+            it.remove(Keys.USER_ID)
+            it.remove(Keys.USER_EMAIL)
+            it.remove(Keys.USER_DISPLAY_NAME)
+            it.remove(Keys.USER_PHOTO_URL)
         }
     }
 }

@@ -42,7 +42,9 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
         unitTests.all { it.useJUnitPlatform() }
+
     }
+
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
@@ -50,7 +52,6 @@ android {
     }
     buildFeatures { compose = true }
 }
-
 dependencies {
     // AndroidX base
     implementation(libs.androidx.core.ktx)
@@ -70,6 +71,7 @@ dependencies {
 
     // Hilt (KSP)
     implementation(libs.hilt.android)
+    implementation(libs.androidx.monitor)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
@@ -98,16 +100,13 @@ dependencies {
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.kotlinx.serialization.json)
 
-    // Unit tests (JUnit 5/Jupiter)
-    testImplementation(platform(libs.junit.bom))
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.platform.launcher)
 
-    // androidTest (JUnit4 + AndroidX Test/Espresso)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
+    testImplementation(kotlin("test"))
+
+
+    androidTestImplementation(libs.androidx.runner)
+    androidTestImplementation(libs.androidx.rules)
+    androidTestImplementation(kotlin("test"))
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
