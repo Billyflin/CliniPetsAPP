@@ -7,6 +7,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.dataStoreFile
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import cl.clinipets.R
+
 import cl.clinipets.core.data.preferences.UserPreferences
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.auth.api.identity.SignInClient
@@ -33,18 +35,23 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    /* ---------- Firebase ---------- */
+
     @Provides
     @Singleton
     fun provideFirebaseAuth(): FirebaseAuth = Firebase.auth
 
     @Provides
     @Singleton
-    fun provideFirestore(): FirebaseFirestore = Firebase.firestore.apply {
-        // Cache offline (sigue siendo buena práctica explícita)
-        firestoreSettings =
-            FirebaseFirestoreSettings.Builder().setLocalCacheSettings(persistentCacheSettings {})
+    fun provideFirestore(): FirebaseFirestore =
+        Firebase.firestore.apply {
+            firestoreSettings = FirebaseFirestoreSettings.Builder()
+                .setLocalCacheSettings(persistentCacheSettings {})
                 .build()
-    }
+        }
+
+    /* ---------- Identity / Auth ---------- */
 
     // One Tap (Google Identity Services clásico)
     @Provides
@@ -52,26 +59,36 @@ object AppModule {
     fun provideOneTapClient(@ApplicationContext ctx: Context): SignInClient =
         Identity.getSignInClient(ctx)
 
-    // Credential Manager (recomendado hoy para Google Sign-In + Passkeys)
+    // Credential Manager (recomendado para Google Sign-In + Passkeys)
     @Provides
     @Singleton
     fun provideCredentialManager(@ApplicationContext ctx: Context): CredentialManager =
         CredentialManager.create(ctx)
 
-    // Server Client ID que inyecta el plugin de google-services (strings.xml)
+    // Server Client ID (strings.xml → default_web_client_id)
+    @Provides
+    @Singleton
+    @WebClientId
+    fun provideWebClientId(@ApplicationContext ctx: Context): String =
+        ctx.getString(R.string.default_web_client_id)
 
-    // Opción Google ID para Credential Manager (configurable: solo cuentas autorizadas, autoselect, etc.)
+    // Opción Google ID para Credential Manager
     @Provides
     @Singleton
     fun provideGoogleIdOption(@WebClientId webClientId: String): GetGoogleIdOption =
-        GetGoogleIdOption.Builder().setServerClientId(webClientId)
-            .setFilterByAuthorizedAccounts(false).setAutoSelectEnabled(false).build()
+        GetGoogleIdOption.Builder()
+            .setServerClientId(webClientId)
+            .setFilterByAuthorizedAccounts(false)
+            .setAutoSelectEnabled(false)
+            .build()
 
-    // Request base de Credential Manager (puedes agregar Passkey si quieres)
+    // Request base de Credential Manager
     @Provides
     @Singleton
     fun provideGetCredentialRequest(googleIdOption: GetGoogleIdOption): GetCredentialRequest =
-        GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
+        GetCredentialRequest.Builder()
+            .addCredentialOption(googleIdOption)
+            .build()
 
     /* ---------- DataStore / Prefs ---------- */
 
@@ -82,7 +99,8 @@ object AppModule {
         @ApplicationContext context: Context
     ): DataStore<Preferences> = PreferenceDataStoreFactory.create(
         scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
-        produceFile = { context.dataStoreFile("user_prefs.preferences_pb") })
+        produceFile = { context.dataStoreFile("user_prefs.preferences_pb") }
+    )
 
     @Provides
     @Singleton

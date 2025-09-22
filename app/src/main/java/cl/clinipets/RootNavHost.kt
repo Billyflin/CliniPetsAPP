@@ -16,26 +16,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import cl.clinipets.attention.navigation.attentionGraph
-import cl.clinipets.auth.AuthDest
-import cl.clinipets.auth.authGraph
-import kotlinx.serialization.Serializable
-
-
-
-
-
-
-
-
-
-
-// Chat
-
-
-
-
-
-/* ───────────── Root host súper compacto ───────────── */
+import cl.clinipets.auth.navigation.AuthDest
+import cl.clinipets.auth.navigation.authGraph
 
 @Composable
 fun RootNavHost() {
@@ -43,19 +25,17 @@ fun RootNavHost() {
     NavHost(navController = nav, startDestination = AuthDest.Graph) {
         authGraph(nav)
         attentionGraph(nav)
-        // Añade cuando tengas pantallas:
-        // onboardingGraph(nav)
-        // vetVerificationGraph(nav)
-        // appointmentsGraph(nav)
-        // consultationGraph(nav)
-        // historyGraph(nav)
-        // chatGraph(nav)
-        // notificationsGraph(nav)
-        // reportsGraph(nav)
+//         onboardingGraph(nav)
+//         vetVerificationGraph(nav)
+//         appointmentsGraph(nav)
+//         consultationGraph(nav)
+//         historyGraph(nav)
+//         chatGraph(nav)
+//         notificationsGraph(nav)
+//         reportsGraph(nav)
     }
 }
 
-/* ───────────── UI placeholder mínima (para compilar ya) ───────────── */
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

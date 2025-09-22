@@ -1,43 +1,37 @@
 package cl.clinipets.auth.navigation
 
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
-import cl.clinipets.SimpleScreen
+import cl.clinipets.auth.presentation.LoginViewModel
+import cl.clinipets.auth.ui.LoginScreen
 import cl.clinipets.attention.navigation.AttDest
 import kotlinx.serialization.Serializable
 
-// Auth
+// AuthNav.kt
 sealed interface AuthDest {
-    @Serializable
-    data object Graph : AuthDest
-
-    @Serializable
-    data object Login : AuthDest
-
-    @Serializable
-    data object Account : AuthDest
+    @Serializable data object Graph : AuthDest
+    @Serializable data object Login : AuthDest
+    @Serializable data object Account : AuthDest
 }
 
 fun NavGraphBuilder.authGraph(nav: NavController) {
     navigation<AuthDest.Graph>(startDestination = AuthDest.Login) {
 
-        // PANTALLA 1: Login
         composable<AuthDest.Login> {
-            // si ya tienes LoginViewModel/LoginScreen, reemplaza el SimpleScreen por tu UI:
-            // val vm: LoginViewModel = hiltViewModel()
-            SimpleScreen(
-                title = "Login", primary = "Entrar", onPrimary = {
-                    // ejemplo: vm.onSubmit() y navegar al mapa
-                    nav.navigate(AttDest.Graph) {
-                        popUpTo(AuthDest.Graph) { inclusive = true }
-                    }
-                })
+            val vm: LoginViewModel = hiltViewModel()
+            LoginScreen(vm = vm) {
+                // Navega al "home" de Tutor (o lo que definas)
+                nav.navigate(AttDest.Graph) {
+                    popUpTo(AuthDest.Graph) { inclusive = true }
+                }
+            }
         }
 
         composable<AuthDest.Account> {
-            SimpleScreen("Cuenta", "Cerrar", onPrimary = { nav.popBackStack() }, showBack = true)
+            // TODO: AccountScreen()
         }
     }
 }
