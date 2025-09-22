@@ -78,6 +78,8 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.androidx.monitor)
     implementation(libs.androidx.junit.ktx)
+    implementation(libs.firebase.crashlytics.buildtools)
+    implementation(libs.play.services.auth)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
