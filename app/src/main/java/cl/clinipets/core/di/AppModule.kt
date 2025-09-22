@@ -8,7 +8,6 @@ import androidx.datastore.dataStoreFile
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import cl.clinipets.R
-
 import cl.clinipets.core.data.preferences.UserPreferences
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.auth.api.identity.SignInClient
@@ -65,7 +64,6 @@ object AppModule {
     fun provideCredentialManager(@ApplicationContext ctx: Context): CredentialManager =
         CredentialManager.create(ctx)
 
-    // Server Client ID (strings.xml → default_web_client_id)
     @Provides
     @Singleton
     @WebClientId

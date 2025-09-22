@@ -1,13 +1,16 @@
 package cl.clinipets.auth.navigation
 
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.LaunchedEffect
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
-import cl.clinipets.auth.presentation.LoginViewModel
-import cl.clinipets.auth.ui.LoginScreen
 import cl.clinipets.attention.navigation.AttDest
+import cl.clinipets.auth.presentation.LoginViewModel
+import cl.clinipets.auth.ui.AccountScreen
+import cl.clinipets.auth.ui.LoginScreen
+import cl.clinipets.home.navigation.HomeDest
 import kotlinx.serialization.Serializable
 
 // AuthNav.kt
@@ -22,16 +25,33 @@ fun NavGraphBuilder.authGraph(nav: NavController) {
 
         composable<AuthDest.Login> {
             val vm: LoginViewModel = hiltViewModel()
-            LoginScreen(vm = vm) {
-                // Navega al "home" de Tutor (o lo que definas)
-                nav.navigate(AttDest.Graph) {
-                    popUpTo(AuthDest.Graph) { inclusive = true }
+
+            if (vm.isLoggedIn()) {
+                LaunchedEffect(Unit) {
+                    nav.navigate(HomeDest.Graph) {
+                        popUpTo(AuthDest.Graph) { inclusive = true }
+                    }
+                }
+            } else {
+                LoginScreen(vm = vm) {
+                    // Navega al "home" de Tutor (o lo que definas)
+                    nav.navigate(AttDest.Graph) {
+                        popUpTo(AuthDest.Graph) { inclusive = true }
+                    }
                 }
             }
         }
 
         composable<AuthDest.Account> {
-            // TODO: AccountScreen()
+            AccountScreen(
+                onLogout = {
+                    // Vuelve al flujo de Auth (Login)
+                    nav.navigate(AuthDest.Graph) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
+
     }
 }

@@ -1,13 +1,13 @@
 package cl.clinipets.attention.navigation
 
 import android.util.Log
+import androidx.compose.material3.Text
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navDeepLink
 import androidx.navigation.navigation
 import androidx.navigation.toRoute
-import cl.clinipets.SimpleScreen
 import kotlinx.serialization.Serializable
 
 sealed interface AttDest {
@@ -29,12 +29,9 @@ fun NavGraphBuilder.attentionGraph(nav: NavController) {
 
         // PANTALLA 2: Request (mapa)
         composable<AttDest.Request> {
-            // si ya tienes RequestViewModel/RequestMapScreen, colócalos aquí:
-            // val vm: RequestViewModel = hiltViewModel()
-            SimpleScreen(
-                title = "Mapa (Request)",
-                primary = "Elegir Vet",
-                onPrimary = { nav.navigate(AttDest.Confirm(vetId = "vet-123")) })
+            Log.d("ATT_DEST", "Request")
+            Text( text = "Request Screen" )
+
         }
 
         composable<AttDest.Confirm>(
@@ -45,18 +42,12 @@ fun NavGraphBuilder.attentionGraph(nav: NavController) {
         ) { entry ->
             val args = entry.toRoute<AttDest.Confirm>()
             Log.d("ATT_DEST", "Confirm: ${args.vetId}")
-            SimpleScreen(
-                title = "Confirmar: ${args.vetId}",
-                primary = "Crear cita",
-                onPrimary = { nav.popBackStack() },
-                showBack = true
-            )
+
         }
 
         composable<AttDest.Inbox> {
-            SimpleScreen(
-                "Inbox Vet", "Volver", onPrimary = { nav.popBackStack() }, showBack = true
-            )
+
+
         }
     }
 }
