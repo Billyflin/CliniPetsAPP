@@ -1,19 +1,21 @@
 package cl.clinipets.auth.navigation
 
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
-import cl.clinipets.attention.navigation.AttDest
+import cl.clinipets.auth.presentation.AuthUiState
 import cl.clinipets.auth.presentation.LoginViewModel
 import cl.clinipets.auth.ui.AccountScreen
 import cl.clinipets.auth.ui.LoginScreen
 import cl.clinipets.home.navigation.HomeDest
 import kotlinx.serialization.Serializable
 
-// AuthNav.kt
+// Destinos Auth
 sealed interface AuthDest {
     @Serializable data object Graph : AuthDest
     @Serializable data object Login : AuthDest
@@ -25,33 +27,37 @@ fun NavGraphBuilder.authGraph(nav: NavController) {
 
         composable<AuthDest.Login> {
             val vm: LoginViewModel = hiltViewModel()
+            val uiState by vm.uiState.collectAsStateWithLifecycle()
 
-            if (vm.isLoggedIn()) {
-                LaunchedEffect(Unit) {
+            // Navegación impulsada por estado (segura ante recomposiciones)
+            LaunchedEffect(uiState) {
+                if (uiState == AuthUiState.LoggedIn) {
                     nav.navigate(HomeDest.Graph) {
                         popUpTo(AuthDest.Graph) { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
-            } else {
-                LoginScreen(vm = vm) {
-                    // Navega al "home" de Tutor (o lo que definas)
-                    nav.navigate(AttDest.Graph) {
-                        popUpTo(AuthDest.Graph) { inclusive = true }
-                    }
-                }
+            }
+
+            // Render según estado (el botón de LoginScreen llama vm.signIn(context))
+            when (uiState) {
+                AuthUiState.Loading   -> LoginScreen(vm = vm)
+                AuthUiState.LoggedOut -> LoginScreen(vm = vm)
+                AuthUiState.LoggedIn  -> Unit // LaunchedEffect ya navegó
             }
         }
 
         composable<AuthDest.Account> {
+            val vm: LoginViewModel = hiltViewModel()
             AccountScreen(
                 onLogout = {
-                    // Vuelve al flujo de Auth (Login)
+                    vm.logout()
                     nav.navigate(AuthDest.Graph) {
                         popUpTo(0) { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
             )
         }
-
     }
 }

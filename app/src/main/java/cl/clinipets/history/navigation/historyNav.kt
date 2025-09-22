@@ -1,5 +1,11 @@
 package cl.clinipets.history.navigation
 
+import androidx.compose.material3.Text
+import androidx.navigation.NavController
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.compose.composable
+import androidx.navigation.navigation
+import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
 
 // Historial
@@ -15,4 +21,26 @@ sealed interface HistDest {
 
     @Serializable
     data class PdfPreview(val petId: String? = null) : HistDest
+}
+
+fun NavGraphBuilder.historyGraph(nav: NavController) {
+    navigation<HistDest.Graph>(startDestination = HistDest.PetList) {
+
+        // Pantalla 1: Lista de mascotas
+        composable<HistDest.PetList> {
+            Text( text = "History Screen" )
+        }
+        // Pantalla 2: Detalles de la mascota
+        composable<HistDest.PetDetails> { entry ->
+            val args = entry.toRoute<HistDest.PetDetails>()
+            Text( text = "Pet Details: ${args.petId}" )
+
+        }
+        // Pantalla 3: Vista previa del PDF
+        composable<HistDest.PdfPreview> { entry ->
+
+            val args = entry.toRoute<HistDest.PdfPreview>()
+            Text( text = "PDF Preview for Pet: ${args.petId}" )
+        }
+    }
 }
