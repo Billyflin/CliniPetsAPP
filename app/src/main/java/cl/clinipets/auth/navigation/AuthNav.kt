@@ -1,11 +1,11 @@
-package cl.clinipets.auth
+package cl.clinipets.auth.navigation
 
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
-import cl.clinipets.AttDest
 import cl.clinipets.SimpleScreen
+import cl.clinipets.attention.navigation.AttDest
 import kotlinx.serialization.Serializable
 
 // Auth
