@@ -40,55 +40,79 @@ class AttentionViewModel @Inject constructor(
     private val _state = MutableStateFlow(RequestUiState())
     val state: StateFlow<RequestUiState> = _state
 
+    // Flags para controlar el "loader" y evitar parpadeos
+    private var petsLoaded = false
+    private var locationReady = false          // primera ubicación o error
+    private var vetsFirstEmission = false      // primera lista de vets o error
+    private var startedRealtime = false
+
     init {
-        // Cargar mascotas apenas inicia
         loadPets()
     }
 
+    private fun recomputeLoading() {
+        val loadingNow = !(petsLoaded && locationReady && vetsFirstEmission)
+        _state.update { it.copy(loading = loadingNow) }
+    }
+
     private fun loadPets() = viewModelScope.launch {
+        _state.update { it.copy(loading = true) }
         runCatching { petsRepo.myPets() }
             .onSuccess { pets ->
-                // selecciona la primera por defecto si hay
+                petsLoaded = true
                 val first = pets.firstOrNull()?.first
                 _state.update { it.copy(pets = pets, selectedPetId = first) }
+                recomputeLoading()
             }
             .onFailure { e ->
+                petsLoaded = true
                 _state.update { it.copy(error = e.message ?: "No se pudieron cargar tus mascotas") }
+                recomputeLoading()
             }
-        _state.update { it.copy(loading = false) }
     }
 
     fun onPetSelected(petId: String) {
         _state.update { it.copy(selectedPetId = petId) }
     }
 
-    /** Llama esto cuando ya hay permiso de ubicación. Se suscribe a ubicación + vets en vivo. */
+    /** Llamar cuando ya hay permiso de ubicación. */
     fun startRealtime() {
-        // evita duplicar suscripciones
-        if (_locationFlow.value != null) return
+        if (startedRealtime) return
+        startedRealtime = true
 
-        viewModelScope.launch {
-            // 1) Ubicación en vivo
-            locationService.observeLocation()
-                .onEach { gp ->
-                    _locationFlow.value = gp
-                    _state.update { it.copy(location = gp, loading = false) }
-                }
-                .catch { e ->
-                    _state.update { it.copy(error = e.message ?: "Error de ubicación", loading = false) }
-                }
-                .launchIn(this)
+        // Asegura loader visible mientras llegan los primeros datos
+        _state.update { it.copy(loading = true) }
 
-            // 2) Vets cercanos reaccionando a ese flow
-            attentionRepo
-                .observeNearbyVets(center = locationFlow.filterNotNull(), radiusMeters = 4000)
-                .onEach { vets ->
-                    _state.update { it.copy(vets = vets, loading = false, error = null) }
+        // 1) Ubicación en vivo
+        locationService.observeLocation()
+            .onEach { gp ->
+                _locationFlow.value = gp
+                if (!locationReady) {
+                    locationReady = true
                 }
-                .catch { e ->
-                    _state.update { it.copy(error = e.message ?: "Error cargando veterinarios", loading = false) }
-                }
-                .launchIn(this)
-        }
+                _state.update { it.copy(location = gp) }
+                recomputeLoading()
+            }
+            .catch { e ->
+                if (!locationReady) locationReady = true
+                _state.update { it.copy(error = e.message ?: "Error de ubicación") }
+                recomputeLoading()
+            }
+            .launchIn(viewModelScope)
+
+        // 2) Vets cercanos reaccionando a ese flow
+        attentionRepo
+            .observeNearbyVets(center = locationFlow.filterNotNull(), radiusMeters = 4000)
+            .onEach { vets ->
+                if (!vetsFirstEmission) vetsFirstEmission = true
+                _state.update { it.copy(vets = vets, error = null) }
+                recomputeLoading()
+            }
+            .catch { e ->
+                if (!vetsFirstEmission) vetsFirstEmission = true
+                _state.update { it.copy(error = e.message ?: "Error cargando veterinarios") }
+                recomputeLoading()
+            }
+            .launchIn(viewModelScope)
     }
 }
