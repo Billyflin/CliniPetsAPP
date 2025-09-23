@@ -43,12 +43,11 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideFirestore(): FirebaseFirestore =
-        Firebase.firestore.apply {
-            firestoreSettings = FirebaseFirestoreSettings.Builder()
-                .setLocalCacheSettings(persistentCacheSettings {})
+    fun provideFirestore(): FirebaseFirestore = Firebase.firestore.apply {
+        firestoreSettings =
+            FirebaseFirestoreSettings.Builder().setLocalCacheSettings(persistentCacheSettings {})
                 .build()
-        }
+    }
 
     /* ---------- Identity / Auth ---------- */
 
@@ -74,19 +73,21 @@ object AppModule {
     @Provides
     @Singleton
     fun provideGoogleIdOption(@WebClientId webClientId: String): GetGoogleIdOption =
-        GetGoogleIdOption.Builder()
-            .setServerClientId(webClientId)
-            .setFilterByAuthorizedAccounts(false)
-            .setAutoSelectEnabled(false)
-            .build()
+        GetGoogleIdOption.Builder().setServerClientId(webClientId)
+            .setFilterByAuthorizedAccounts(false).setAutoSelectEnabled(false).build()
 
     // Request base de Credential Manager
     @Provides
     @Singleton
     fun provideGetCredentialRequest(googleIdOption: GetGoogleIdOption): GetCredentialRequest =
-        GetCredentialRequest.Builder()
-            .addCredentialOption(googleIdOption)
-            .build()
+        GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
+
+
+
+    @Provides
+    @Singleton
+    fun provideLocationService(@ApplicationContext ctx: Context): cl.clinipets.core.common.location.LocationService =
+        cl.clinipets.core.common.location.LocationServiceImpl(ctx)
 
     /* ---------- DataStore / Prefs ---------- */
 
@@ -94,12 +95,10 @@ object AppModule {
     @Singleton
     @UserPrefs
     fun providePreferencesDataStore(
-        @ApplicationContext context: Context,
-        @IoDispatcher dispatcher: CoroutineDispatcher
+        @ApplicationContext context: Context, @IoDispatcher dispatcher: CoroutineDispatcher
     ): DataStore<Preferences> = PreferenceDataStoreFactory.create(
         scope = CoroutineScope(SupervisorJob() + dispatcher),
-        produceFile = { context.dataStoreFile("user_prefs.preferences_pb") }
-    )
+        produceFile = { context.dataStoreFile("user_prefs.preferences_pb") })
 
     @Provides
     @Singleton

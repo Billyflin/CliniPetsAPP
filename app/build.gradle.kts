@@ -105,8 +105,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
 
     implementation("com.google.android.gms:play-services-location:21.3.0")
-    implementation("com.google.android.libraries.maps:maps:3.5.0")
-    implementation("com.google.maps.android:maps-compose:4.4.1") // Compose Maps
+    implementation("com.google.maps.android:maps-compose:6.11.0") // Compose Maps
 
     // Serialization
     implementation(libs.kotlinx.serialization.core)
