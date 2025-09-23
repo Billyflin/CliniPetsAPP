@@ -18,36 +18,37 @@ sealed interface AttDest {
     data object Request : AttDest
 
     @Serializable
-    data class Confirm(val vetId: String) : AttDest
+    data class Confirm(val vet: String) : AttDest
 
     @Serializable
     data object Inbox : AttDest
 }
-
 fun NavGraphBuilder.attentionGraph(nav: NavController) {
     navigation<AttDest.Graph>(startDestination = AttDest.Request) {
 
-        // PANTALLA 2: Request (mapa)
         composable<AttDest.Request> {
             Log.d("ATT_DEST", "Request")
-            RequestScreen()
+            RequestScreen(
+                onVetSelected = { vet ->
+                    Log.d("ATT_DEST", "Selected vet: ${vet.name}")
+                }
 
+            )
         }
 
         composable<AttDest.Confirm>(
             deepLinks = listOf(
-                navDeepLink { uriPattern = "clinipets://confirm/{vetId}" },
-                navDeepLink { uriPattern = "https://clinipets.app/confirm/{vetId}" }
+                navDeepLink { uriPattern = "clinipets://confirm/{vet}" },
+                navDeepLink { uriPattern = "https://clinipets.app/confirm/{vet}" }
             )
         ) { entry ->
             val args = entry.toRoute<AttDest.Confirm>()
-            Log.d("ATT_DEST", "Confirm: ${args.vetId}")
+            Log.d("ATT_DEST", "Confirm: ${args.vet}")
 
         }
 
         composable<AttDest.Inbox> {
-
-
+            // TODO: inbox
         }
     }
 }

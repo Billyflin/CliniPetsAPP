@@ -5,13 +5,40 @@ import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pets
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -24,12 +51,22 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
-import com.google.maps.android.compose.*
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapEffect
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.MapsComposeExperimentalApi
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.maps.android.compose.rememberUpdatedMarkerState
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, MapsComposeExperimentalApi::class)
 @Composable
 fun RequestScreen(
-    vm: AttentionViewModel = hiltViewModel(), onVetTap: (VetLite) -> Unit = {}
+    vm: AttentionViewModel = hiltViewModel(),
+    onVetSelected: (VetLite) -> Unit
+
 ) {
     val ctx = LocalContext.current
     val state by vm.state.collectAsState()
@@ -54,12 +91,11 @@ fun RequestScreen(
     }
 
     val camera = rememberCameraPositionState()
+    val scope = rememberCoroutineScope()
+    var userMovedCamera by remember { mutableStateOf(false) }
 
     if (state.loading) {
-        Box(
-            Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
     } else {
@@ -94,8 +130,7 @@ fun RequestScreen(
                         if (myLoc != null) {
                             val nearestVetLoc = remember(state.vets) {
                                 state.vets
-                                    .filter { it.location != null }
-                                    .minByOrNull { it.distanceMeters }
+                                    .firstOrNull { it.location != null }
                                     ?.location
                             }
 
@@ -115,31 +150,36 @@ fun RequestScreen(
                             ) {
                                 state.vets.forEach { vet ->
                                     val vLoc = vet.location ?: return@forEach
-                                    val markerState = rememberUpdatedMarkerState(
-                                        position = LatLng(vLoc.lat, vLoc.lng)
-                                    )
+                                    val markerPos = LatLng(vLoc.lat, vLoc.lng)
+                                    val markerState = rememberUpdatedMarkerState(position = markerPos)
                                     Marker(
                                         state = markerState,
                                         title = vet.name,
-                                        snippet = "${vet.rating}★ · ${formatMeters(vet.distanceMeters)}"
+                                        snippet = "${vet.rating}★ · ${formatMeters(vet.distanceMeters)}",
+                                        onClick = {
+                                            userMovedCamera = true
+                                            scope.launch {
+                                                camera.animate(
+                                                    CameraUpdateFactory.newLatLngZoom(markerPos, 16f),
+                                                    600
+                                                )
+                                            }
+                                            true
+                                        }
                                     )
                                 }
 
-                                MapEffect(myLoc, nearestVetLoc) { map ->
+                                MapEffect(myLoc, nearestVetLoc, userMovedCamera) { map ->
+                                    if (userMovedCamera) return@MapEffect
                                     if (nearestVetLoc != null && hasPermission.value) {
                                         val me = LatLng(myLoc.lat, myLoc.lng)
                                         val vet = LatLng(nearestVetLoc.lat, nearestVetLoc.lng)
-                                        val bounds = LatLngBounds.builder()
-                                            .include(me).include(vet).build()
+                                        val bounds = LatLngBounds.builder().include(me).include(vet).build()
                                         val padding = 80
-                                        map.animateCamera(
-                                            CameraUpdateFactory.newLatLngBounds(bounds, padding)
-                                        )
+                                        map.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
                                     } else if (hasPermission.value) {
                                         val me = LatLng(myLoc.lat, myLoc.lng)
-                                        map.animateCamera(
-                                            CameraUpdateFactory.newLatLngZoom(me, 15f)
-                                        )
+                                        map.moveCamera(CameraUpdateFactory.newLatLngZoom(me, 15f))
                                     }
                                 }
                             }
@@ -166,7 +206,25 @@ fun RequestScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(state.vets, key = { it.id }) { vet ->
-                        VetCard(vet = vet, onClick = { onVetTap(vet) })
+                        VetCard(
+                            vet = vet,
+                            onClick = {
+                                onVetSelected(vet)
+                                val my = state.location ?: return@VetCard
+                                val vLoc = vet.location ?: return@VetCard
+                                val bounds = LatLngBounds.builder()
+                                    .include(LatLng(my.lat, my.lng))
+                                    .include(LatLng(vLoc.lat, vLoc.lng))
+                                    .build()
+                                userMovedCamera = true
+                                scope.launch {
+                                    camera.animate(
+                                        CameraUpdateFactory.newLatLngBounds(bounds, 80),
+                                        600
+                                    )
+                                }
+                            }
+                        )
                     }
                 }
             }
