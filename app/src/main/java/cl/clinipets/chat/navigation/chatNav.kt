@@ -11,13 +11,13 @@ import kotlinx.serialization.Serializable
 
 sealed interface ChatDest {
     @Serializable
-    data object Graph :ChatDest
+    data object Graph : ChatDest
 
     @Serializable
-    data object ThreadList :ChatDest
+    data object ThreadList : ChatDest
 
     @Serializable
-    data class Thread(val conversationId: String) :ChatDest
+    data class Thread(val conversationId: String) : ChatDest
 }
 
 
@@ -34,7 +34,8 @@ fun NavGraphBuilder.chatGraph(nav: NavController) {
             )
         }
         composable<ChatDest.Thread> { backStackEntry ->
-            val conversationId = backStackEntry.arguments?.getString("conversationId") ?: return@composable
+            val conversationId =
+                backStackEntry.arguments?.getString("conversationId") ?: return@composable
 
             Log.d("ThreadScreen", "conversationId: $conversationId")
             ThreadScreen(

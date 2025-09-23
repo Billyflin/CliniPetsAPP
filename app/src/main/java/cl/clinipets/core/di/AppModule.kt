@@ -83,7 +83,6 @@ object AppModule {
         GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
 
 
-
     @Provides
     @Singleton
     fun provideLocationService(@ApplicationContext ctx: Context): cl.clinipets.core.common.location.LocationService =

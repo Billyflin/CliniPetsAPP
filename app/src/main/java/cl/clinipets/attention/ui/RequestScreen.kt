@@ -22,7 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import cl.clinipets.attention.presentation.AttentionViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.MapsInitializer
@@ -35,8 +35,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RequestScreen(
-    vm: AttentionViewModel = hiltViewModel(),
-    onRequestCreated: () -> Unit = {}
+    vm: AttentionViewModel = hiltViewModel(), onRequestCreated: () -> Unit = {}
 ) {
     val ctx = LocalContext.current
     val state by vm.state.collectAsState()
@@ -68,7 +67,7 @@ fun RequestScreen(
     val camPosState = rememberCameraPositionState()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Solicitar atención") }) },
+        topBar = { TopAppBar(title = { Text("Solicitar atención " + state.location) }) },
     ) { pads ->
         Box(
             Modifier
@@ -82,7 +81,7 @@ fun RequestScreen(
                     LaunchedEffect(loc) {
                         camPosState.animate(
                             CameraUpdateFactory.newLatLngZoom(
-                                LatLng(loc.lat, loc.lng), 15f
+                                LatLng(loc.lat, loc.lng), 17f
                             )
                         )
                     }
@@ -95,9 +94,11 @@ fun RequestScreen(
                         // markers/overlays si quieres
                     }
                 }
+
                 state.loading -> {
                     CircularProgressIndicator(Modifier.align(Alignment.Center))
                 }
+
                 else -> {
                     Text(
                         state.error ?: "Permite la ubicación para continuar",

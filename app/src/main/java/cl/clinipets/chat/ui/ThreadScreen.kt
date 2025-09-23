@@ -20,5 +20,5 @@ fun ThreadScreen(
 @Preview(name = "ThreadScreen")
 @Composable
 private fun PreviewThreadScreen() {
-    ThreadScreen( onBack = { true })
+    ThreadScreen(onBack = { true })
 }

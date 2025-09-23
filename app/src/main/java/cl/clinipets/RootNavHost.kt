@@ -21,9 +21,9 @@ fun RootNavHost() {
         historyGraph(nav)
 //         onboardingGraph(nav)
 //         vetVerificationGraph(nav)
-         appointmentsGraph(nav)
+        appointmentsGraph(nav)
 //         consultationGraph(nav)
-         chatGraph(nav)
+        chatGraph(nav)
 //         notificationsGraph(nav)
 //         reportsGraph(nav)
     }

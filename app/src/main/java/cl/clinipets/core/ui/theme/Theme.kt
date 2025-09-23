@@ -485,14 +485,14 @@ private fun baseSchemeFor(
 ): ColorScheme = if (darkTheme) {
     when (contrast) {
         Contrast.Standard -> darkScheme
-        Contrast.Medium  -> mediumContrastDarkColorScheme
-        Contrast.High    -> highContrastDarkColorScheme
+        Contrast.Medium -> mediumContrastDarkColorScheme
+        Contrast.High -> highContrastDarkColorScheme
     }
 } else {
     when (contrast) {
         Contrast.Standard -> lightScheme
-        Contrast.Medium  -> mediumContrastLightColorScheme
-        Contrast.High    -> highContrastLightColorScheme
+        Contrast.Medium -> mediumContrastLightColorScheme
+        Contrast.High -> highContrastLightColorScheme
     }
 }
 
@@ -502,14 +502,14 @@ private fun extendedColorsFor(
 ): ExtendedColors = if (darkTheme) {
     when (contrast) {
         Contrast.Standard -> extendedDark
-        Contrast.Medium  -> extendedDarkMediumContrast
-        Contrast.High    -> extendedDarkHighContrast
+        Contrast.Medium -> extendedDarkMediumContrast
+        Contrast.High -> extendedDarkHighContrast
     }
 } else {
     when (contrast) {
         Contrast.Standard -> extendedLight
-        Contrast.Medium  -> extendedLightMediumContrast
-        Contrast.High    -> extendedLightHighContrast
+        Contrast.Medium -> extendedLightMediumContrast
+        Contrast.High -> extendedLightHighContrast
     }
 }
 private typealias ExtendedColors = ExtendedColorScheme

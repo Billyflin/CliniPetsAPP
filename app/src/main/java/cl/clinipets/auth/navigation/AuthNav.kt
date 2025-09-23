@@ -17,9 +17,12 @@ import kotlinx.serialization.Serializable
 
 // Destinos Auth
 sealed interface AuthDest {
-    @Serializable data object Graph : AuthDest
-    @Serializable data object Login : AuthDest
-    @Serializable data object Account : AuthDest
+    @Serializable
+    data object Graph : AuthDest
+    @Serializable
+    data object Login : AuthDest
+    @Serializable
+    data object Account : AuthDest
 }
 
 fun NavGraphBuilder.authGraph(nav: NavController) {
@@ -40,9 +43,9 @@ fun NavGraphBuilder.authGraph(nav: NavController) {
             }
 
             when (uiState) {
-                AuthUiState.Loading   -> LoginScreen( uiState, vm::signIn, vm.errors)
-                AuthUiState.LoggedOut -> LoginScreen( uiState, vm::signIn, vm.errors)
-                AuthUiState.LoggedIn  -> Unit // LaunchedEffect ya navegó
+                AuthUiState.Loading -> LoginScreen(uiState, vm::signIn, vm.errors)
+                AuthUiState.LoggedOut -> LoginScreen(uiState, vm::signIn, vm.errors)
+                AuthUiState.LoggedIn -> Unit // LaunchedEffect ya navegó
             }
         }
 

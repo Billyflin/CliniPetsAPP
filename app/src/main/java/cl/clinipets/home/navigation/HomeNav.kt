@@ -12,8 +12,10 @@ import cl.clinipets.home.ui.HomeScreen
 import kotlinx.serialization.Serializable
 
 sealed interface HomeDest {
-    @Serializable data object Graph : HomeDest
-    @Serializable data object Dashboard : HomeDest
+    @Serializable
+    data object Graph : HomeDest
+    @Serializable
+    data object Dashboard : HomeDest
 }
 
 fun NavGraphBuilder.homeGraph(nav: NavController) {

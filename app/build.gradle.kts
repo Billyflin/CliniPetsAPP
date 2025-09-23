@@ -97,7 +97,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.coil.compose)
-    implementation(libs.facebook.login)
+   // implementation(libs.facebook.login)
 
     // Navigation 3 (experimental)
     implementation(libs.androidx.navigation3.runtime)
