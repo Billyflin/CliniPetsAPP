@@ -39,10 +39,9 @@ fun NavGraphBuilder.authGraph(nav: NavController) {
                 }
             }
 
-            // Render según estado (el botón de LoginScreen llama vm.signIn(context))
             when (uiState) {
-                AuthUiState.Loading   -> LoginScreen(vm = vm)
-                AuthUiState.LoggedOut -> LoginScreen(vm = vm)
+                AuthUiState.Loading   -> LoginScreen( uiState, vm::signIn, vm.errors)
+                AuthUiState.LoggedOut -> LoginScreen( uiState, vm::signIn, vm.errors)
                 AuthUiState.LoggedIn  -> Unit // LaunchedEffect ya navegó
             }
         }

@@ -1,5 +1,7 @@
+// app/src/main/java/cl/clinipets/auth/ui/LoginScreen.kt
 package cl.clinipets.auth.ui
 
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,8 +21,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,25 +32,28 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.clinipets.R
 import cl.clinipets.auth.presentation.AuthUiState
-import cl.clinipets.auth.presentation.LoginViewModel
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.collectLatest
 
 @Composable
-fun LoginScreen(vm: LoginViewModel) {
-    val ctx = LocalContext.current
-    val uiState by vm.uiState.collectAsState() // Loading / LoggedOut / LoggedIn
-    val snackbar = remember { SnackbarHostState() }
+fun LoginScreen(
+    uiState: AuthUiState,
+    onSignIn: (Context) -> Unit,
+    errors: SharedFlow<String>
+) {
+    val loading = uiState == AuthUiState.Loading
+    val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
-    // Mostrar errores como snackbars
-    LaunchedEffect(Unit) {
-        vm.errors.collect { msg ->
-            snackbar.showSnackbar(msg)
+    // Mostrar errores en snackbar
+    LaunchedEffect(errors) {
+        errors.collectLatest { msg ->
+            snackbarHostState.showSnackbar(msg)
         }
     }
 
-    val loading = uiState == AuthUiState.Loading
-
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbar) }
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { pads ->
         Surface(
             modifier = Modifier
@@ -101,7 +104,7 @@ fun LoginScreen(vm: LoginViewModel) {
                     Spacer(Modifier.height(32.dp))
 
                     Button(
-                        onClick = { vm.signIn(ctx) },
+                        onClick = { onSignIn(context) },
                         enabled = !loading,
                         modifier = Modifier
                             .fillMaxWidth()

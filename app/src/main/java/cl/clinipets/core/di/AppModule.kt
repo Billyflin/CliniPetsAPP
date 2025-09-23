@@ -94,9 +94,10 @@ object AppModule {
     @Singleton
     @UserPrefs
     fun providePreferencesDataStore(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        @IoDispatcher dispatcher: CoroutineDispatcher
     ): DataStore<Preferences> = PreferenceDataStoreFactory.create(
-        scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+        scope = CoroutineScope(SupervisorJob() + dispatcher),
         produceFile = { context.dataStoreFile("user_prefs.preferences_pb") }
     )
 
