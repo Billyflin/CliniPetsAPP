@@ -8,7 +8,13 @@ import androidx.datastore.dataStoreFile
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import cl.clinipets.R
+import cl.clinipets.core.common.location.LocationService
+import cl.clinipets.core.common.location.LocationServiceImpl
 import cl.clinipets.core.data.preferences.UserPreferences
+import cl.clinipets.core.domain.AttentionRepository
+import cl.clinipets.core.domain.AttentionRepositoryImplFake
+import cl.clinipets.core.domain.PetsRepository
+import cl.clinipets.core.domain.PetsRepositoryImplFake
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
@@ -85,8 +91,18 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideLocationService(@ApplicationContext ctx: Context): cl.clinipets.core.common.location.LocationService =
-        cl.clinipets.core.common.location.LocationServiceImpl(ctx)
+    fun provideLocationService(@ApplicationContext ctx: Context): LocationService = LocationServiceImpl(ctx)
+
+
+    //---------- MODO FAKE (MVP / offline) ----------
+    @Provides
+    @Singleton
+    fun providePetsRepositoryFake(): PetsRepository = PetsRepositoryImplFake()
+
+    @Provides
+    @Singleton
+    fun provideAttentionRepositoryFake(): AttentionRepository = AttentionRepositoryImplFake()
+
 
     /* ---------- DataStore / Prefs ---------- */
 
