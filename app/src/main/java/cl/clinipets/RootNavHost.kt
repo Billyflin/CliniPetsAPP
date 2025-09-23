@@ -3,6 +3,7 @@ package cl.clinipets
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
+import cl.clinipets.appointments.navigation.appointmentsGraph
 import cl.clinipets.attention.navigation.attentionGraph
 import cl.clinipets.auth.navigation.AuthDest
 import cl.clinipets.auth.navigation.authGraph
@@ -20,7 +21,7 @@ fun RootNavHost() {
         historyGraph(nav)
 //         onboardingGraph(nav)
 //         vetVerificationGraph(nav)
-//         appointmentsGraph(nav)
+         appointmentsGraph(nav)
 //         consultationGraph(nav)
          chatGraph(nav)
 //         notificationsGraph(nav)

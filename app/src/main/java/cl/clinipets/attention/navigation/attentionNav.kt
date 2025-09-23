@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navDeepLink
 import androidx.navigation.navigation
 import androidx.navigation.toRoute
+import cl.clinipets.attention.ui.RequestScreen
 import kotlinx.serialization.Serializable
 
 sealed interface AttDest {
@@ -30,7 +31,7 @@ fun NavGraphBuilder.attentionGraph(nav: NavController) {
         // PANTALLA 2: Request (mapa)
         composable<AttDest.Request> {
             Log.d("ATT_DEST", "Request")
-            Text( text = "Request Screen" )
+            RequestScreen()
 
         }
 
