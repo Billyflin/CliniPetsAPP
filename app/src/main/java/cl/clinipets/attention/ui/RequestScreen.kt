@@ -43,21 +43,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import cl.clinipets.attention.model.VetLite
 import cl.clinipets.attention.presentation.AttentionViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapEffect
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.MapsComposeExperimentalApi
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.rememberCameraPositionState
-import com.google.maps.android.compose.rememberMarkerState
 import com.google.maps.android.compose.rememberUpdatedMarkerState
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, MapsComposeExperimentalApi::class)
 @Composable
 fun RequestScreen(
     vm: AttentionViewModel = hiltViewModel(), onVetTap: (VetLite) -> Unit = {}
@@ -89,7 +91,6 @@ fun RequestScreen(
     }
 
     val camera = rememberCameraPositionState()
-    val myMarker = rememberMarkerState()
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Solicitar atención") }) }) { pads ->
@@ -113,7 +114,6 @@ fun RequestScreen(
                 )
             }
 
-            // Mapa con mi posición y vets en vivo
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -122,14 +122,14 @@ fun RequestScreen(
             ) {
                 Box(Modifier.fillMaxSize()) {
                     val myLoc = state.location
-                    if (myLoc != null) {
-                        LaunchedEffect(myLoc) {
-                            val here = LatLng(myLoc.lat, myLoc.lng)
-                            myMarker.position = here
-                            if (hasPermission.value) {
-                                camera.animate(CameraUpdateFactory.newLatLngZoom(here, 15f))
-                            }
+                    if (myLoc != null) {                        // ✅ Centrado entre "yo" y el vet más cercano
+                        val nearestVetLoc = remember(state.vets) {
+                            state.vets
+                                .filter { it.location != null }
+                                .minByOrNull { it.distanceMeters }
+                                ?.location
                         }
+
                         GoogleMap(
                             modifier = Modifier.matchParentSize(),
                             cameraPositionState = camera,
@@ -140,12 +140,11 @@ fun RequestScreen(
                             ),
                             uiSettings = MapUiSettings(
                                 myLocationButtonEnabled = true,
-
+                                mapToolbarEnabled = false,
                                 zoomControlsEnabled = false
                             )
                         ) {
-
-                            // vets cercanos (como pins)
+                            // Pins de vets
                             state.vets.forEach { vet ->
                                 val vLoc = vet.location ?: return@forEach
                                 val markerState = rememberUpdatedMarkerState(
@@ -157,7 +156,26 @@ fun RequestScreen(
                                     snippet = "${vet.rating}★ · ${formatMeters(vet.distanceMeters)}"
                                 )
                             }
-                        }
+
+
+
+                        MapEffect(myLoc, nearestVetLoc) { map ->
+                            if (nearestVetLoc != null && hasPermission.value) {
+                                val me = LatLng(myLoc.lat, myLoc.lng)
+                                val vet = LatLng(nearestVetLoc.lat, nearestVetLoc.lng)
+                                val bounds = LatLngBounds.builder()
+                                    .include(me)
+                                    .include(vet)
+                                    .build()
+                                // padding en px para que no queden pegados a los bordes
+                                val padding = 80
+                                map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
+                            } else if (hasPermission.value) {
+                                // Si no hay vets, centra solo en mi ubicación con un zoom razonable
+                                val me = LatLng(myLoc.lat, myLoc.lng)
+                                map.animateCamera(CameraUpdateFactory.newLatLngZoom(me, 15f))
+                            }
+                        }}
                     } else {
                         if (state.loading) CircularProgressIndicator(Modifier.align(Alignment.Center))
                         else Text(
