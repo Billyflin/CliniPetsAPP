@@ -1,6 +1,5 @@
 package cl.clinipets.data.api
 
-import cl.clinipets.data.dto.CrearReserva
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -16,9 +15,8 @@ interface AgendaApi {
     ): String
 
     @POST("/api/agenda/reservas")
-    suspend fun crearReserva(@Body body: CrearReserva)
+    suspend fun crearReserva(@Body body: cl.clinipets.data.dto.CrearReserva)
 
     @GET("/api/agenda/reservas/mias")
     suspend fun reservasMias(): String
 }
-

@@ -14,10 +14,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import cl.clinipets.core.security.TokenStorage
 import cl.clinipets.data.NetworkModule
-import cl.clinipets.data.api.AuthApi
-import cl.clinipets.data.api.DiscoveryApi
-import cl.clinipets.data.repositories.AuthRepositoryImpl
-import cl.clinipets.data.repositories.DiscoveryRepositoryImpl
+import cl.clinipets.data.api.*
+import cl.clinipets.data.repositories.*
 import cl.clinipets.ui.theme.ClinipetsTheme
 import cl.clinipets.ui.AppRoot
 import retrofit2.create
@@ -47,16 +45,27 @@ class MainActivity : ComponentActivity() {
             }
         )
         val retrofit = NetworkModule.retrofit(BuildConfig.BASE_URL, okHttp)
+
+        // APIs
         val authApi = retrofit.create<AuthApi>()
         val discoveryApi = retrofit.create<DiscoveryApi>()
+        val mascotasApi = retrofit.create<MascotasApi>()
+        val agendaApi = retrofit.create<AgendaApi>()
+        val catalogoApi = retrofit.create<CatalogoApi>()
+
+        // Repos
         val authRepo = AuthRepositoryImpl(authApi, tokenStorage)
         val discoveryRepo = DiscoveryRepositoryImpl(discoveryApi)
+        val mascotasRepo = MascotasRepositoryImpl(mascotasApi)
+        val agendaRepo = AgendaRepositoryImpl(agendaApi)
+        val catalogoRepo = CatalogoRepositoryImpl(catalogoApi)
+
         val webClientId = BuildConfig.GOOGLE_SERVER_CLIENT_ID.trim()
 
         if (webClientId.isBlank()) {
             Log.e(LOG_TAG, "GOOGLE_SERVER_CLIENT_ID vacío. Configúralo en build.gradle.kts")
         } else {
-            Log.d(LOG_TAG, "GOOGLE_SERVER_CLIENT_ID: ***${webClientId.takeLast(TAIL_LEN)} (long=${webClientId.length})")
+            Log.d(LOG_TAG, "GOOGLE_SERVER CLIENT_ID: ***${webClientId.takeLast(TAIL_LEN)} (long=${webClientId.length})")
         }
 
         setContent {
@@ -69,7 +78,10 @@ class MainActivity : ComponentActivity() {
                         authRepository = authRepo,
                         discoveryRepository = discoveryRepo,
                         webClientId = webClientId,
-                        unauthorizedSignal = unauthorizedTick.value
+                        unauthorizedSignal = unauthorizedTick.value,
+                        mascotasRepository = mascotasRepo,
+                        agendaRepository = agendaRepo,
+                        catalogoRepository = catalogoRepo
                     )
                 }
             }
