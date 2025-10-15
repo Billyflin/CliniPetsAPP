@@ -1,16 +1,18 @@
 package cl.clinipets.data.repositories
 
 import cl.clinipets.data.api.DiscoveryApi
-import cl.clinipets.data.dto.discovery.VetNearbyDto
-import cl.clinipets.data.dto.discovery.VetNearbyListWrapper
+import cl.clinipets.data.dto.discovery.DiscoveryResult
 import cl.clinipets.domain.discovery.DiscoveryRepository
 import cl.clinipets.domain.discovery.VetNearby
-import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class DiscoveryRepositoryImpl(private val api: DiscoveryApi) : DiscoveryRepository {
-    override suspend fun buscar(lat: Double, lon: Double, radio: Int): String =
-        api.buscar(lat, lon, radio)
+    override suspend fun buscar(lat: Double, lon: Double, radio: Int): String {
+        val result: DiscoveryResult = api.buscar(lat = lat, lon = lon, radio = radio)
+        val json = Json { ignoreUnknownKeys = true; isLenient = true; explicitNulls = false }
+        return json.encodeToString(result)
+    }
 
     override suspend fun buscarVets(
         lat: Double,
@@ -22,7 +24,7 @@ class DiscoveryRepositoryImpl(private val api: DiscoveryApi) : DiscoveryReposito
         limit: Int,
         offset: Int
     ): List<VetNearby> {
-        val raw = api.buscar(
+        val result: DiscoveryResult = api.buscar(
             lat = lat,
             lon = lon,
             radio = radio,
@@ -32,24 +34,16 @@ class DiscoveryRepositoryImpl(private val api: DiscoveryApi) : DiscoveryReposito
             limit = limit,
             offset = offset
         )
-        val json = Json { ignoreUnknownKeys = true; isLenient = true }
-        val dtos: List<VetNearbyDto> = runCatching {
-            json.decodeFromString(ListSerializer(VetNearbyDto.serializer()), raw)
-        }.getOrElse {
-            // fallback si viene envuelto en { items: [...] }
-            val wrapper = json.decodeFromString(VetNearbyListWrapper.serializer(), raw)
-            wrapper.items
-        }
-        return dtos.map { dto ->
-            val oferta = dto.ofertaPrincipal ?: dto.ofertas?.minByOrNull { it.precio ?: Double.MAX_VALUE }
+        return result.items.map { item ->
+            val minOferta = item.ofertas.minByOrNull { it.precioCents }
             VetNearby(
-                id = dto.vetId,
-                nombre = dto.nombre,
-                lat = dto.lat,
-                lon = dto.lon,
-                openNow = dto.openNow ?: false,
-                ofertaNombre = oferta?.nombre,
-                ofertaPrecioMin = oferta?.precio
+                id = item.vetId,
+                nombre = item.nombre,
+                lat = item.lat,
+                lon = item.lon,
+                openNow = item.openNow,
+                ofertaNombre = minOferta?.nombre,
+                ofertaPrecioMin = minOferta?.let { it.precioCents / 100.0 }
             )
         }
     }

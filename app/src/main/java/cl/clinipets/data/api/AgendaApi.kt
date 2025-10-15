@@ -2,6 +2,7 @@ package cl.clinipets.data.api
 
 import cl.clinipets.data.dto.CrearReserva
 import cl.clinipets.data.dto.ReservaDto
+import cl.clinipets.data.dto.SlotDto
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -16,7 +17,7 @@ interface AgendaApi {
         @Query("from") fromIso: String,
         @Query("to") toIso: String,
         @Query("ofertaId") ofertaId: String? = null
-    ): String
+    ): List<SlotDto>
 
     @POST("/api/agenda/reservas")
     suspend fun crearReserva(@Body body: CrearReserva): ReservaDto

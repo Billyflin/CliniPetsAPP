@@ -10,3 +10,8 @@ data class CrearReserva(
     val nota: String? = null
 )
 
+@Serializable
+data class SlotDto(
+    val inicio: String,
+    val fin: String
+)

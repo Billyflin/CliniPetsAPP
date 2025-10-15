@@ -20,10 +20,10 @@ class AuthRepositoryImpl(
 
     override suspend fun me(): MeResponse {
         val me = api.me()
-        // Persistir roles y rol activo por defecto si no existe
-        tokenStorage.setRoles(me.roles)
-        if (tokenStorage.getActiveRole().isNullOrBlank() && me.roles.isNotEmpty()) {
-            tokenStorage.setActiveRole(me.roles.first())
+        val roles = me.roles.orEmpty()
+        tokenStorage.setRoles(roles)
+        if (tokenStorage.getActiveRole().isNullOrBlank() && roles.isNotEmpty()) {
+            tokenStorage.setActiveRole(roles.first())
         }
         return me
     }
