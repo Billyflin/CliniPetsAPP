@@ -2,24 +2,15 @@
 package cl.clinipets.ui.theme
 
 
-import android.content.Context
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MotionScheme
-import androidx.compose.material3.Shapes
-import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -441,118 +432,26 @@ private val HAS_EXPRESSIVE: Boolean = runCatching {
     Class.forName("androidx.compose.material3.MaterialExpressiveKt")
 }.isSuccess
 
-/* ---------- MAIN THEME (refactor) ---------- */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Suppress("FunctionNaming")
+
 @Composable
-fun ClinipetsTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
-    contrast: Contrast = Contrast.Standard,
-    content: @Composable () -> Unit,
+fun ClinipetsTheme(darkTheme: Boolean = isSystemInDarkTheme(),
+    // Dynamic color is available on Android 12+
+                   dynamicColor: Boolean = true,
+                   content: @Composable () -> Unit
 ) {
-    val context = LocalContext.current
+    val colorScheme = when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            val context = LocalContext.current
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
 
-    // 1) Resolver esquema base (estable)
-    val baseScheme = remember(darkTheme, contrast) {
-        baseSchemeFor(darkTheme, contrast)
+        darkTheme -> darkScheme
+        else -> lightScheme
     }
 
-    // 2) Resolver esquema final (dinámico solo si aplica)
-    val colorScheme = remember(context, darkTheme, contrast, dynamicColor, baseScheme) {
-        resolveColorScheme(context, darkTheme, contrast, dynamicColor, baseScheme)
-    }
-
-    // 3) Resolver paleta extendida (estable)
-    val extendedColors = remember(key1 = darkTheme, key2 = contrast) {
-        extendedColorsFor(darkTheme, contrast)
-    }
-
-    // 4) Aplicar tema (una sola decisión)
-    CompositionLocalProvider(LocalExtendedColors provides extendedColors) {
-        ApplyMaterialTheme(
-            colorScheme = colorScheme,
-            content = content
-        )
-    }
-}
-
-/* ---------- Helpers puros (bajan la complejidad del composable) ---------- */
-
-private fun baseSchemeFor(
-    darkTheme: Boolean,
-    contrast: Contrast,
-): ColorScheme = if (darkTheme) {
-    when (contrast) {
-        Contrast.Standard -> darkScheme
-        Contrast.Medium  -> mediumContrastDarkColorScheme
-        Contrast.High    -> highContrastDarkColorScheme
-    }
-} else {
-    when (contrast) {
-        Contrast.Standard -> lightScheme
-        Contrast.Medium  -> mediumContrastLightColorScheme
-        Contrast.High    -> highContrastLightColorScheme
-    }
-}
-
-private fun extendedColorsFor(
-    darkTheme: Boolean,
-    contrast: Contrast,
-): ExtendedColors = if (darkTheme) {
-    when (contrast) {
-        Contrast.Standard -> extendedDark
-        Contrast.Medium  -> extendedDarkMediumContrast
-        Contrast.High    -> extendedDarkHighContrast
-    }
-} else {
-    when (contrast) {
-        Contrast.Standard -> extendedLight
-        Contrast.Medium  -> extendedLightMediumContrast
-        Contrast.High    -> extendedLightHighContrast
-    }
-}
-private typealias ExtendedColors = ExtendedColorScheme
-
-private fun isDynamicEligible(
-    dynamicColor: Boolean,
-    contrast: Contrast,
-): Boolean = dynamicColor && contrast == Contrast.Standard
-
-private fun resolveColorScheme(
-    context: Context,
-    darkTheme: Boolean,
-    contrast: Contrast,
-    dynamicColor: Boolean,
-    fallback: ColorScheme,
-): ColorScheme {
-    if (!isDynamicEligible(dynamicColor, contrast)) return fallback
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return fallback
-    return if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-}
-
-/* ---------- Capa de aplicación del tema (aisla el if) ---------- */
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun ApplyMaterialTheme(
-    colorScheme: ColorScheme,
-    content: @Composable () -> Unit,
-) {
-    if (HAS_EXPRESSIVE) {
-        MaterialExpressiveTheme(
-            colorScheme = colorScheme,
-            typography = Typography(),
-            shapes = Shapes(),
-            motionScheme = MotionScheme.expressive(),
-            content = content,
-        )
-    } else {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = Typography(),
-            shapes = Shapes(),
-            content = content,
-        )
-    }
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = Typography,
+        content = content
+    )
 }
