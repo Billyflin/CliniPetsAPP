@@ -1,0 +1,1057 @@
+openapi: "3.1.0"
+info:
+  title: "backend API"
+  description: "backend API"
+  version: "1.0.0"
+servers:
+  - url: "https://backend"
+paths:
+  /api/catalogo/procedimientos/{id}:
+    put:
+      summary: "PUT api/catalogo/procedimientos/{id}"
+      operationId: "editarProcedimiento"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertProcedimiento"
+        required: true
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+    delete:
+      summary: "DELETE api/catalogo/procedimientos/{id}"
+      operationId: "borrarProcedimiento"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "204":
+          description: "No Content"
+  /api/catalogo/ofertas/{ofertaId}:
+    put:
+      summary: "PUT api/catalogo/ofertas/{ofertaId}"
+      operationId: "editarOferta"
+      parameters:
+        - name: "ofertaId"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertOferta"
+        required: true
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+    delete:
+      summary: "DELETE api/catalogo/ofertas/{ofertaId}"
+      operationId: "borrarOferta"
+      parameters:
+        - name: "ofertaId"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "204":
+          description: "No Content"
+  /api/catalogo/procedimientos:
+    post:
+      summary: "POST api/catalogo/procedimientos"
+      operationId: "crearProcedimiento"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertProcedimiento"
+        required: true
+      responses:
+        "201":
+          description: "Created"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+    get:
+      summary: "GET api/catalogo/procedimientos"
+      operationId: "procedimientos"
+      parameters:
+        - name: "q"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "categoria"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/Map"
+  /api/catalogo/ofertas:
+    post:
+      summary: "POST api/catalogo/ofertas"
+      operationId: "crearOferta"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertOferta"
+        required: true
+      responses:
+        "201":
+          description: "Created"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+    get:
+      summary: "GET api/catalogo/ofertas"
+      operationId: "ofertas"
+      parameters:
+        - name: "vetId"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "procedimientoId"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "activo"
+          in: "query"
+          required: false
+          schema:
+            type: "boolean"
+            default: "true"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/Map"
+  /api/agenda/disponibilidad/reglas:
+    put:
+      summary: "PUT api/agenda/disponibilidad/reglas"
+      operationId: "upsertReglas"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReglasRequest"
+        required: true
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+  /api/agenda/disponibilidad/slots:
+    get:
+      summary: "GET api/agenda/disponibilidad/slots"
+      operationId: "slots"
+      parameters:
+        - name: "vetId"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "from"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+        - name: "to"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+        - name: "ofertaId"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/Map"
+  /api/agenda/disponibilidad/open-now:
+    get:
+      summary: "GET api/agenda/disponibilidad/open-now"
+      operationId: "openNow"
+      parameters:
+        - name: "vetId"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+  /api/publico/descubrimiento/_demo/open-now:
+    post:
+      summary: "POST api/publico/descubrimiento/_demo/open-now"
+      operationId: "demoOpenNow"
+      parameters:
+        - name: "vetId"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "openNow"
+          in: "query"
+          required: true
+          schema:
+            type: "boolean"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+  /api/publico/descubrimiento/_demo/near/{bucket}:
+    post:
+      summary: "POST api/publico/descubrimiento/_demo/near/{bucket}"
+      operationId: "demoNear"
+      parameters:
+        - name: "bucket"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+  /api/agenda/reservas/{reservaId}/aceptar:
+    put:
+      summary: "PUT api/agenda/reservas/{reservaId}/aceptar"
+      operationId: "aceptar"
+      parameters:
+        - name: "reservaId"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+  /api/agenda/reservas/{reservaId}/rechazar:
+    put:
+      summary: "PUT api/agenda/reservas/{reservaId}/rechazar"
+      operationId: "rechazar"
+      parameters:
+        - name: "reservaId"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+  /api/agenda/reservas/{reservaId}/cancelar:
+    put:
+      summary: "PUT api/agenda/reservas/{reservaId}/cancelar"
+      operationId: "cancelar"
+      parameters:
+        - name: "reservaId"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+  /api/agenda/reservas/{reservaId}/completar:
+    put:
+      summary: "PUT api/agenda/reservas/{reservaId}/completar"
+      operationId: "completar"
+      parameters:
+        - name: "reservaId"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+  /api/agenda/reservas:
+    post:
+      summary: "POST api/agenda/reservas"
+      operationId: "crear"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearReserva"
+        required: true
+      responses:
+        "201":
+          description: "Created"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+  /api/agenda/reservas/mias:
+    get:
+      summary: "GET api/agenda/reservas/mias"
+      operationId: "mias"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/Map"
+  /api/agenda/reservas/{reservaId}:
+    get:
+      summary: "GET api/agenda/reservas/{reservaId}"
+      operationId: "detalle"
+      parameters:
+        - name: "reservaId"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+  /api/clinica/consultas:
+    post:
+      summary: "POST api/clinica/consultas"
+      operationId: "crearConsulta"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearConsulta"
+        required: true
+      responses:
+        "201":
+          description: "Created"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+  /api/clinica/sugerencias:
+    post:
+      summary: "POST api/clinica/sugerencias"
+      operationId: "sugerencias"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SugerenciasRequest"
+        required: true
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/Map"
+  /api/veterinarios/mi-perfil:
+    put:
+      summary: "PUT api/veterinarios/mi-perfil"
+      operationId: "upsertMiPerfil"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertPerfil"
+        required: true
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+  /api/veterinarios/{vetId}/verificar:
+    put:
+      summary: "PUT api/veterinarios/{vetId}/verificar"
+      operationId: "verificar"
+      parameters:
+        - name: "vetId"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+  /api/veterinarios/publicos:
+    get:
+      summary: "GET api/veterinarios/publicos"
+      operationId: "publicos"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/Map"
+  /api/veterinarios/{vetId}:
+    get:
+      summary: "GET api/veterinarios/{vetId}"
+      operationId: "perfil"
+      parameters:
+        - name: "vetId"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+  /api/inventario/productos:
+    post:
+      summary: "POST api/inventario/productos"
+      operationId: "crearProducto"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductoUpsert"
+        required: true
+      responses:
+        "201":
+          description: "Created"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+    get:
+      summary: "GET api/inventario/productos"
+      operationId: "productos"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/Map"
+  /api/inventario/internal/reservas:
+    post:
+      summary: "POST api/inventario/internal/reservas"
+      operationId: "reservar"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReservaStockRequest"
+        required: true
+      responses:
+        "201":
+          description: "Created"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+  /api/inventario/internal/reservas/{bookingId}:
+    delete:
+      summary: "DELETE api/inventario/internal/reservas/{bookingId}"
+      operationId: "liberar"
+      parameters:
+        - name: "bookingId"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "204":
+          description: "No Content"
+  /api/inventario/stock:
+    get:
+      summary: "GET api/inventario/stock"
+      operationId: "stock"
+      parameters:
+        - name: "ubicacionId"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "sku"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/Map"
+  /api/publico/descubrimiento:
+    get:
+      summary: "GET api/publico/descubrimiento"
+      operationId: "buscar"
+      parameters:
+        - name: "lat"
+          in: "query"
+          required: true
+          schema:
+            type: "number"
+            format: "double"
+        - name: "lon"
+          in: "query"
+          required: true
+          schema:
+            type: "number"
+            format: "double"
+        - name: "radio"
+          in: "query"
+          required: true
+          schema:
+            type: "integer"
+            format: "int32"
+        - name: "procedimientoId"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "abiertoAhora"
+          in: "query"
+          required: false
+          schema:
+            type: "boolean"
+        - name: "conStock"
+          in: "query"
+          required: false
+          schema:
+            type: "boolean"
+        - name: "limit"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+            format: "int32"
+            default: "50"
+        - name: "offset"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+            format: "int32"
+            default: "0"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+  /api/mascotas/{id}:
+    put:
+      summary: "PUT api/mascotas/{id}"
+      operationId: "actualizar"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActualizarMascota"
+        required: true
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Mascota"
+    delete:
+      summary: "DELETE api/mascotas/{id}"
+      operationId: "eliminar"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "204":
+          description: "No Content"
+    get:
+      summary: "GET api/mascotas/{id}"
+      operationId: "detalle"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Mascota"
+  /api/mascotas:
+    post:
+      summary: "POST api/mascotas"
+      operationId: "crear"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearMascota"
+        required: true
+      responses:
+        "201":
+          description: "Created"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Mascota"
+  /api/mascotas/mias:
+    get:
+      summary: "GET api/mascotas/mias"
+      operationId: "mias"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/Mascota"
+  /api/auth/google:
+    post:
+      summary: "POST api/auth/google"
+      operationId: "google"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoogleLoginRequest"
+        required: true
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+  /api/auth/me:
+    get:
+      summary: "GET api/auth/me"
+      operationId: "me"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
+components:
+  schemas:
+    UpsertProcedimiento:
+      type: "object"
+      properties:
+        nombre:
+          type: "string"
+        categoria:
+          type: "string"
+      required:
+        - "nombre"
+        - "categoria"
+    UpsertOferta:
+      type: "object"
+      properties:
+        procedimientoId:
+          type: "string"
+          format: "uuid"
+        precioCents:
+          type: "integer"
+          format: "int32"
+        duracionMin:
+          type: "integer"
+          format: "int32"
+        activo:
+          type: "boolean"
+      required:
+        - "procedimientoId"
+        - "precioCents"
+        - "duracionMin"
+        - "activo"
+    Map:
+      type: "object"
+      properties: { }
+    ReglasRequest:
+      type: "object"
+      properties:
+        vetId:
+          type: "string"
+          format: "uuid"
+        semanal:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Map"
+        excepciones:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Map"
+      required:
+        - "vetId"
+        - "semanal"
+        - "excepciones"
+    CrearReserva:
+      type: "object"
+      properties:
+        mascotaId:
+          type: "string"
+          format: "uuid"
+        ofertaId:
+          type: "string"
+          format: "uuid"
+        inicio:
+          type: "string"
+        nota:
+          type: "string"
+          nullable: true
+      required:
+        - "mascotaId"
+        - "ofertaId"
+        - "inicio"
+    UsedSku:
+      type: "object"
+      properties:
+        sku:
+          type: "string"
+        qty:
+          type: "integer"
+          format: "int32"
+      required:
+        - "sku"
+        - "qty"
+    CrearConsulta:
+      type: "object"
+      properties:
+        reservaId:
+          type: "string"
+          format: "uuid"
+        diagnostico:
+          type: "string"
+        usedSkus:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/UsedSku"
+      required:
+        - "reservaId"
+        - "diagnostico"
+        - "usedSkus"
+    SugerenciasRequest:
+      type: "object"
+      properties:
+        especie:
+          type: "string"
+        sintomas:
+          type: "array"
+          items:
+            type: "string"
+        edad:
+          type: "string"
+        pesoKg:
+          type: "number"
+          format: "double"
+      required:
+        - "especie"
+        - "sintomas"
+        - "edad"
+        - "pesoKg"
+    UpsertPerfil:
+      type: "object"
+      properties:
+        nombre:
+          type: "string"
+          nullable: true
+        bio:
+          type: "string"
+          nullable: true
+        latitud:
+          type: "number"
+          format: "double"
+          nullable: true
+        longitud:
+          type: "number"
+          format: "double"
+          nullable: true
+    ProductoUpsert:
+      type: "object"
+      properties:
+        sku:
+          type: "string"
+        nombre:
+          type: "string"
+        categoria:
+          type: "string"
+      required:
+        - "sku"
+        - "nombre"
+        - "categoria"
+    ReserveItem:
+      type: "object"
+      properties:
+        sku:
+          type: "string"
+        qty:
+          type: "integer"
+          format: "int32"
+      required:
+        - "sku"
+        - "qty"
+    ReservaStockRequest:
+      type: "object"
+      properties:
+        bookingId:
+          type: "string"
+          format: "uuid"
+        vetId:
+          type: "string"
+          format: "uuid"
+        ubicacionId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ReserveItem"
+      required:
+        - "bookingId"
+        - "vetId"
+        - "items"
+    ActualizarMascota:
+      type: "object"
+      properties:
+        nombre:
+          type: "string"
+          nullable: true
+        especie:
+          type: "string"
+          nullable: true
+          enum:
+            - "PERRO"
+            - "GATO"
+        raza:
+          type: "string"
+          nullable: true
+        sexo:
+          type: "string"
+          nullable: true
+        fechaNacimiento:
+          type: "string"
+          format: "date"
+          nullable: true
+        pesoKg:
+          type: "number"
+          format: "double"
+          nullable: true
+    Instant:
+      type: "object"
+      properties: { }
+    Mascota:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        nombre:
+          type: "string"
+        especie:
+          type: "string"
+          enum:
+            - "PERRO"
+            - "GATO"
+        raza:
+          type: "string"
+          nullable: true
+        sexo:
+          type: "string"
+          nullable: true
+        fechaNacimiento:
+          type: "string"
+          format: "date"
+          nullable: true
+        pesoKg:
+          type: "number"
+          format: "double"
+          nullable: true
+        tutorId:
+          type: "string"
+          format: "uuid"
+        creadoEn:
+          $ref: "#/components/schemas/Instant"
+        modificadoEn:
+          $ref: "#/components/schemas/Instant"
+        creadoPor:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        modificadoPor:
+          type: "string"
+          format: "uuid"
+          nullable: true
+      required:
+        - "nombre"
+        - "especie"
+        - "tutorId"
+        - "creadoEn"
+        - "modificadoEn"
+    CrearMascota:
+      type: "object"
+      properties:
+        nombre:
+          type: "string"
+        especie:
+          type: "string"
+          enum:
+            - "PERRO"
+            - "GATO"
+        raza:
+          type: "string"
+          nullable: true
+        sexo:
+          type: "string"
+          nullable: true
+        fechaNacimiento:
+          type: "string"
+          format: "date"
+          nullable: true
+        pesoKg:
+          type: "number"
+          format: "double"
+          nullable: true
+      required:
+        - "nombre"
+        - "especie"
+    GoogleLoginRequest:
+      type: "object"
+      properties:
+        idToken:
+          type: "string"
+      required:
+        - "idToken"
+    TokenResponse:
+      type: "object"
+      properties:
+        token:
+          type: "string"
+      required:
+        - "token"

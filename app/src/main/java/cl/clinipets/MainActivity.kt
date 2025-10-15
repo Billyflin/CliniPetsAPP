@@ -7,7 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import cl.clinipets.core.ui.theme.ClinipetsTheme
+import cl.clinipets.navigation.AppNavigation
+import cl.clinipets.ui.theme.ClinipetsTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -20,8 +21,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-
-                    RootNavHost()
+                    AppNavigation()
                 }
             }
         }
