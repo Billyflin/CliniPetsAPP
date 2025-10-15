@@ -35,6 +35,9 @@ data class UpsertProcedimiento(
 )
 
 @Serializable
+enum class ReservaEstado { PENDIENTE, ACEPTADA, RECHAZADA, CANCELADA, COMPLETADA }
+
+@Serializable
 data class ReservaDto(
     val reservaId: String? = null,
     val mascotaId: String,

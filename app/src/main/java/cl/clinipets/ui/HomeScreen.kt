@@ -39,6 +39,7 @@ import cl.clinipets.data.dto.OfertaDto
 import cl.clinipets.data.dto.ProcedimientoDto
 import cl.clinipets.data.dto.ProductoDto
 import cl.clinipets.data.dto.ReservaDto
+import cl.clinipets.data.dto.ReservaEstado
 import cl.clinipets.data.dto.StockItemDto
 import cl.clinipets.data.dto.UpsertOferta
 import cl.clinipets.data.dto.UpsertPerfil
@@ -285,7 +286,7 @@ private fun ClienteHomeScreen(
                         val list = agendaRepository.reservasMias()
                         val now = Instant.now()
                         proxima.value = list
-                            .filter { it.estado in listOf("PENDIENTE", "ACEPTADA") }
+                            .filter { it.estado in listOf(ReservaEstado.PENDIENTE, ReservaEstado.ACEPTADA) }
                             .minByOrNull {
                                 try {
                                     Instant.parse(it.inicio)
