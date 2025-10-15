@@ -2,12 +2,15 @@ package cl.clinipets
 
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import cl.clinipets.core.security.TokenStorage
 import cl.clinipets.data.NetworkModule
@@ -32,18 +35,28 @@ class MainActivity : ComponentActivity() {
         logAppIdAndSha1()
 
         val tokenStorage = TokenStorage(this)
-        val okHttp = NetworkModule.okHttp { tokenStorage.getJwt() }
+        val unauthorizedTick = mutableStateOf(0L)
+        val mainHandler = Handler(Looper.getMainLooper())
+
+        val okHttp = NetworkModule.okHttp(
+            tokenProvider = { tokenStorage.getJwt() },
+            onUnauthorized = {
+                Log.w(LOG_TAG, "401 detectado. Limpiando JWT y notificando UI…")
+                tokenStorage.setJwt(null)
+                mainHandler.post { unauthorizedTick.value = unauthorizedTick.value + 1 }
+            }
+        )
         val retrofit = NetworkModule.retrofit(BuildConfig.BASE_URL, okHttp)
         val authApi = retrofit.create<AuthApi>()
         val discoveryApi = retrofit.create<DiscoveryApi>()
         val authRepo = AuthRepositoryImpl(authApi, tokenStorage)
         val discoveryRepo = DiscoveryRepositoryImpl(discoveryApi)
-        val webClientId = getString(R.string.google_web_client_id).trim()
+        val webClientId = BuildConfig.GOOGLE_SERVER_CLIENT_ID.trim()
 
         if (webClientId.isBlank()) {
-            Log.e(LOG_TAG, "google_web_client_id vacío. Revisa res/values/auth.xml")
+            Log.e(LOG_TAG, "GOOGLE_SERVER_CLIENT_ID vacío. Configúralo en build.gradle.kts")
         } else {
-            Log.d(LOG_TAG, "google_web_client_id: ***${webClientId.takeLast(TAIL_LEN)} (long=${webClientId.length})")
+            Log.d(LOG_TAG, "GOOGLE_SERVER_CLIENT_ID: ***${webClientId.takeLast(TAIL_LEN)} (long=${webClientId.length})")
         }
 
         setContent {
@@ -55,7 +68,8 @@ class MainActivity : ComponentActivity() {
                     AppRoot(
                         authRepository = authRepo,
                         discoveryRepository = discoveryRepo,
-                        webClientId = webClientId
+                        webClientId = webClientId,
+                        unauthorizedSignal = unauthorizedTick.value
                     )
                 }
             }

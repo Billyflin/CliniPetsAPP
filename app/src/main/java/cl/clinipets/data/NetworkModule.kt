@@ -1,5 +1,7 @@
 package cl.clinipets.data
 
+import cl.clinipets.BuildConfig
+import cl.clinipets.core.network.AuthFailureInterceptor
 import cl.clinipets.core.network.AuthInterceptor
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
@@ -18,15 +20,22 @@ object NetworkModule {
         encodeDefaults = true
     }
 
-    fun okHttp(tokenProvider: () -> String?): OkHttpClient {
-        val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
-        return OkHttpClient.Builder()
+    fun okHttp(
+        tokenProvider: () -> String?,
+        onUnauthorized: () -> Unit = {}
+    ): OkHttpClient {
+        val builder = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
-            .addInterceptor(logging)
             .addInterceptor(AuthInterceptor(tokenProvider))
-            .build()
+            .addInterceptor(AuthFailureInterceptor(onUnauthorized))
+
+        if (BuildConfig.DEBUG) {
+            val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
+            builder.addInterceptor(logging)
+        }
+        return builder.build()
     }
 
     fun retrofit(baseUrl: String, client: OkHttpClient): Retrofit {
