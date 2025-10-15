@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Client ID de tipo Web (serverClientId usado por Credential Manager + GIS) -->
+    <string name="google_web_client_id">516859256009-obqnjjbnn9k5e2phvbk35sspf1sdvqr7.apps.googleusercontent.com</string>
+
+    <!-- Opcional: Client ID Android (para referencia/debug, no se usa como serverClientId) -->
+    <string name="google_android_client_id">516859256009-ug16brinti0v5j0bup2ppr7qlq1lrluc.apps.googleusercontent.com</string>
+</resources>
