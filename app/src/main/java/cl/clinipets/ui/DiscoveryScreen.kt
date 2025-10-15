@@ -17,7 +17,7 @@ import cl.clinipets.domain.discovery.DiscoveryRepository
 import kotlinx.coroutines.launch
 
 @Composable
-fun DiscoveryScreen(repo: DiscoveryRepository, onOpenVet: (String) -> Unit = {}) {
+fun DiscoveryScreen(repo: DiscoveryRepository, onOpenVet: (String) -> Unit = {}, onOpenMap: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
     val lat = remember { mutableStateOf(-33.45) }
     val lon = remember { mutableStateOf(-70.66) }
@@ -45,5 +45,7 @@ fun DiscoveryScreen(repo: DiscoveryRepository, onOpenVet: (String) -> Unit = {})
         OutlinedTextField(value = vetId.value, onValueChange = { vetId.value = it }, label = { Text("vetId") })
         Spacer(Modifier.height(8.dp))
         Button(onClick = { if (vetId.value.isNotBlank()) onOpenVet(vetId.value) }) { Text("Ver ofertas del Vet") }
+        Spacer(Modifier.height(16.dp))
+        Button(onClick = onOpenMap) { Text("Ver mapa demo") }
     }
 }

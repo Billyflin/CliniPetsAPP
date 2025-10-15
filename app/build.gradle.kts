@@ -22,6 +22,12 @@ android {
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         signingConfig = signingConfigs.getByName("debug")
+
+        // Inyecta la API Key de Google Maps desde local.properties o variable de entorno
+        val mapsApiKey = providers.gradleProperty("MAPS_API_KEY").orNull
+            ?: System.getenv("MAPS_API_KEY")
+            ?: ""
+        manifestPlaceholders += mapOf("MAPS_API_KEY" to mapsApiKey)
     }
 
     buildTypes {
@@ -83,6 +89,17 @@ dependencies {
     implementation(libs.googleid)
 
     implementation(libs.play.services.base)
+
+    // Google Maps
+    implementation(libs.play.services.maps)
+    implementation(libs.maps.compose)
+    implementation(libs.play.services.location)
+
+    // Persistencia ligera
+    implementation(libs.datastore.preferences)
+
+    // Material Icons
+    implementation(libs.androidx.compose.material.icons.extended)
 
     testImplementation(libs.junit)
     testImplementation(libs.okhttp3.mockwebserver)

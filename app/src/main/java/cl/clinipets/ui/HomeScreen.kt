@@ -18,8 +18,9 @@ import cl.clinipets.domain.agenda.AgendaRepository
 import cl.clinipets.domain.catalogo.CatalogoRepository
 import cl.clinipets.domain.discovery.DiscoveryRepository
 import cl.clinipets.domain.mascotas.MascotasRepository
+import cl.clinipets.ui.discovery.MapDiscoverScreen
 
-private enum class HomeTab { Descubrir, Mascotas, Reservas }
+private enum class HomeTab { Descubrir, Veterinarios, Mascotas, Reservas, Perfil }
 
 @Composable
 fun HomeScreen(
@@ -34,15 +35,17 @@ fun HomeScreen(
 
     Column(Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = tab.value.ordinal) {
-            HomeTab.values().forEachIndexed { index, t ->
+            HomeTab.values().forEach { t ->
                 Tab(
                     selected = tab.value == t,
                     onClick = {
                         tab.value = t
                         when (t) {
                             HomeTab.Descubrir -> navController.navigate("descubrir") { launchSingleTop = true }
+                            HomeTab.Veterinarios -> navController.navigate("veterinarios") { launchSingleTop = true }
                             HomeTab.Mascotas -> navController.navigate("mascotas") { launchSingleTop = true }
                             HomeTab.Reservas -> navController.navigate("reservas") { launchSingleTop = true }
+                            HomeTab.Perfil -> navController.navigate("perfil") { launchSingleTop = true }
                         }
                     },
                     text = { Text(t.name) }
@@ -52,16 +55,22 @@ fun HomeScreen(
 
         NavHost(navController = navController, startDestination = "descubrir") {
             composable("descubrir") {
-                DiscoveryScreen(
+                MapDiscoverScreen(
                     repo = discoveryRepository,
                     onOpenVet = { vetId -> navController.navigate("vet/$vetId") }
                 )
+            }
+            composable("veterinarios") {
+                VetsScreen(repo = discoveryRepository) { vetId -> navController.navigate("vet/$vetId") }
             }
             composable("mascotas") {
                 MascotasScreen(repo = mascotasRepository)
             }
             composable("reservas") {
                 ReservasScreen(repo = agendaRepository)
+            }
+            composable("perfil") {
+                ProfileScreen(onLogout = onLogout)
             }
             composable(
                 route = "vet/{vetId}",

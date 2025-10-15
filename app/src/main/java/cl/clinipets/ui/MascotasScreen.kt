@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cl.clinipets.domain.mascotas.MascotasRepository
 import kotlinx.coroutines.launch
+import java.util.logging.Logger
 
 @Suppress("FunctionName")
 @Composable
@@ -108,7 +109,8 @@ fun MascotasScreen(repo: MascotasRepository) {
         // Lista simple con eliminar
         items.forEach { m ->
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                Text(text = "${'$'}{m.nombre} (${ '$'}{m.especie.name})")
+                Logger.getLogger("MascotasScreen").info("Mostrando mascota: $m")
+                Text(text = "${m.nombre} (${m.especie.name})")
                 Spacer(Modifier.width(8.dp))
                 Button(onClick = {
                     val id = m.id ?: return@Button

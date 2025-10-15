@@ -76,8 +76,11 @@ fun AppRoot(
                     agendaRepository = agendaRepository,
                     catalogoRepository = catalogoRepository,
                     onLogout = {
-                        // fuerza logout inmediato (token ya fue borrado por interceptor si aplica)
-                        loggedIn.value = false
+                        scope.launch {
+                            runCatching { authRepository.logout() }
+                            loggedIn.value = false
+                            snackbar.showSnackbar("Sesión cerrada")
+                        }
                     }
                 )
             }

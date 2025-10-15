@@ -16,5 +16,7 @@ class AuthRepositoryImpl(
         return res.token
     }
     override suspend fun me(): String = api.me()
+    override suspend fun logout() {
+        tokenStorage.setJwt(null)
+    }
 }
-
