@@ -1,7 +1,3 @@
 <resources>
     <string name="app_name">Clinipets</string>
-    <string name="default_web_client_id">a</string>
-    <string name="facebook_app_id">1088098406132214</string>
-    <string name="fb_login_protocol_scheme">fb1088098406132214</string>
-    <string name="facebook_client_token">8a3030226441c3a0ad0dac32ba09df25</string>
 </resources>

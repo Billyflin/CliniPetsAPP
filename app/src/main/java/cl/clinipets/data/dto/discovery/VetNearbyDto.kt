@@ -3,25 +3,27 @@ package cl.clinipets.data.dto.discovery
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class OfertaDto(
-    val id: String? = null,
-    val nombre: String? = null,
-    val precio: Double? = null
+data class OfertaItem(
+    val ofertaId: String,
+    val procedimientoId: String,
+    val nombre: String,
+    val precioCents: Int,
+    val conStock: Boolean
 )
 
 @Serializable
-data class VetNearbyDto(
-    val id: String,
+data class VetItem(
+    val vetId: String,
     val nombre: String,
+    val distanciaM: Int,
+    val openNow: Boolean,
     val lat: Double,
     val lon: Double,
-    val openNow: Boolean? = null,
-    val ofertas: List<OfertaDto>? = null,
-    val ofertaPrincipal: OfertaDto? = null
+    val ofertas: List<OfertaItem>
 )
 
 @Serializable
-data class VetNearbyListWrapper(
-    val items: List<VetNearbyDto> = emptyList()
+data class DiscoveryResult(
+    val items: List<VetItem>,
+    val nextOffset: Int
 )
-

@@ -15,6 +15,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cl.clinipets.data.dto.CrearReserva
+import cl.clinipets.data.dto.ReservaDto
 import cl.clinipets.domain.agenda.AgendaRepository
 import kotlinx.coroutines.launch
 
@@ -23,7 +24,8 @@ fun ReservasScreen(repo: AgendaRepository) {
     val scope = rememberCoroutineScope()
     val loading = remember { mutableStateOf(false) }
     val error = remember { mutableStateOf<String?>(null) }
-    val resultado = remember { mutableStateOf("") }
+    val reservas = remember { mutableStateOf<List<ReservaDto>>(emptyList()) }
+    val creada = remember { mutableStateOf<ReservaDto?>(null) }
 
     val mascotaId = remember { mutableStateOf("") }
     val ofertaId = remember { mutableStateOf("") }
@@ -37,7 +39,7 @@ fun ReservasScreen(repo: AgendaRepository) {
                 loading.value = true
                 error.value = null
                 runCatching { repo.reservasMias() }
-                    .onSuccess { resultado.value = it }
+                    .onSuccess { reservas.value = it }
                     .onFailure { e -> error.value = e.message }
                 loading.value = false
             }
@@ -46,7 +48,9 @@ fun ReservasScreen(repo: AgendaRepository) {
         Spacer(Modifier.height(12.dp))
         if (loading.value) Text("Cargando…")
         error.value?.let { Text("Error: $it") }
-        if (resultado.value.isNotBlank()) Text(resultado.value)
+        reservas.value.forEach { r ->
+            Text("• ${r.reservaId ?: "(sin id)"} - oferta=${r.ofertaId} inicio=${r.inicio} estado=${r.estado}")
+        }
 
         Spacer(Modifier.height(24.dp))
         Text("Crear reserva")
@@ -59,17 +63,20 @@ fun ReservasScreen(repo: AgendaRepository) {
                 loading.value = true
                 error.value = null
                 runCatching {
-                    repo.crearReserva(CrearReserva(
-                        mascotaId = mascotaId.value,
-                        ofertaId = ofertaId.value,
-                        inicio = inicioIso.value
-                    ))
-                }.onSuccess {
-                    resultado.value = "Reserva creada"
-                }.onFailure { e -> error.value = e.message }
+                    repo.crearReserva(
+                        CrearReserva(
+                            mascotaId = mascotaId.value,
+                            ofertaId = ofertaId.value,
+                            inicio = inicioIso.value
+                        )
+                    )
+                }.onSuccess { creada.value = it }
+                    .onFailure { e -> error.value = e.message }
                 loading.value = false
             }
         }) { Text("Crear") }
+        creada.value?.let { r ->
+            Text("Reserva creada: ${r.reservaId ?: "(sin id)"} estado=${r.estado}")
+        }
     }
 }
-

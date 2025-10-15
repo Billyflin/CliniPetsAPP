@@ -1,0 +1,259 @@
+###
+PUT https://backend/api/catalogo/procedimientos/{{id}}
+Content-Type: application/json
+
+{
+  "nombre": "",
+  "categoria": ""
+}
+
+###
+DELETE https://backend/api/catalogo/procedimientos/{{id}}
+Content-Type: application/json
+
+{
+  "nombre": "",
+  "categoria": ""
+}
+
+###
+PUT https://backend/api/catalogo/ofertas/{{ofertaId}}
+Content-Type: application/json
+
+{
+  "procedimientoId": "",
+  "precioCents": 0,
+  "duracionMin": 0,
+  "activo": false
+}
+
+###
+DELETE https://backend/api/catalogo/ofertas/{{ofertaId}}
+Content-Type: application/json
+
+{
+  "procedimientoId": "",
+  "precioCents": 0,
+  "duracionMin": 0,
+  "activo": false
+}
+
+###
+POST https://backend/api/catalogo/procedimientos?
+    q={{$random.alphanumeric(8)}}&
+    categoria={{$random.alphanumeric(8)}}
+    Content-Type: application/json
+
+###
+GET https://backend/api/catalogo/procedimientos?
+    q={{$random.alphanumeric(8)}}&
+    categoria={{$random.alphanumeric(8)}}
+    Content-Type: application/json
+
+###
+POST https://backend/api/catalogo/ofertas?
+    vetId={{$random.uuid}}&
+    procedimientoId={{$random.uuid}}&
+    activo=false
+    Content-Type: application/json
+
+###
+GET https://backend/api/catalogo/ofertas?
+    vetId={{$random.uuid}}&
+    procedimientoId={{$random.uuid}}&
+    activo=false
+    Content-Type: application/json
+
+###
+PUT https://backend/api/agenda/disponibilidad/reglas
+Content-Type: application/json
+
+{
+  "vetId": "",
+  "semanal": [],
+  "excepciones": []
+}
+
+###
+GET https://backend/api/agenda/disponibilidad/slots?
+    vetId={{$random.uuid}}&
+    from={{$random.alphanumeric(8)}}&
+    to={{$random.alphanumeric(8)}}&
+    ofertaId={{$random.uuid}}
+
+###
+GET https://backend/api/agenda/disponibilidad/open-now?
+    vetId={{$random.uuid}}
+
+###
+POST https://backend/api/publico/descubrimiento/_demo/open-now?
+    vetId={{$random.uuid}}&
+    openNow=false
+
+###
+POST https://backend/api/publico/descubrimiento/_demo/near/{{bucket}}
+
+###
+PUT https://backend/api/agenda/reservas/{{reservaId}}/aceptar
+
+###
+PUT https://backend/api/agenda/reservas/{{reservaId}}/rechazar
+
+###
+PUT https://backend/api/agenda/reservas/{{reservaId}}/cancelar
+
+###
+PUT https://backend/api/agenda/reservas/{{reservaId}}/completar
+
+###
+POST https://backend/api/agenda/reservas
+Content-Type: application/json
+
+{
+  "mascotaId": "",
+  "ofertaId": "",
+  "inicio": "",
+  "nota": ""
+}
+
+###
+GET https://backend/api/agenda/reservas/mias
+
+###
+GET https://backend/api/agenda/reservas/{{reservaId}}
+
+###
+POST https://backend/api/clinica/consultas
+Content-Type: application/json
+
+{
+  "reservaId": "",
+  "diagnostico": "",
+  "usedSkus": []
+}
+
+###
+POST https://backend/api/clinica/sugerencias
+Content-Type: application/json
+
+{
+  "especie": "",
+  "sintomas": [],
+  "edad": "",
+  "pesoKg": 0
+}
+
+###
+PUT https://backend/api/veterinarios/mi-perfil
+Content-Type: application/json
+
+{
+  "nombre": "",
+  "bio": "",
+  "latitud": 0,
+  "longitud": 0
+}
+
+###
+PUT https://backend/api/veterinarios/{{vetId}}/verificar
+
+###
+GET https://backend/api/veterinarios/publicos
+
+###
+GET https://backend/api/veterinarios/{{vetId}}
+Content-Type: application/json
+
+{
+  "nombre": "",
+  "bio": "",
+  "latitud": 0,
+  "longitud": 0
+}
+
+###
+POST https://backend/api/inventario/productos
+Content-Type: application/json
+
+{
+  "sku": "",
+  "nombre": "",
+  "categoria": ""
+}
+
+###
+GET https://backend/api/inventario/productos
+Content-Type: application/json
+
+{
+  "sku": "",
+  "nombre": "",
+  "categoria": ""
+}
+
+###
+POST https://backend/api/inventario/internal/reservas
+Content-Type: application/json
+
+{
+  "bookingId": "",
+  "vetId": "",
+  "ubicacionId": "",
+  "items": []
+}
+
+###
+DELETE https://backend/api/inventario/internal/reservas/{{bookingId}}
+
+###
+GET https://backend/api/inventario/stock?
+    ubicacionId={{$random.uuid}}&
+    sku={{$random.alphanumeric(8)}}
+
+###
+GET https://backend/api/publico/descubrimiento?
+    lat={{$random.float(100)}}&
+    lon={{$random.float(100)}}&
+    radio={{$random.integer(100)}}&
+    procedimientoId={{$random.uuid}}&
+    abiertoAhora=false&
+    conStock=false&
+    limit={{$random.integer(100)}}&
+    offset={{$random.integer(100)}}
+
+###
+PUT https://backend/api/mascotas/{{id}}
+Content-Type: application/json
+
+###
+DELETE https://backend/api/mascotas/{{id}}
+
+###
+GET https://backend/api/mascotas/{{id}}
+
+###
+POST https://backend/api/mascotas
+Content-Type: application/json
+
+{
+  "nombre": "",
+  "especie": "PERRO",
+  "raza": "",
+  "sexo": "",
+  "fechaNacimiento": "",
+  "pesoKg": 0
+}
+
+###
+GET https://backend/api/mascotas/mias
+
+###
+POST https://backend/api/auth/google
+Content-Type: application/json
+
+{
+  "idToken": ""
+}
+
+###
+GET https://backend/api/auth/me

@@ -15,7 +15,9 @@ import cl.clinipets.domain.agenda.AgendaRepository
 import cl.clinipets.domain.auth.AuthRepository
 import cl.clinipets.domain.catalogo.CatalogoRepository
 import cl.clinipets.domain.discovery.DiscoveryRepository
+import cl.clinipets.domain.inventario.InventarioRepository
 import cl.clinipets.domain.mascotas.MascotasRepository
+import cl.clinipets.domain.veterinarios.VeterinariosRepository
 import kotlinx.coroutines.launch
 
 @Suppress("FunctionName")
@@ -28,6 +30,9 @@ fun AppRoot(
     mascotasRepository: MascotasRepository,
     agendaRepository: AgendaRepository,
     catalogoRepository: CatalogoRepository,
+    forbiddenTick: Long = 0L,
+    veterinariosRepository: VeterinariosRepository? = null,
+    inventarioRepository: InventarioRepository? = null,
 ) {
     val snackbar = remember { SnackbarHostState() }
     val loggedIn = remember { mutableStateOf(authRepository.isLoggedIn()) }
@@ -46,6 +51,13 @@ fun AppRoot(
         if (unauthorizedSignal > 0) {
             loggedIn.value = false
             snackbar.showSnackbar("Sesión expirada. Inicia sesión nuevamente.")
+        }
+    }
+
+    // Manejo de 403 global
+    LaunchedEffect(forbiddenTick) {
+        if (forbiddenTick > 0) {
+            snackbar.showSnackbar("No autorizado para esta acción o sección.")
         }
     }
 
@@ -81,7 +93,12 @@ fun AppRoot(
                             loggedIn.value = false
                             snackbar.showSnackbar("Sesión cerrada")
                         }
-                    }
+                    },
+                    authRepository = authRepository,
+                    forbiddenSignal = forbiddenTick,
+                    showMessage = { msg -> scope.launch { snackbar.showSnackbar(msg) } },
+                    veterinariosRepository = veterinariosRepository,
+                    inventarioRepository = inventarioRepository,
                 )
             }
         }

@@ -43,7 +43,7 @@ class DiscoveryRepositoryImpl(private val api: DiscoveryApi) : DiscoveryReposito
         return dtos.map { dto ->
             val oferta = dto.ofertaPrincipal ?: dto.ofertas?.minByOrNull { it.precio ?: Double.MAX_VALUE }
             VetNearby(
-                id = dto.id,
+                id = dto.vetId,
                 nombre = dto.nombre,
                 lat = dto.lat,
                 lon = dto.lon,

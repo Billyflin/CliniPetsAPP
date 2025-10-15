@@ -1,6 +1,7 @@
 package cl.clinipets.data.api
 
 import cl.clinipets.data.dto.GoogleLoginRequest
+import cl.clinipets.data.dto.MeResponse
 import cl.clinipets.data.dto.TokenResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -11,6 +12,5 @@ interface AuthApi {
     suspend fun login(@Body body: GoogleLoginRequest): TokenResponse
 
     @GET("/api/auth/me")
-    suspend fun me(): String
+    suspend fun me(): MeResponse
 }
-

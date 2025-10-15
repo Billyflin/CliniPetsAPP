@@ -14,10 +14,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import cl.clinipets.core.security.TokenStorage
 import cl.clinipets.data.NetworkModule
-import cl.clinipets.data.api.*
-import cl.clinipets.data.repositories.*
+import cl.clinipets.data.api.AgendaApi
+import cl.clinipets.data.api.AuthApi
+import cl.clinipets.data.api.CatalogoApi
+import cl.clinipets.data.api.DiscoveryApi
+import cl.clinipets.data.api.InventarioApi
+import cl.clinipets.data.api.MascotasApi
+import cl.clinipets.data.api.VeterinariosApi
+import cl.clinipets.data.repositories.AgendaRepositoryImpl
+import cl.clinipets.data.repositories.AuthRepositoryImpl
+import cl.clinipets.data.repositories.CatalogoRepositoryImpl
+import cl.clinipets.data.repositories.DiscoveryRepositoryImpl
+import cl.clinipets.data.repositories.InventarioRepositoryImpl
+import cl.clinipets.data.repositories.MascotasRepositoryImpl
+import cl.clinipets.data.repositories.VeterinariosRepositoryImpl
 import cl.clinipets.ui.theme.ClinipetsTheme
-import cl.clinipets.ui.AppRoot
 import retrofit2.create
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
@@ -34,6 +45,7 @@ class MainActivity : ComponentActivity() {
 
         val tokenStorage = TokenStorage(this)
         val unauthorizedTick = mutableStateOf(0L)
+        val forbiddenTick = mutableStateOf(0L)
         val mainHandler = Handler(Looper.getMainLooper())
 
         val okHttp = NetworkModule.okHttp(
@@ -42,6 +54,10 @@ class MainActivity : ComponentActivity() {
                 Log.w(LOG_TAG, "401 detectado. Limpiando JWT y notificando UI…")
                 tokenStorage.setJwt(null)
                 mainHandler.post { unauthorizedTick.value = unauthorizedTick.value + 1 }
+            },
+            onForbidden = {
+                Log.w(LOG_TAG, "403 detectado. Notificando UI…")
+                mainHandler.post { forbiddenTick.value = forbiddenTick.value + 1 }
             }
         )
         val retrofit = NetworkModule.retrofit(BuildConfig.BASE_URL, okHttp)
@@ -52,6 +68,8 @@ class MainActivity : ComponentActivity() {
         val mascotasApi = retrofit.create<MascotasApi>()
         val agendaApi = retrofit.create<AgendaApi>()
         val catalogoApi = retrofit.create<CatalogoApi>()
+        val veterinariosApi = retrofit.create<VeterinariosApi>()
+        val inventarioApi = retrofit.create<InventarioApi>()
 
         // Repos
         val authRepo = AuthRepositoryImpl(authApi, tokenStorage)
@@ -59,6 +77,8 @@ class MainActivity : ComponentActivity() {
         val mascotasRepo = MascotasRepositoryImpl(mascotasApi)
         val agendaRepo = AgendaRepositoryImpl(agendaApi)
         val catalogoRepo = CatalogoRepositoryImpl(catalogoApi)
+        val veterinariosRepo = VeterinariosRepositoryImpl(veterinariosApi)
+        val inventarioRepo = InventarioRepositoryImpl(inventarioApi)
 
         val webClientId = BuildConfig.GOOGLE_SERVER_CLIENT_ID.trim()
 
@@ -74,14 +94,17 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppRoot(
+                    AppRootEntry(
                         authRepository = authRepo,
                         discoveryRepository = discoveryRepo,
                         webClientId = webClientId,
                         unauthorizedSignal = unauthorizedTick.value,
                         mascotasRepository = mascotasRepo,
                         agendaRepository = agendaRepo,
-                        catalogoRepository = catalogoRepo
+                        catalogoRepository = catalogoRepo,
+                        forbiddenSignal = forbiddenTick.value,
+                        veterinariosRepository = veterinariosRepo,
+                        inventarioRepository = inventarioRepo,
                     )
                 }
             }

@@ -15,6 +15,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cl.clinipets.data.dto.CrearReserva
+import cl.clinipets.data.dto.OfertaDto
+import cl.clinipets.data.dto.ReservaDto
 import cl.clinipets.domain.agenda.AgendaRepository
 import cl.clinipets.domain.catalogo.CatalogoRepository
 import cl.clinipets.domain.mascotas.MascotasRepository
@@ -28,8 +30,9 @@ fun VetDetailScreen(
     mascotasRepository: MascotasRepository,
 ) {
     val scope = rememberCoroutineScope()
-    val ofertas = remember { mutableStateOf("") }
+    val ofertas = remember { mutableStateOf<List<OfertaDto>>(emptyList()) }
     val slots = remember { mutableStateOf("") }
+    val reservaCreada = remember { mutableStateOf<ReservaDto?>(null) }
     val error = remember { mutableStateOf<String?>(null) }
 
     val fromIso = remember { mutableStateOf("") }
@@ -48,7 +51,11 @@ fun VetDetailScreen(
                     .onFailure { e -> error.value = e.message }
             }
         }) { Text("Cargar ofertas") }
-        if (ofertas.value.isNotBlank()) Text(ofertas.value)
+        ofertas.value.forEach { of ->
+            val precio =
+                "${of.precioCents / 100}.${(of.precioCents % 100).toString().padStart(2, '0')}"
+            Text("• ${of.nombre} - $${precio}")
+        }
 
         Spacer(Modifier.height(16.dp))
         Text("Consultar slots")
@@ -83,12 +90,15 @@ fun VetDetailScreen(
                             inicio = fromIso.value
                         )
                     )
-                }.onSuccess { slots.value = "Reserva creada" }
-                    .onFailure { e -> error.value = e.message }
+                }.onSuccess { r ->
+                    reservaCreada.value = r
+                }.onFailure { e -> error.value = e.message }
             }
         }) { Text("Reservar") }
+        reservaCreada.value?.let { r ->
+            Text("Reserva creada: ${r.reservaId ?: "(sin id)"} estado=${r.estado}")
+        }
 
         error.value?.let { Text("Error: $it") }
     }
 }
-

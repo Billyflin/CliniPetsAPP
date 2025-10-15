@@ -10,17 +10,20 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,9 +37,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material.icons.filled.Search
 import cl.clinipets.core.prefs.MapPrefs
 import cl.clinipets.domain.discovery.DiscoveryRepository
 import cl.clinipets.domain.discovery.VetNearby
@@ -44,6 +44,7 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.tasks.Task
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
@@ -169,7 +170,7 @@ fun MapDiscoverScreen(
                         state = MarkerState(LatLng(vet.lat, vet.lon)),
                         title = vet.nombre,
                         snippet = vet.ofertaNombre?.let { name ->
-                            val precio = vet.ofertaPrecioMin?.let { p -> " - $" + p.toString() } ?: ""
+                            val precio = vet.ofertaPrecioMin?.let { p -> " - $$p" } ?: ""
                             "$name$precio"
                         },
                         onClick = {
@@ -213,7 +214,7 @@ fun MapDiscoverScreen(
 }
 
 // await helper para Task<Location>
-private suspend fun com.google.android.gms.tasks.Task<android.location.Location>.awaitOrNull(): android.location.Location? =
+private suspend fun Task<android.location.Location>.awaitOrNull(): android.location.Location? =
     kotlinx.coroutines.suspendCancellableCoroutine { cont ->
         this.addOnSuccessListener { cont.resume(it, onCancellation = null) }
         this.addOnFailureListener { cont.resume(null, onCancellation = null) }

@@ -5,15 +5,36 @@ info:
   version: "1.0.0"
 servers:
   - url: "https://backend"
+tags:
+  - name: "Catálogo"
+    description: "Gestión de procedimientos y ofertas de veterinarios"
+  - name: "Disponibilidad"
+    description: "Reglas de disponibilidad y slots de atención"
+  - name: "Reservas"
+    description: "Creación y gestión del ciclo de vida de reservas"
+  - name: "Clínica"
+    description: "Acciones clínicas: crear consulta y sugerencias"
+  - name: "Veterinarios"
+    description: "Gestión de perfiles públicos/privados de veterinarios"
+  - name: "Inventario"
+    description: "Inventario interno: productos, stock y reservas de insumos"
+  - name: "Descubrimiento"
+    description: "Búsqueda pública de veterinarias cercanas y sus ofertas"
+  - name: "Mascotas"
+    description: "ABM de mascotas del cliente"
+  - name: "Auth"
+    description: "Autenticación y obtención de perfil JWT"
 paths:
   /api/catalogo/procedimientos/{id}:
     put:
-      summary: "PUT api/catalogo/procedimientos/{id}"
-      operationId: "editarProcedimiento"
+      summary: "Editar procedimiento"
+      description: "Actualiza nombre y categoría de un procedimiento."
+      operationId: ""
       parameters:
         - name: "id"
           in: "path"
           required: true
+          description: "ID del procedimiento"
           schema:
             type: "string"
             format: "uuid"
@@ -29,14 +50,16 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/ProcedimientoDto"
     delete:
-      summary: "DELETE api/catalogo/procedimientos/{id}"
-      operationId: "borrarProcedimiento"
+      summary: "Borrar procedimiento"
+      description: "Elimina el procedimiento indicado si no está en uso."
+      operationId: ""
       parameters:
         - name: "id"
           in: "path"
           required: true
+          description: "ID del procedimiento"
           schema:
             type: "string"
             format: "uuid"
@@ -45,12 +68,14 @@ paths:
           description: "No Content"
   /api/catalogo/ofertas/{ofertaId}:
     put:
-      summary: "PUT api/catalogo/ofertas/{ofertaId}"
-      operationId: "editarOferta"
+      summary: "Editar oferta"
+      description: "Actualiza una oferta del veterinario (propietario o ADMIN)."
+      operationId: ""
       parameters:
         - name: "ofertaId"
           in: "path"
           required: true
+          description: "ID de la oferta a editar"
           schema:
             type: "string"
             format: "uuid"
@@ -66,14 +91,16 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/OfertaDto"
     delete:
-      summary: "DELETE api/catalogo/ofertas/{ofertaId}"
-      operationId: "borrarOferta"
+      summary: "Borrar oferta"
+      description: "Elimina la oferta indicada (propietario o ADMIN)."
+      operationId: ""
       parameters:
         - name: "ofertaId"
           in: "path"
           required: true
+          description: "ID de la oferta"
           schema:
             type: "string"
             format: "uuid"
@@ -82,8 +109,9 @@ paths:
           description: "No Content"
   /api/catalogo/procedimientos:
     post:
-      summary: "POST api/catalogo/procedimientos"
-      operationId: "crearProcedimiento"
+      summary: "Crear procedimiento"
+      description: "Crea un procedimiento del catálogo global. Requiere rol ADMIN."
+      operationId: ""
       requestBody:
         content:
           application/json:
@@ -96,19 +124,23 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/ProcedimientoDto"
     get:
-      summary: "GET api/catalogo/procedimientos"
-      operationId: "procedimientos"
+      summary: "Listar procedimientos"
+      description: "Filtra por texto (q) y/o categoría. Devuelve el catálogo de procedimientos\
+        \ base."
+      operationId: ""
       parameters:
         - name: "q"
           in: "query"
           required: false
+          description: "Texto a buscar en nombre del procedimiento"
           schema:
             type: "string"
         - name: "categoria"
           in: "query"
           required: false
+          description: "Categoría exacta del procedimiento"
           schema:
             type: "string"
       responses:
@@ -119,11 +151,12 @@ paths:
               schema:
                 type: "array"
                 items:
-                  $ref: "#/components/schemas/Map"
+                  $ref: "#/components/schemas/ProcedimientoDto"
   /api/catalogo/ofertas:
     post:
-      summary: "POST api/catalogo/ofertas"
-      operationId: "crearOferta"
+      summary: "Crear oferta"
+      description: "Crea una oferta para el veterinario autenticado."
+      operationId: ""
       requestBody:
         content:
           application/json:
@@ -136,26 +169,31 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/OfertaDto"
     get:
-      summary: "GET api/catalogo/ofertas"
-      operationId: "ofertas"
+      summary: "Listar ofertas"
+      description: "Filtra por vetId, procedimientoId y estado (activo). Devuelve\
+        \ ofertas publicadas."
+      operationId: ""
       parameters:
         - name: "vetId"
           in: "query"
           required: false
+          description: "ID del veterinario propietario de la oferta"
           schema:
             type: "string"
             format: "uuid"
         - name: "procedimientoId"
           in: "query"
           required: false
+          description: "ID del procedimiento referenciado por la oferta"
           schema:
             type: "string"
             format: "uuid"
         - name: "activo"
           in: "query"
           required: false
+          description: "Solo ofertas activas (true por defecto)"
           schema:
             type: "boolean"
             default: "true"
@@ -167,11 +205,12 @@ paths:
               schema:
                 type: "array"
                 items:
-                  $ref: "#/components/schemas/Map"
+                  $ref: "#/components/schemas/OfertaDto"
   /api/agenda/disponibilidad/reglas:
     put:
-      summary: "PUT api/agenda/disponibilidad/reglas"
-      operationId: "upsertReglas"
+      summary: "Upsert reglas"
+      description: "Reemplaza reglas semanales y excepciones para un veterinario."
+      operationId: ""
       requestBody:
         content:
           application/json:
@@ -184,31 +223,36 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/OkResponse"
   /api/agenda/disponibilidad/slots:
     get:
-      summary: "GET api/agenda/disponibilidad/slots"
-      operationId: "slots"
+      summary: "Listar slots"
+      description: "Devuelve los slots disponibles entre from y to (UTC, ISO-8601)."
+      operationId: ""
       parameters:
         - name: "vetId"
           in: "query"
           required: true
+          description: "ID del veterinario"
           schema:
             type: "string"
             format: "uuid"
         - name: "from"
           in: "query"
           required: true
+          description: "Inicio ventana (ISO-8601 UTC)"
           schema:
             type: "string"
         - name: "to"
           in: "query"
           required: true
+          description: "Fin ventana (ISO-8601 UTC)"
           schema:
             type: "string"
         - name: "ofertaId"
           in: "query"
           required: false
+          description: "Oferta opcional para filtrar"
           schema:
             type: "string"
             format: "uuid"
@@ -220,15 +264,17 @@ paths:
               schema:
                 type: "array"
                 items:
-                  $ref: "#/components/schemas/Map"
+                  $ref: "#/components/schemas/SlotDto"
   /api/agenda/disponibilidad/open-now:
     get:
-      summary: "GET api/agenda/disponibilidad/open-now"
-      operationId: "openNow"
+      summary: "¿Abierto ahora?"
+      description: "Indica si el veterinario está abierto en este momento (UTC)."
+      operationId: ""
       parameters:
         - name: "vetId"
           in: "query"
           required: true
+          description: "ID del veterinario"
           schema:
             type: "string"
             format: "uuid"
@@ -238,7 +284,7 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/OpenNowResponse"
   /api/publico/descubrimiento/_demo/open-now:
     post:
       summary: "POST api/publico/descubrimiento/_demo/open-now"
@@ -281,12 +327,14 @@ paths:
                 type: "string"
   /api/agenda/reservas/{reservaId}/aceptar:
     put:
-      summary: "PUT api/agenda/reservas/{reservaId}/aceptar"
-      operationId: "aceptar"
+      summary: "Aceptar"
+      description: "Transiciona la reserva a ACEPTADA."
+      operationId: ""
       parameters:
         - name: "reservaId"
           in: "path"
           required: true
+          description: "ID de la reserva"
           schema:
             type: "string"
             format: "uuid"
@@ -296,15 +344,17 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/ReservaDto"
   /api/agenda/reservas/{reservaId}/rechazar:
     put:
-      summary: "PUT api/agenda/reservas/{reservaId}/rechazar"
-      operationId: "rechazar"
+      summary: "Rechazar"
+      description: "Transiciona la reserva a RECHAZADA."
+      operationId: ""
       parameters:
         - name: "reservaId"
           in: "path"
           required: true
+          description: "ID de la reserva"
           schema:
             type: "string"
             format: "uuid"
@@ -314,15 +364,17 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/ReservaDto"
   /api/agenda/reservas/{reservaId}/cancelar:
     put:
-      summary: "PUT api/agenda/reservas/{reservaId}/cancelar"
-      operationId: "cancelar"
+      summary: "Cancelar"
+      description: "Transiciona la reserva a CANCELADA."
+      operationId: ""
       parameters:
         - name: "reservaId"
           in: "path"
           required: true
+          description: "ID de la reserva"
           schema:
             type: "string"
             format: "uuid"
@@ -332,15 +384,17 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/ReservaDto"
   /api/agenda/reservas/{reservaId}/completar:
     put:
-      summary: "PUT api/agenda/reservas/{reservaId}/completar"
-      operationId: "completar"
+      summary: "Completar"
+      description: "Transiciona la reserva a COMPLETADA."
+      operationId: ""
       parameters:
         - name: "reservaId"
           in: "path"
           required: true
+          description: "ID de la reserva"
           schema:
             type: "string"
             format: "uuid"
@@ -350,11 +404,12 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/ReservaDto"
   /api/agenda/reservas:
     post:
-      summary: "POST api/agenda/reservas"
-      operationId: "crear"
+      summary: "Crear reserva"
+      description: "Crea una nueva reserva a partir de mascota y oferta."
+      operationId: ""
       requestBody:
         content:
           application/json:
@@ -367,11 +422,12 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/ReservaDto"
   /api/agenda/reservas/mias:
     get:
-      summary: "GET api/agenda/reservas/mias"
-      operationId: "mias"
+      summary: "Mis reservas"
+      description: "Lista las reservas del usuario autenticado."
+      operationId: ""
       responses:
         "200":
           description: "OK"
@@ -380,15 +436,17 @@ paths:
               schema:
                 type: "array"
                 items:
-                  $ref: "#/components/schemas/Map"
+                  $ref: "#/components/schemas/ReservaDto"
   /api/agenda/reservas/{reservaId}:
     get:
-      summary: "GET api/agenda/reservas/{reservaId}"
-      operationId: "detalle"
+      summary: "Detalle de reserva"
+      description: "Obtiene el detalle de una reserva por su ID."
+      operationId: ""
       parameters:
         - name: "reservaId"
           in: "path"
           required: true
+          description: "ID de la reserva"
           schema:
             type: "string"
             format: "uuid"
@@ -398,11 +456,12 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/ReservaDto"
   /api/clinica/consultas:
     post:
-      summary: "POST api/clinica/consultas"
-      operationId: "crearConsulta"
+      summary: "Crear consulta"
+      description: "Registra una consulta asociada a una reserva."
+      operationId: ""
       requestBody:
         content:
           application/json:
@@ -415,11 +474,12 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/CrearConsultaResponse"
   /api/clinica/sugerencias:
     post:
-      summary: "POST api/clinica/sugerencias"
-      operationId: "sugerencias"
+      summary: "Obtener sugerencias"
+      description: "Devuelve sugerencias generales según especie y síntomas."
+      operationId: ""
       requestBody:
         content:
           application/json:
@@ -434,11 +494,12 @@ paths:
               schema:
                 type: "array"
                 items:
-                  $ref: "#/components/schemas/Map"
+                  $ref: "#/components/schemas/Sugerencia"
   /api/veterinarios/mi-perfil:
     put:
-      summary: "PUT api/veterinarios/mi-perfil"
-      operationId: "upsertMiPerfil"
+      summary: "Actualizar mi perfil"
+      description: "Crea/actualiza el perfil del veterinario autenticado."
+      operationId: ""
       requestBody:
         content:
           application/json:
@@ -451,15 +512,17 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/MiPerfilDto"
   /api/veterinarios/{vetId}/verificar:
     put:
-      summary: "PUT api/veterinarios/{vetId}/verificar"
-      operationId: "verificar"
+      summary: "Verificar veterinario"
+      description: "Marca un veterinario como verificado (ADMIN)."
+      operationId: ""
       parameters:
         - name: "vetId"
           in: "path"
           required: true
+          description: "ID del veterinario"
           schema:
             type: "string"
             format: "uuid"
@@ -469,11 +532,12 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/VerificarResponse"
   /api/veterinarios/publicos:
     get:
-      summary: "GET api/veterinarios/publicos"
-      operationId: "publicos"
+      summary: "Listar veterinarios públicos"
+      description: "Devuelve una lista de perfiles públicos."
+      operationId: ""
       responses:
         "200":
           description: "OK"
@@ -482,15 +546,17 @@ paths:
               schema:
                 type: "array"
                 items:
-                  $ref: "#/components/schemas/Map"
+                  $ref: "#/components/schemas/PublicVetDto"
   /api/veterinarios/{vetId}:
     get:
-      summary: "GET api/veterinarios/{vetId}"
-      operationId: "perfil"
+      summary: "Perfil público"
+      description: "Obtiene el perfil público de un veterinario."
+      operationId: ""
       parameters:
         - name: "vetId"
           in: "path"
           required: true
+          description: "ID del veterinario"
           schema:
             type: "string"
             format: "uuid"
@@ -500,11 +566,12 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/PublicVetDto"
   /api/inventario/productos:
     post:
-      summary: "POST api/inventario/productos"
-      operationId: "crearProducto"
+      summary: "Crear producto"
+      description: "Crea un producto de inventario (endpoint de ejemplo/stub)."
+      operationId: ""
       requestBody:
         content:
           application/json:
@@ -517,10 +584,11 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/ProductoDto"
     get:
-      summary: "GET api/inventario/productos"
-      operationId: "productos"
+      summary: "Listar productos"
+      description: "Devuelve productos del catálogo interno de inventario."
+      operationId: ""
       responses:
         "200":
           description: "OK"
@@ -529,11 +597,12 @@ paths:
               schema:
                 type: "array"
                 items:
-                  $ref: "#/components/schemas/Map"
+                  $ref: "#/components/schemas/ProductoDto"
   /api/inventario/internal/reservas:
     post:
-      summary: "POST api/inventario/internal/reservas"
-      operationId: "reservar"
+      summary: "Reservar insumos"
+      description: "Reserva insumos para una atención (endpoint demo)."
+      operationId: ""
       requestBody:
         content:
           application/json:
@@ -546,11 +615,12 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/OkResponse"
   /api/inventario/internal/reservas/{bookingId}:
     delete:
-      summary: "DELETE api/inventario/internal/reservas/{bookingId}"
-      operationId: "liberar"
+      summary: "Liberar reserva de insumos"
+      description: "Elimina la reserva de insumos (endpoint demo)."
+      operationId: ""
       parameters:
         - name: "bookingId"
           in: "path"
@@ -563,8 +633,9 @@ paths:
           description: "No Content"
   /api/inventario/stock:
     get:
-      summary: "GET api/inventario/stock"
-      operationId: "stock"
+      summary: "Consultar stock"
+      description: "Consulta stock por ubicación y/o SKU (endpoint demo)."
+      operationId: ""
       parameters:
         - name: "ubicacionId"
           in: "query"
@@ -585,49 +656,58 @@ paths:
               schema:
                 type: "array"
                 items:
-                  $ref: "#/components/schemas/Map"
+                  $ref: "#/components/schemas/StockItemDto"
   /api/publico/descubrimiento:
     get:
-      summary: "GET api/publico/descubrimiento"
-      operationId: "buscar"
+      summary: "Buscar veterinarias cercanas"
+      description: "Devuelve veterinarias ordenadas por distancia desde lat/lon dentro\
+        \ de un radio dado."
+      operationId: ""
       parameters:
         - name: "lat"
           in: "query"
           required: true
+          description: "Latitud en grados decimales"
           schema:
             type: "number"
             format: "double"
         - name: "lon"
           in: "query"
           required: true
+          description: "Longitud en grados decimales"
           schema:
             type: "number"
             format: "double"
         - name: "radio"
           in: "query"
           required: true
+          description: "Radio en metros"
           schema:
             type: "integer"
             format: "int32"
         - name: "procedimientoId"
           in: "query"
           required: false
+          description: "Filtrar por procedimiento"
           schema:
             type: "string"
             format: "uuid"
         - name: "abiertoAhora"
           in: "query"
           required: false
+          description: "Solo abiertas ahora"
           schema:
             type: "boolean"
         - name: "conStock"
           in: "query"
           required: false
+          description: "Solo con stock disponible"
           schema:
             type: "boolean"
         - name: "limit"
           in: "query"
           required: false
+          description: "Límite de resultados"
           schema:
             type: "integer"
             format: "int32"
@@ -635,6 +715,7 @@ paths:
         - name: "offset"
           in: "query"
           required: false
+          description: "Desplazamiento para paginar"
           schema:
             type: "integer"
             format: "int32"
@@ -645,15 +726,17 @@ paths:
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/DiscoveryResult"
   /api/mascotas/{id}:
     put:
-      summary: "PUT api/mascotas/{id}"
-      operationId: "actualizar"
+      summary: "Actualizar mascota"
+      description: "Actualiza datos básicos de la mascota."
+      operationId: ""
       parameters:
         - name: "id"
           in: "path"
           required: true
+          description: "ID de la mascota"
           schema:
             type: "string"
             format: "uuid"
@@ -671,12 +754,14 @@ paths:
               schema:
                 $ref: "#/components/schemas/Mascota"
     delete:
-      summary: "DELETE api/mascotas/{id}"
-      operationId: "eliminar"
+      summary: "Eliminar mascota"
+      description: "Elimina una mascota propia."
+      operationId: ""
       parameters:
         - name: "id"
           in: "path"
           required: true
+          description: "ID de la mascota"
           schema:
             type: "string"
             format: "uuid"
@@ -684,12 +769,14 @@ paths:
         "204":
           description: "No Content"
     get:
-      summary: "GET api/mascotas/{id}"
-      operationId: "detalle"
+      summary: "Detalle de mascota"
+      description: "Obtiene una mascota por su ID (propietario o ADMIN)."
+      operationId: ""
       parameters:
         - name: "id"
           in: "path"
           required: true
+          description: "ID de la mascota"
           schema:
             type: "string"
             format: "uuid"
@@ -702,8 +789,9 @@ paths:
                 $ref: "#/components/schemas/Mascota"
   /api/mascotas:
     post:
-      summary: "POST api/mascotas"
-      operationId: "crear"
+      summary: "Crear mascota"
+      description: "Crea una mascota asociada al usuario autenticado."
+      operationId: ""
       requestBody:
         content:
           application/json:
@@ -719,8 +807,9 @@ paths:
                 $ref: "#/components/schemas/Mascota"
   /api/mascotas/mias:
     get:
-      summary: "GET api/mascotas/mias"
-      operationId: "mias"
+      summary: "Listar mis mascotas"
+      description: "Devuelve las mascotas del usuario autenticado."
+      operationId: ""
       responses:
         "200":
           description: "OK"
@@ -732,8 +821,9 @@ paths:
                   $ref: "#/components/schemas/Mascota"
   /api/auth/google:
     post:
-      summary: "POST api/auth/google"
-      operationId: "google"
+      summary: "Login con Google ID Token"
+      description: "Intercambia un Google ID Token válido por un JWT propio."
+      operationId: ""
       requestBody:
         content:
           application/json:
@@ -749,20 +839,35 @@ paths:
                 $ref: "#/components/schemas/TokenResponse"
   /api/auth/me:
     get:
-      summary: "GET api/auth/me"
-      operationId: "me"
+      summary: "Mi perfil"
+      description: "Devuelve información básica del usuario autenticado."
+      operationId: ""
       responses:
         "200":
           description: "OK"
           content:
             '*/*':
               schema:
-                type: "string"
+                $ref: "#/components/schemas/MeResponse"
 components:
   schemas:
     UpsertProcedimiento:
       type: "object"
       properties:
+        nombre:
+          type: "string"
+        categoria:
+          type: "string"
+      required:
+        - "nombre"
+        - "categoria"
+    ProcedimientoDto:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          nullable: true
         nombre:
           type: "string"
         categoria:
@@ -789,9 +894,66 @@ components:
         - "precioCents"
         - "duracionMin"
         - "activo"
-    Map:
+    OfertaDto:
       type: "object"
-      properties: { }
+      properties:
+        ofertaId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        vetId:
+          type: "string"
+          format: "uuid"
+        procedimientoId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        nombre:
+          type: "string"
+        precioCents:
+          type: "integer"
+          format: "int32"
+        duracionMin:
+          type: "integer"
+          format: "int32"
+        activo:
+          type: "boolean"
+      required:
+        - "vetId"
+        - "nombre"
+        - "precioCents"
+        - "duracionMin"
+        - "activo"
+    ReglaSemanalIn:
+      type: "object"
+      properties:
+        dia:
+          type: "integer"
+          format: "int32"
+        inicio:
+          type: "string"
+        fin:
+          type: "string"
+      required:
+        - "dia"
+        - "inicio"
+        - "fin"
+    ExcepcionIn:
+      type: "object"
+      properties:
+        fecha:
+          type: "string"
+        cerrado:
+          type: "boolean"
+        inicio:
+          type: "string"
+          nullable: true
+        fin:
+          type: "string"
+          nullable: true
+      required:
+        - "fecha"
+        - "cerrado"
     ReglasRequest:
       type: "object"
       properties:
@@ -801,15 +963,70 @@ components:
         semanal:
           type: "array"
           items:
-            $ref: "#/components/schemas/Map"
+            $ref: "#/components/schemas/ReglaSemanalIn"
         excepciones:
           type: "array"
           items:
-            $ref: "#/components/schemas/Map"
+            $ref: "#/components/schemas/ExcepcionIn"
       required:
         - "vetId"
         - "semanal"
         - "excepciones"
+    OkResponse:
+      type: "object"
+      properties:
+        ok:
+          type: "boolean"
+      required:
+        - "ok"
+    SlotDto:
+      type: "object"
+      properties:
+        inicio:
+          type: "string"
+        fin:
+          type: "string"
+      required:
+        - "inicio"
+        - "fin"
+    OpenNowResponse:
+      type: "object"
+      properties:
+        openNow:
+          type: "boolean"
+      required:
+        - "openNow"
+    ReservaDto:
+      type: "object"
+      properties:
+        reservaId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        mascotaId:
+          type: "string"
+          format: "uuid"
+        ofertaId:
+          type: "string"
+          format: "uuid"
+        inicio:
+          type: "string"
+        estado:
+          type: "string"
+          enum:
+            - "PENDIENTE"
+            - "ACEPTADA"
+            - "RECHAZADA"
+            - "CANCELADA"
+            - "COMPLETADA"
+        nota:
+          type: "string"
+          nullable: true
+      required:
+        - "mascotaId"
+        - "ofertaId"
+        - "inicio"
+        - "estado"
     CrearReserva:
       type: "object"
       properties:
@@ -855,6 +1072,14 @@ components:
         - "reservaId"
         - "diagnostico"
         - "usedSkus"
+    CrearConsultaResponse:
+      type: "object"
+      properties:
+        consultaId:
+          type: "string"
+          format: "uuid"
+      required:
+        - "consultaId"
     SugerenciasRequest:
       type: "object"
       properties:
@@ -874,6 +1099,16 @@ components:
         - "sintomas"
         - "edad"
         - "pesoKg"
+    Sugerencia:
+      type: "object"
+      properties:
+        titulo:
+          type: "string"
+        detalle:
+          type: "string"
+      required:
+        - "titulo"
+        - "detalle"
     UpsertPerfil:
       type: "object"
       properties:
@@ -891,7 +1126,75 @@ components:
           type: "number"
           format: "double"
           nullable: true
+    MiPerfilDto:
+      type: "object"
+      properties:
+        vetId:
+          type: "string"
+          format: "uuid"
+        nombre:
+          type: "string"
+        bio:
+          type: "string"
+          nullable: true
+        latitud:
+          type: "number"
+          format: "double"
+          nullable: true
+        longitud:
+          type: "number"
+          format: "double"
+          nullable: true
+      required:
+        - "vetId"
+        - "nombre"
+    VerificarResponse:
+      type: "object"
+      properties:
+        vetId:
+          type: "string"
+          format: "uuid"
+        verificado:
+          type: "boolean"
+      required:
+        - "vetId"
+        - "verificado"
+    PublicVetDto:
+      type: "object"
+      properties:
+        vetId:
+          type: "string"
+          format: "uuid"
+        nombre:
+          type: "string"
+        verificado:
+          type: "boolean"
+        latitud:
+          type: "number"
+          format: "double"
+        longitud:
+          type: "number"
+          format: "double"
+      required:
+        - "vetId"
+        - "nombre"
+        - "verificado"
+        - "latitud"
+        - "longitud"
     ProductoUpsert:
+      type: "object"
+      properties:
+        sku:
+          type: "string"
+        nombre:
+          type: "string"
+        categoria:
+          type: "string"
+      required:
+        - "sku"
+        - "nombre"
+        - "categoria"
+    ProductoDto:
       type: "object"
       properties:
         sku:
@@ -936,6 +1239,87 @@ components:
         - "bookingId"
         - "vetId"
         - "items"
+    StockItemDto:
+      type: "object"
+      properties:
+        ubicacionId:
+          type: "string"
+          format: "uuid"
+        sku:
+          type: "string"
+        qty:
+          type: "integer"
+          format: "int32"
+      required:
+        - "ubicacionId"
+        - "sku"
+        - "qty"
+    OfertaItem:
+      type: "object"
+      properties:
+        ofertaId:
+          type: "string"
+          format: "uuid"
+        procedimientoId:
+          type: "string"
+          format: "uuid"
+        nombre:
+          type: "string"
+        precioCents:
+          type: "integer"
+          format: "int32"
+        conStock:
+          type: "boolean"
+      required:
+        - "ofertaId"
+        - "procedimientoId"
+        - "nombre"
+        - "precioCents"
+        - "conStock"
+    VetItem:
+      type: "object"
+      properties:
+        vetId:
+          type: "string"
+          format: "uuid"
+        nombre:
+          type: "string"
+        distanciaM:
+          type: "integer"
+          format: "int32"
+        openNow:
+          type: "boolean"
+        lat:
+          type: "number"
+          format: "double"
+        lon:
+          type: "number"
+          format: "double"
+        ofertas:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/OfertaItem"
+      required:
+        - "vetId"
+        - "nombre"
+        - "distanciaM"
+        - "openNow"
+        - "lat"
+        - "lon"
+        - "ofertas"
+    DiscoveryResult:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/VetItem"
+        nextOffset:
+          type: "integer"
+          format: "int32"
+      required:
+        - "items"
+        - "nextOffset"
     ActualizarMascota:
       type: "object"
       properties:
@@ -1055,3 +1439,22 @@ components:
           type: "string"
       required:
         - "token"
+    MeResponse:
+      type: "object"
+      properties:
+        authenticated:
+          type: "boolean"
+        id:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        email:
+          type: "string"
+          nullable: true
+        roles:
+          type: "array"
+          nullable: true
+          items:
+            type: "string"
+      required:
+        - "authenticated"

@@ -1,5 +1,6 @@
 package cl.clinipets.data.api
 
+import cl.clinipets.data.dto.discovery.DiscoveryResult
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -14,6 +15,5 @@ interface DiscoveryApi {
         @Query("conStock") conStock: Boolean? = null,
         @Query("limit") limit: Int = 50,
         @Query("offset") offset: Int = 0
-    ): String
+    ): DiscoveryResult
 }
-
