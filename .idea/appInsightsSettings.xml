@@ -23,10 +23,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="cl.clinipets" />
-                  <option name="mobileSdkAppId" value="1:1059838240942:android:5a70a493a13c3a6f51253f" />
-                  <option name="projectId" value="clinipetsapp" />
-                  <option name="projectNumber" value="1059838240942" />
+                  <option name="appId" value="PLACEHOLDER" />
+                  <option name="mobileSdkAppId" value="" />
+                  <option name="projectId" value="" />
+                  <option name="projectNumber" value="" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
