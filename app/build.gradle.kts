@@ -89,6 +89,10 @@ dependencies {
     implementation(libs.retrofit2)
     implementation(libs.retrofit2.scalars)
     implementation(libs.retrofit.kotlinx.serialization)
+    // Retrofit Gson converter
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    // Retrofit Coroutine adapter (if needed)
+    implementation("com.jakewharton.retrofit:retrofit2-kotlin-coroutines-adapter:0.9.2")
 
     // Seguridad para JWT storage
     implementation(libs.security.crypto)
