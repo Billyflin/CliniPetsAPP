@@ -17,6 +17,26 @@ class AuthViewModel(private val repo: AuthRepository) : ViewModel() {
     private val _profile = MutableStateFlow<cl.clinipets.network.MeResponse?>(null)
     val profile: StateFlow<cl.clinipets.network.MeResponse?> = _profile
 
+    private var bootstrapped = false
+
+    fun bootstrap() {
+        if (bootstrapped) return
+        bootstrapped = true
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            val res = repo.bootstrapSession()
+            if (res.isSuccess) {
+                val me = res.getOrNull()
+                _profile.value = if (me?.authenticated == true) me else null
+            } else {
+                _profile.value = null
+                _error.value = res.exceptionOrNull()?.localizedMessage
+            }
+            _isLoading.value = false
+        }
+    }
+
     fun loginWithGoogle(idToken: String, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -52,7 +72,8 @@ class AuthViewModel(private val repo: AuthRepository) : ViewModel() {
     }
 
     fun signOut() {
-        repo.signOut()
-        _profile.value = null
+        viewModelScope.launch {
+            try { repo.logout() } finally { _profile.value = null }
+        }
     }
 }

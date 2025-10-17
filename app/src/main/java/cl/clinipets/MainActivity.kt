@@ -6,6 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -47,7 +49,7 @@ class MainActivity : ComponentActivity() {
 
                     NavHost(navController = navController, startDestination = "splash") {
                         composable("splash") {
-                            SplashScreen(navController = navController)
+                            SplashScreen(navController = navController, viewModel = authVm)
                         }
 
                         composable("login") {
@@ -62,7 +64,8 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable("home") {
-                            val isVet = authVm.profile.value?.roles?.contains("VETERINARIO") == true
+                            val profile by authVm.profile.collectAsState()
+                            val isVet = profile?.roles?.contains("VETERINARIO") == true
                             HomeScreen(
                                 onNavigate = { route -> navController.navigate(route) },
                                 onSignOut = {

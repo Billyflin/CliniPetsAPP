@@ -2,43 +2,84 @@ package cl.clinipets.network
 
 import android.content.Context
 import cl.clinipets.BuildConfig
-import okhttp3.Interceptor
-import okhttp3.OkHttpClient
-import okhttp3.Response
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
+import org.json.JSONArray
+import org.json.JSONObject
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 
 object NetworkModule {
     fun provideApiService(context: Context): ApiService {
-        // use fully-qualified TokenStore to avoid resolution issues
         val tokenStore = cl.clinipets.auth.TokenStore(context)
 
         val logging = HttpLoggingInterceptor()
         logging.level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
 
+        val cookieJar = PersistentCookieJar(context)
+
         val authInterceptor = Interceptor { chain ->
-            val reqBuilder = chain.request().newBuilder()
+            val req = chain.request()
             val token = tokenStore.getToken()
-            if (token != null && token.isNotEmpty()) {
-                reqBuilder.addHeader("Authorization", "Bearer $token")
-            }
-            chain.proceed(reqBuilder.build())
+            val newReq = if (!token.isNullOrEmpty()) {
+                req.newBuilder().addHeader("Authorization", "Bearer $token").build()
+            } else req
+            chain.proceed(newReq)
         }
 
-        val responseInterceptor = Interceptor { chain ->
-            val response: Response = chain.proceed(chain.request())
-            if (response.code == 401 || response.code == 403) {
-                // clear token on unauthorized/forbidden globally
-                tokenStore.clearToken()
-            }
-            response
-        }
-
-        val client = OkHttpClient.Builder()
-            .addInterceptor(authInterceptor)
-            .addInterceptor(responseInterceptor)
+        fun newBaseClient(): OkHttpClient = OkHttpClient.Builder()
+            .cookieJar(cookieJar)
             .addInterceptor(logging)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+
+        val baseClient = newBaseClient()
+
+        val tokenAuthenticator = Authenticator { _, response ->
+            if (responseCount(response) >= 1) return@Authenticator null
+
+            val originalRequest = response.request
+            val path = originalRequest.url.encodedPath
+            if (path.endsWith("/api/auth/refresh") || path.endsWith("/api/auth/google")) {
+                return@Authenticator null
+            }
+
+            try {
+                val refreshRequest = Request.Builder()
+                    .url(BuildConfig.BASE_URL.trimEnd('/') + "/api/auth/refresh")
+                    .post("{}".toRequestBody("application/json".toMediaTypeOrNull()))
+                    .build()
+                val refreshResp = baseClient.newCall(refreshRequest).execute()
+                if (!refreshResp.isSuccessful) {
+                    tokenStore.clearToken()
+                    return@Authenticator null
+                }
+                val bodyStr = refreshResp.body?.string() ?: return@Authenticator null
+                val token = try {
+                    JSONObject(bodyStr).getString("token")
+                } catch (_: Exception) { null }
+                if (token.isNullOrEmpty()) {
+                    tokenStore.clearToken()
+                    return@Authenticator null
+                }
+                tokenStore.saveToken(token)
+                return@Authenticator originalRequest.newBuilder()
+                    .header("Authorization", "Bearer $token")
+                    .build()
+            } catch (_: Exception) {
+                tokenStore.clearToken()
+                null
+            }
+        }
+
+        val client = baseClient.newBuilder()
+            .addInterceptor(authInterceptor)
+            .authenticator(tokenAuthenticator)
             .build()
 
         val retrofit = Retrofit.Builder()
@@ -48,5 +89,123 @@ object NetworkModule {
             .build()
 
         return retrofit.create(ApiService::class.java)
+    }
+
+    private fun responseCount(response: Response): Int {
+        var result = 1
+        var priorResponse = response.priorResponse
+        while (priorResponse != null) {
+            result++
+            priorResponse = priorResponse.priorResponse
+        }
+        return result
+    }
+}
+
+// CookieJar persistente usando SharedPreferences con org.json
+private class PersistentCookieJar(context: Context) : CookieJar {
+    private val prefs = context.getSharedPreferences("clinipets_cookies", Context.MODE_PRIVATE)
+    private val key = "cookies_v1"
+
+    @Volatile private var cache: MutableMap<String, MutableList<Cookie>> = load()
+
+    @Synchronized
+    override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
+        if (cookies.isEmpty()) return
+        val host = url.host
+        val list = (cache[host] ?: mutableListOf()).apply {
+            for (c in cookies) removeAll { it.name == c.name && it.matches(url) }
+            cookies.filter { !it.hasExpired() }.forEach { add(it) }
+        }
+        cache[host] = list
+        persist()
+    }
+
+    @Synchronized
+    override fun loadForRequest(url: HttpUrl): List<Cookie> {
+        pruneExpired()
+        val all = cache.flatMap { it.value }
+        return all.filter { it.matches(url) }
+    }
+
+    private fun Cookie.hasExpired(): Boolean = expiresAt < System.currentTimeMillis()
+
+    @Synchronized
+    private fun persist() {
+        val root = JSONObject()
+        cache.forEach { (host, list) ->
+            val arr = JSONArray()
+            list.forEach { c -> arr.put(encodeObj(c)) }
+            root.put(host, arr)
+        }
+        prefs.edit().putString(key, root.toString()).apply()
+    }
+
+    @Synchronized
+    private fun load(): MutableMap<String, MutableList<Cookie>> {
+        val json = prefs.getString(key, null) ?: return mutableMapOf()
+        return try {
+            val root = JSONObject(json)
+            val result = mutableMapOf<String, MutableList<Cookie>>()
+            val keys = root.keys()
+            while (keys.hasNext()) {
+                val host = keys.next()
+                val arr = root.optJSONArray(host) ?: continue
+                val list = mutableListOf<Cookie>()
+                for (i in 0 until arr.length()) {
+                    val obj = arr.optJSONObject(i) ?: continue
+                    decodeObj(obj)?.let { list.add(it) }
+                }
+                if (list.isNotEmpty()) result[host] = list
+            }
+            result
+        } catch (_: Exception) {
+            mutableMapOf()
+        }
+    }
+
+    @Synchronized
+    private fun pruneExpired() {
+        var changed = false
+        cache.forEach { (_, list) ->
+            val it = list.iterator()
+            while (it.hasNext()) {
+                if (it.next().hasExpired()) { it.remove(); changed = true }
+            }
+        }
+        if (changed) persist()
+    }
+
+    private fun encodeObj(cookie: Cookie): JSONObject {
+        val obj = JSONObject()
+        obj.put("name", cookie.name)
+        obj.put("value", cookie.value)
+        obj.put("expiresAt", cookie.expiresAt)
+        obj.put("domain", cookie.domain)
+        obj.put("path", cookie.path)
+        obj.put("secure", cookie.secure)
+        obj.put("httpOnly", cookie.httpOnly)
+        return obj
+    }
+
+    private fun decodeObj(obj: JSONObject): Cookie? {
+        return try {
+            val name = obj.optString("name", null) ?: return null
+            val value = obj.optString("value", null) ?: return null
+            val expiresAt = obj.optLong("expiresAt", 0L).takeIf { it > 0 } ?: return null
+            val domain = obj.optString("domain", null) ?: return null
+            val path = obj.optString("path", "/")
+            val secure = obj.optBoolean("secure", false)
+            val httpOnly = obj.optBoolean("httpOnly", false)
+            Cookie.Builder()
+                .name(name)
+                .value(value)
+                .domain(domain)
+                .path(path)
+                .expiresAt(expiresAt)
+                .apply { if (secure) secure() }
+                .apply { if (httpOnly) httpOnly() }
+                .build()
+        } catch (_: Exception) { null }
     }
 }

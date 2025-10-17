@@ -13,7 +13,10 @@ import retrofit2.http.Query
 data class GoogleAuthRequest(val idToken: String)
 data class UsuarioInfo(val id: String, val email: String, val nombre: String?, val fotoUrl: String?, val roles: List<String>)
 data class TokenResponse(val token: String, val usuario: UsuarioInfo)
+// Respuesta de /api/auth/me
 data class MeResponse(val authenticated: Boolean, val id: String?, val email: String?, val roles: List<String>?)
+// Respuesta de /api/auth/refresh
+data class RefreshResponse(val token: String)
 
 // --- Mascotas ---
 data class Mascota(
@@ -128,6 +131,12 @@ interface ApiService {
 
     @GET("/api/auth/me")
     suspend fun me(): MeResponse
+
+    @POST("/api/auth/refresh")
+    suspend fun refresh(): RefreshResponse
+
+    @POST("/api/auth/logout")
+    suspend fun logout(): Map<String, Any>
 
     // Mascotas
     @GET("/api/mascotas/mias")

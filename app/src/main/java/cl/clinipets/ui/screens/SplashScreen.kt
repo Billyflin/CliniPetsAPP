@@ -9,27 +9,20 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import cl.clinipets.auth.AuthViewModel
-import cl.clinipets.auth.AuthViewModelFactory
 
 @Composable
-fun SplashScreen(navController: NavController) {
-    val context = LocalContext.current
-    val vm: AuthViewModel = viewModel(factory = AuthViewModelFactory(context))
-
-    val isLoading by vm.isLoading.collectAsState()
+fun SplashScreen(navController: NavController, viewModel: AuthViewModel) {
+    val isLoading by viewModel.isLoading.collectAsState()
 
     LaunchedEffect(Unit) {
-        vm.fetchProfile()
+        viewModel.bootstrap()
     }
 
-    // cuando isLoading pasa a false, verificamos profile y navegamos
     LaunchedEffect(isLoading) {
         if (!isLoading) {
-            val profile = vm.profile.value
+            val profile = viewModel.profile.value
             if (profile != null) {
                 navController.navigate("home") {
                     popUpTo("splash") { inclusive = true }
