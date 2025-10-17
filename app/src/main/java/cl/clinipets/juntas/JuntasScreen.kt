@@ -42,11 +42,11 @@ fun JuntasScreen(viewModelFactory: androidx.lifecycle.ViewModelProvider.Factory)
         Text("Junta actual:")
         if (junta != null) {
             Text("id: ${junta!!.id}")
-            Text("reservaId: ${junta!!.reservaId}")
-            Text("estado: ${junta!!.estado}")
+            Text("reserva.id: ${junta!!.reserva.id ?: "-"}")
+            Text("estado: ${junta!!.estado ?: "-"}")
 
             Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(value = nuevoEstado, onValueChange = { nuevoEstado = it }, label = { Text("nuevo estado (EN_CAMINO, EN_SITIO, FINALIZADA)") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = nuevoEstado, onValueChange = { nuevoEstado = it }, label = { Text("nuevo estado (INICIADA, EN_CAMINO, EN_SITIO, FINALIZADA)") }, modifier = Modifier.fillMaxWidth())
             Button(onClick = { if (nuevoEstado.isNotBlank()) vm.cambiarEstado(junta!!.id, nuevoEstado) }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text("Cambiar estado") }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -64,4 +64,3 @@ fun JuntasScreen(viewModelFactory: androidx.lifecycle.ViewModelProvider.Factory)
         if (!error.isNullOrEmpty()) Text(error ?: "")
     }
 }
-

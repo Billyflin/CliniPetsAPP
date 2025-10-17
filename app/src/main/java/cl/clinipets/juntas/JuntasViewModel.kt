@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.network.Junta
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -19,14 +21,18 @@ class JuntasViewModel(private val repo: JuntasRepository) : ViewModel() {
     private val _junta = MutableStateFlow<Junta?>(null)
     val junta: StateFlow<Junta?> = _junta
 
+    private var pollingJob: Job? = null
+
     fun crearJunta(reservaId: String, onResult: (Boolean, Junta?) -> Unit = { _, _ -> }) {
         viewModelScope.launch {
             _isLoading.value = true
             val res = repo.crearJunta(reservaId)
             _isLoading.value = false
             if (res.isSuccess) {
-                _junta.value = res.getOrNull()
-                onResult(true, res.getOrNull())
+                val j = res.getOrNull()
+                _junta.value = j
+                if (j != null) startPolling(j.id)
+                onResult(true, j)
             } else {
                 _error.value = res.exceptionOrNull()?.localizedMessage
                 onResult(false, null)
@@ -78,12 +84,31 @@ class JuntasViewModel(private val repo: JuntasRepository) : ViewModel() {
             _isLoading.value = false
             if (res.isSuccess) {
                 obtenerJunta(juntaId)
+                stopPolling()
                 onResult(true)
             } else {
                 _error.value = res.exceptionOrNull()?.localizedMessage
                 onResult(false)
             }
         }
+    }
+
+    fun startPolling(juntaId: String, intervalMs: Long = 3000L) {
+        pollingJob?.cancel()
+        pollingJob = viewModelScope.launch {
+            while (true) {
+                val res = repo.obtenerJunta(juntaId)
+                if (res.isSuccess) {
+                    _junta.value = res.getOrNull()
+                }
+                delay(intervalMs)
+            }
+        }
+    }
+
+    fun stopPolling() {
+        pollingJob?.cancel()
+        pollingJob = null
     }
 }
 
@@ -96,4 +121,3 @@ class JuntasViewModelFactory(private val context: Context) : ViewModelProvider.F
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
-

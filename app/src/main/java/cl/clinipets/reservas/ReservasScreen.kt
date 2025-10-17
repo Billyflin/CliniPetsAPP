@@ -1,6 +1,7 @@
 package cl.clinipets.reservas
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -41,6 +44,10 @@ fun ReservasScreen(viewModelFactory: androidx.lifecycle.ViewModelProvider.Factor
     var direccion by remember { mutableStateOf("") }
     var notas by remember { mutableStateOf("") }
 
+    // cancel dialog state
+    var cancelId by remember { mutableStateOf<String?>(null) }
+    var cancelMotivo by remember { mutableStateOf("") }
+
     LaunchedEffect(Unit) { vm.loadMisReservas() }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -52,7 +59,12 @@ fun ReservasScreen(viewModelFactory: androidx.lifecycle.ViewModelProvider.Factor
         if (isLoading) Text("Cargando...")
         if (!error.isNullOrEmpty()) Text(error ?: "")
 
-        LazyColumn { items(reservas) { r: Reserva -> ReservaRow(r) } }
+        LazyColumn { items(reservas) { r: Reserva ->
+            ReservaRow(
+                r,
+                onCancel = { cancelId = r.id }
+            )
+        } }
     }
 
     if (showCreate) {
@@ -80,15 +92,56 @@ fun ReservasScreen(viewModelFactory: androidx.lifecycle.ViewModelProvider.Factor
             dismissButton = { TextButton(onClick = { showCreate = false }) { Text("Cancelar") } }
         )
     }
-}
 
-@Composable
-private fun ReservaRow(r: Reserva) {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Text("Reserva ${r.id}")
-        Text("Estado: ${r.estado}")
-        Text("Mascota: ${r.mascotaId} | Vet: ${r.veterinarioId}")
-        Text("Inicio: ${r.inicio} | Modo: ${r.modo}")
+    if (cancelId != null) {
+        AlertDialog(
+            onDismissRequest = { cancelId = null },
+            title = { Text("Cancelar reserva") },
+            text = {
+                Column {
+                    Text("Indica un motivo (opcional)")
+                    OutlinedTextField(value = cancelMotivo, onValueChange = { cancelMotivo = it }, label = { Text("Motivo") })
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val id = cancelId!!
+                    vm.cancelarReserva(id, cancelMotivo.ifBlank { null }) { ok ->
+                        if (ok) cancelId = null
+                    }
+                }) { Text("Confirmar") }
+            },
+            dismissButton = { TextButton(onClick = { cancelId = null }) { Text("Cerrar") } }
+        )
     }
 }
 
+@Composable
+private fun ReservaRow(r: Reserva, onCancel: () -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Text("Reserva ${r.id ?: "-"}")
+        Row(modifier = Modifier.fillMaxWidth()) {
+            EstadoChip(r.estado)
+        }
+        Text("Mascota: ${r.mascota.nombre} | Vet: ${r.veterinario.nombreCompleto ?: "-"}")
+        Text("Inicio: ${r.inicio} | Modo: ${r.modo}")
+        Spacer(modifier = Modifier.height(6.dp))
+        if (r.estado == "PENDIENTE" || r.estado == "CONFIRMADA") {
+            TextButton(onClick = onCancel) { Text("Cancelar reserva") }
+        }
+    }
+}
+
+@Composable
+private fun EstadoChip(estado: String) {
+    val label = when (estado) {
+        "PENDIENTE" -> "Pendiente"
+        "CONFIRMADA" -> "Confirmada"
+        "EN_CURSO" -> "En curso"
+        "COMPLETADA" -> "Completada"
+        "CANCELADA_CLIENTE" -> "Cancelada (cliente)"
+        "CANCELADA_VETERINARIO" -> "Cancelada (veterinario)"
+        else -> estado
+    }
+    AssistChip(onClick = {}, label = { Text(label) }, colors = AssistChipDefaults.assistChipColors())
+}

@@ -15,7 +15,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Clinipets"
-        android:usesCleartextTraffic="false"
+        android:usesCleartextTraffic="true"
         >
         <!-- Clave de Google Maps: se inyecta desde manifestPlaceholders (MAPS_API_KEY) -->
         <meta-data

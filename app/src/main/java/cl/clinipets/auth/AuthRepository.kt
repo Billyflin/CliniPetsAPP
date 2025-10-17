@@ -7,8 +7,9 @@ class AuthRepository(private val api: ApiService, private val tokenStore: TokenS
     suspend fun loginWithGoogle(idToken: String): Result<Unit> {
         return try {
             val resp = api.loginWithGoogle(cl.clinipets.network.GoogleAuthRequest(idToken))
-            if (!resp.token.isNullOrEmpty()) {
-                tokenStore.saveToken(resp.token)
+            val token = resp.token
+            if (token.isNotEmpty()) {
+                tokenStore.saveToken(token)
                 Result.success(Unit)
             } else {
                 Result.failure(Exception("Empty token from server"))
@@ -18,7 +19,7 @@ class AuthRepository(private val api: ApiService, private val tokenStore: TokenS
         }
     }
 
-    suspend fun fetchProfile(): Result<cl.clinipets.network.UserProfile> {
+    suspend fun fetchProfile(): Result<cl.clinipets.network.MeResponse> {
         return try {
             val profile = api.me()
             Result.success(profile)
@@ -31,4 +32,3 @@ class AuthRepository(private val api: ApiService, private val tokenStore: TokenS
         tokenStore.clearToken()
     }
 }
-

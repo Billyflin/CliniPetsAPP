@@ -11,15 +11,48 @@ import retrofit2.http.Query
 
 // --- Auth ---
 data class GoogleAuthRequest(val idToken: String)
-data class AuthResponse(val token: String)
-data class UserProfile(val id: String, val email: String, val roles: List<String>, val name: String?, val avatarUrl: String?)
+data class UsuarioInfo(val id: String, val email: String, val nombre: String?, val fotoUrl: String?, val roles: List<String>)
+data class TokenResponse(val token: String, val usuario: UsuarioInfo)
+data class MeResponse(val authenticated: Boolean, val id: String?, val email: String?, val roles: List<String>?)
 
 // --- Mascotas ---
-data class Mascota(val id: String, val nombre: String, val especie: String, val fotoUrl: String?)
-data class CreateMascotaRequest(val nombre: String, val especie: String)
+data class Mascota(
+    val id: String?,
+    val nombre: String,
+    val especie: String,
+    val raza: String?,
+    val sexo: String?,
+    val fechaNacimiento: String?,
+    val pesoKg: Double?,
+    val tutor: Usuario?,
+)
+data class CrearMascotaRequest(
+    val nombre: String,
+    val especie: String,
+    val raza: String? = null,
+    val sexo: String? = null,
+    val fechaNacimiento: String? = null,
+    val pesoKg: Double? = null,
+)
+data class ActualizarMascotaRequest(
+    val nombre: String? = null,
+    val raza: String? = null,
+    val sexo: String? = null,
+    val fechaNacimiento: String? = null,
+    val pesoKg: Double? = null,
+)
 
 // --- Descubrimiento ---
-data class VetItem(val id: String, val nombre: String, val fotoUrl: String?, val modos: List<String>, val verificado: Boolean, val distanciaKm: Double?)
+data class VetItem(
+    val id: String,
+    val nombre: String,
+    val fotoUrl: String?,
+    val modos: List<String>,
+    val verificado: Boolean,
+    val distanciaKm: Double?,
+    val lat: Double?,
+    val lng: Double?
+)
 data class Procedimiento(val sku: String, val nombre: String, val duracionMinutos: Int, val especies: List<String>)
 data class Oferta(val id: String, val procedimientoSku: String, val procedimientoNombre: String, val precio: Double, val duracionMinutos: Int, val compatibleEspecies: List<String>, val distanciaKm: Double?)
 
@@ -27,6 +60,10 @@ data class Oferta(val id: String, val procedimientoSku: String, val procedimient
 data class Bloque(val inicio: String, val fin: String)
 data class ReglaDisponibilidadRequest(val diaSemana: Int, val horaInicio: String, val horaFin: String)
 data class ExcepcionDisponibilidadRequest(val fecha: String, val tipo: String, val horaInicio: String?, val horaFin: String?, val motivo: String?)
+
+// --- Core tipos de usuario/veterinario para respuestas ---
+data class Usuario(val id: String?, val email: String?, val nombre: String?)
+data class Veterinario(val id: String?, val nombreCompleto: String?)
 
 // --- Reservas ---
 data class CrearReservaRequest(
@@ -38,7 +75,19 @@ data class CrearReservaRequest(
     val direccionAtencion: String?,
     val notas: String?
 )
-data class Reserva(val id: String, val estado: String, val mascotaId: String, val veterinarioId: String, val inicio: String, val modo: String)
+data class Reserva(
+    val id: String,
+    val cliente: Usuario,
+    val mascota: Mascota,
+    val veterinario: Veterinario,
+    val procedimientoSku: String,
+    val inicio: String,
+    val fin: String,
+    val modo: String,
+    val estado: String,
+    val direccionAtencion: String?,
+    val notas: String?
+)
 
 data class CambioEstadoReservaRequest(val nuevoEstado: String, val motivo: String?)
 
@@ -55,10 +104,14 @@ data class VeterinarioPerfil(val id: String, val nombreCompleto: String, val ver
 
 // --- Juntas ---
 data class CrearJuntaRequest(val reservaId: String)
-data class Junta(val id: String, val reservaId: String, val estado: String)
+data class Junta(val id: String, val reserva: Reserva, val estado: String?)
 data class CambioEstadoJuntaRequest(val estado: String)
-data class UbicacionUpdateRequest(val lat: Double, val lng: Double)
+data class ActualizarUbicacionJuntaRequest(val latitud: Double, val longitud: Double)
 data class FinalizarJuntaRequest(val notas: String?)
+
+// --- Clinica ---
+data class SugerenciasDiagnosticoRequest(val sintomas: List<String>)
+data class SugerenciasTratamientoRequest(val diagnostico: String)
 
 // --- Catalogo ---
 data class CatalogoProcedimientoRequest(val sku: String, val nombre: String, val duracionMinutos: Int, val especies: List<String>)
@@ -71,20 +124,20 @@ data class InventarioReservarRequest(val items: List<String>)
 interface ApiService {
     // Auth
     @POST("/api/auth/google")
-    suspend fun loginWithGoogle(@Body body: GoogleAuthRequest): AuthResponse
+    suspend fun loginWithGoogle(@Body body: GoogleAuthRequest): TokenResponse
 
     @GET("/api/auth/me")
-    suspend fun me(): UserProfile
+    suspend fun me(): MeResponse
 
     // Mascotas
     @GET("/api/mascotas/mias")
     suspend fun misMascotas(): List<Mascota>
 
     @POST("/api/mascotas")
-    suspend fun crearMascota(@Body body: CreateMascotaRequest): Mascota
+    suspend fun crearMascota(@Body body: CrearMascotaRequest): Mascota
 
     @PUT("/api/mascotas/{id}")
-    suspend fun editarMascota(@Path("id") id: String, @Body body: CreateMascotaRequest): Mascota
+    suspend fun editarMascota(@Path("id") id: String, @Body body: ActualizarMascotaRequest): Mascota
 
     @DELETE("/api/mascotas/{id}")
     suspend fun eliminarMascota(@Path("id") id: String)
@@ -171,13 +224,20 @@ interface ApiService {
     suspend fun cambiarEstadoJunta(@Path("id") id: String, @Body body: CambioEstadoJuntaRequest)
 
     @PATCH("/api/juntas/{id}/ubicacion")
-    suspend fun actualizarUbicacionJunta(@Path("id") id: String, @Body body: UbicacionUpdateRequest)
+    suspend fun actualizarUbicacionJunta(@Path("id") id: String, @Body body: ActualizarUbicacionJuntaRequest)
 
     @POST("/api/juntas/{id}/finalizar")
     suspend fun finalizarJunta(@Path("id") id: String, @Body body: FinalizarJuntaRequest)
 
     @GET("/api/juntas/{id}")
     suspend fun obtenerJunta(@Path("id") id: String): Junta
+
+    // Clinica
+    @POST("/api/clinica/sugerencias/diagnostico")
+    suspend fun sugerenciasDiagnostico(@Body body: SugerenciasDiagnosticoRequest): List<String>
+
+    @POST("/api/clinica/sugerencias/tratamiento")
+    suspend fun sugerenciasTratamiento(@Body body: SugerenciasTratamientoRequest): List<String>
 
     // Catalogo
     @POST("/api/catalogo/procedimientos")

@@ -2,7 +2,8 @@ package cl.clinipets.mascotas
 
 import android.content.Context
 import cl.clinipets.network.ApiService
-import cl.clinipets.network.CreateMascotaRequest
+import cl.clinipets.network.CrearMascotaRequest
+import cl.clinipets.network.ActualizarMascotaRequest
 import cl.clinipets.network.Mascota
 import cl.clinipets.network.NetworkModule
 
@@ -16,14 +17,14 @@ class MascotasRepository(context: Context) {
     }
 
     suspend fun crearMascota(nombre: String, especie: String): Result<Mascota> = try {
-        val req = CreateMascotaRequest(nombre = nombre, especie = especie)
+        val req = CrearMascotaRequest(nombre = nombre, especie = especie)
         Result.success(api.crearMascota(req))
     } catch (e: Exception) {
         Result.failure(e)
     }
 
     suspend fun editarMascota(id: String, nombre: String, especie: String): Result<Mascota> = try {
-        val req = CreateMascotaRequest(nombre = nombre, especie = especie)
+        val req = ActualizarMascotaRequest(nombre = nombre)
         Result.success(api.editarMascota(id, req))
     } catch (e: Exception) {
         Result.failure(e)
@@ -36,4 +37,3 @@ class MascotasRepository(context: Context) {
         Result.failure(e)
     }
 }
-

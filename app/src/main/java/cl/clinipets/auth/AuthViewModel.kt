@@ -14,8 +14,8 @@ class AuthViewModel(private val repo: AuthRepository) : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    private val _profile = MutableStateFlow<cl.clinipets.network.UserProfile?>(null)
-    val profile: StateFlow<cl.clinipets.network.UserProfile?> = _profile
+    private val _profile = MutableStateFlow<cl.clinipets.network.MeResponse?>(null)
+    val profile: StateFlow<cl.clinipets.network.MeResponse?> = _profile
 
     fun loginWithGoogle(idToken: String, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
@@ -23,10 +23,10 @@ class AuthViewModel(private val repo: AuthRepository) : ViewModel() {
             _error.value = null
             val res = repo.loginWithGoogle(idToken)
             if (res.isSuccess) {
-                // fetch profile
                 val p = repo.fetchProfile()
                 if (p.isSuccess) {
-                    _profile.value = p.getOrNull()
+                    val me = p.getOrNull()
+                    _profile.value = if (me?.authenticated == true) me else null
                 }
                 onSuccess()
             } else {
@@ -41,9 +41,11 @@ class AuthViewModel(private val repo: AuthRepository) : ViewModel() {
             _isLoading.value = true
             val p = repo.fetchProfile()
             if (p.isSuccess) {
-                _profile.value = p.getOrNull()
+                val me = p.getOrNull()
+                _profile.value = if (me?.authenticated == true) me else null
             } else {
                 _error.value = p.exceptionOrNull()?.localizedMessage
+                _profile.value = null
             }
             _isLoading.value = false
         }

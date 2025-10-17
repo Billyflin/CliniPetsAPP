@@ -48,6 +48,21 @@ class MascotasViewModel(private val repo: MascotasRepository) : ViewModel() {
         }
     }
 
+    fun editarMascota(id: String, nombre: String, especie: String, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val res = repo.editarMascota(id, nombre, especie)
+            _isLoading.value = false
+            if (res.isSuccess) {
+                loadMascotas()
+                onResult(true)
+            } else {
+                _error.value = res.exceptionOrNull()?.localizedMessage
+                onResult(false)
+            }
+        }
+    }
+
     fun eliminarMascota(id: String, onResult: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -73,4 +88,3 @@ class MascotasViewModelFactory(private val context: Context) : ViewModelProvider
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
-

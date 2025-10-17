@@ -24,7 +24,7 @@ class JuntasRepository(context: Context) {
     }
 
     suspend fun actualizarUbicacion(juntaId: String, lat: Double, lng: Double): Result<Unit> = try {
-        api.actualizarUbicacionJunta(juntaId, cl.clinipets.network.UbicacionUpdateRequest(lat, lng))
+        api.actualizarUbicacionJunta(juntaId, cl.clinipets.network.ActualizarUbicacionJuntaRequest(latitud = lat, longitud = lng))
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)
@@ -43,4 +43,3 @@ class JuntasRepository(context: Context) {
         Result.failure(e)
     }
 }
-

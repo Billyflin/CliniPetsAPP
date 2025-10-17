@@ -94,15 +94,14 @@ dependencies {
     // Retrofit Coroutine adapter (if needed)
     implementation("com.jakewharton.retrofit:retrofit2-kotlin-coroutines-adapter:0.9.2")
 
+
     // Seguridad para JWT storage
     implementation(libs.security.crypto)
 
     // Google Sign-In con Credential Manager
-    implementation(libs.credentials)
-    implementation(libs.credentials.play.services.auth)
-    implementation(libs.googleid)
-
-    implementation(libs.play.services.base)
+    implementation("androidx.credentials:credentials:1.6.0-beta01")
+    implementation("androidx.credentials:credentials-play-services-auth:1.6.0-beta01")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     // Google Maps
     implementation(libs.play.services.maps)
@@ -114,6 +113,7 @@ dependencies {
 
     // Material Icons
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.google.googleid)
 
     testImplementation(libs.junit)
     testImplementation(libs.okhttp3.mockwebserver)

@@ -47,6 +47,21 @@ class ReservasViewModel(private val repo: ReservasRepository) : ViewModel() {
             }
         }
     }
+
+    fun cancelarReserva(reservaId: String, motivo: String? = null, onDone: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val res = repo.cambiarEstado(reservaId, "CANCELADA_CLIENTE", motivo)
+            _isLoading.value = false
+            if (res.isSuccess) {
+                loadMisReservas()
+                onDone(true)
+            } else {
+                _error.value = res.exceptionOrNull()?.localizedMessage
+                onDone(false)
+            }
+        }
+    }
 }
 
 class ReservasViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
@@ -58,4 +73,3 @@ class ReservasViewModelFactory(private val context: Context) : ViewModelProvider
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
-

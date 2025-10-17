@@ -15,13 +15,18 @@ import cl.clinipets.auth.AuthViewModel
 import cl.clinipets.auth.AuthViewModelFactory
 import cl.clinipets.descubrimiento.DescubrimientoScreen
 import cl.clinipets.descubrimiento.DescubrimientoViewModelFactory
+import cl.clinipets.juntas.JuntasScreen
+import cl.clinipets.juntas.JuntasViewModelFactory
 import cl.clinipets.mascotas.MascotasScreen
 import cl.clinipets.mascotas.MascotasViewModelFactory
 import cl.clinipets.perfil.ProfileScreen
+import cl.clinipets.reservas.ReservaFlowScreen
+import cl.clinipets.reservas.ReservaFlowViewModelFactory
 import cl.clinipets.reservas.ReservasScreen
 import cl.clinipets.reservas.ReservasViewModelFactory
 import cl.clinipets.ui.screens.HomeScreen
 import cl.clinipets.ui.screens.LoginScreen
+import cl.clinipets.ui.screens.SplashScreen
 import cl.clinipets.ui.theme.ClinipetsTheme
 import cl.clinipets.veterinario.OnboardingVetScreen
 import cl.clinipets.veterinario.VeterinarioViewModelFactory
@@ -37,12 +42,17 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
+                    // Única instancia compartida de AuthViewModel
+                    val authVm: AuthViewModel = viewModel(factory = AuthViewModelFactory(applicationContext))
 
-                    NavHost(navController = navController, startDestination = "login") {
+                    NavHost(navController = navController, startDestination = "splash") {
+                        composable("splash") {
+                            SplashScreen(navController = navController)
+                        }
+
                         composable("login") {
-                            val vm: AuthViewModel = viewModel(factory = AuthViewModelFactory(applicationContext))
                             LoginScreen(
-                                viewModel = vm,
+                                viewModel = authVm,
                                 onLoginSuccess = {
                                     navController.navigate("home") {
                                         popUpTo("login") { inclusive = true }
@@ -52,25 +62,36 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable("home") {
-                            val vm: AuthViewModel = viewModel(factory = AuthViewModelFactory(applicationContext))
+                            val isVet = authVm.profile.value?.roles?.contains("VETERINARIO") == true
                             HomeScreen(
                                 onNavigate = { route -> navController.navigate(route) },
                                 onSignOut = {
-                                    vm.signOut()
+                                    authVm.signOut()
                                     navController.navigate("login") {
                                         popUpTo("home") { inclusive = true }
                                     }
-                                }
+                                },
+                                isVet = isVet
                             )
                         }
 
                         composable("perfil") {
-                            val vm: AuthViewModel = viewModel(factory = AuthViewModelFactory(applicationContext))
-                            ProfileScreen(viewModel = vm, onBeVet = { navController.navigate("onboard_vet") })
+                            ProfileScreen(
+                                viewModel = authVm,
+                                onBeVet = { navController.navigate("onboard_vet") },
+                                onVetProfile = { navController.navigate("perfil_vet") }
+                            )
+                        }
+
+                        composable("perfil_vet") {
+                            cl.clinipets.veterinario.PerfilVetScreen(viewModelFactory = VeterinarioViewModelFactory(applicationContext))
                         }
 
                         composable("onboard_vet") {
-                            OnboardingVetScreen(viewModelFactory = VeterinarioViewModelFactory(applicationContext), onSuccess = { navController.navigate("home") { popUpTo("onboard_vet") { inclusive = true } } })
+                            OnboardingVetScreen(viewModelFactory = VeterinarioViewModelFactory(applicationContext), onSuccess = {
+                                authVm.fetchProfile()
+                                navController.navigate("home") { popUpTo("onboard_vet") { inclusive = true } }
+                            })
                         }
 
                         composable("mascotas") {
@@ -83,6 +104,26 @@ class MainActivity : ComponentActivity() {
 
                         composable("reservas") {
                             ReservasScreen(viewModelFactory = ReservasViewModelFactory(applicationContext))
+                        }
+
+                        composable("nueva_reserva") {
+                            ReservaFlowScreen(viewModelFactory = ReservaFlowViewModelFactory(applicationContext))
+                        }
+
+                        composable("juntas") {
+                            JuntasScreen(viewModelFactory = JuntasViewModelFactory(applicationContext))
+                        }
+
+                        composable("disponibilidad_vet") {
+                            cl.clinipets.disponibilidad.DisponibilidadScreen(viewModelFactory = cl.clinipets.disponibilidad.DisponibilidadViewModelFactory(applicationContext))
+                        }
+
+                        composable("agenda_vet") {
+                            cl.clinipets.agenda.AgendaVetScreen(viewModelFactory = cl.clinipets.agenda.AgendaVetViewModelFactory(applicationContext))
+                        }
+
+                        composable("clinica") {
+                            cl.clinipets.clinica.ClinicaScreen(viewModelFactory = cl.clinipets.clinica.ClinicaViewModelFactory(applicationContext))
                         }
                     }
                 }
