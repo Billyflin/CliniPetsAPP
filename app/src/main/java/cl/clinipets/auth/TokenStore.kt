@@ -26,15 +26,53 @@ class TokenStore(private val context: Context) {
     }
 
     companion object {
-        private const val KEY_TOKEN = "key_jwt"
+        private const val KEY_LEGACY_ACCESS = "key_jwt" // compatibilidad anterior
+        private const val KEY_ACCESS = "access_token"
+        private const val KEY_REFRESH = "refresh_token"
     }
 
+    // Compatibilidad: antes solo se guardaba un token (lo tratamos como access)
     fun saveToken(token: String) {
-        prefs.edit().putString(KEY_TOKEN, token).apply()
+        prefs.edit()
+            .putString(KEY_LEGACY_ACCESS, token)
+            .putString(KEY_ACCESS, token)
+            .apply()
     }
 
-    fun getToken(): String? = prefs.getString(KEY_TOKEN, null)
+    fun getToken(): String? = getAccessToken() ?: prefs.getString(KEY_LEGACY_ACCESS, null)
 
-    fun clearToken() { prefs.edit().remove(KEY_TOKEN).apply() }
+    fun clearToken() {
+        prefs.edit()
+            .remove(KEY_LEGACY_ACCESS)
+            .remove(KEY_ACCESS)
+            .apply()
+    }
+
+    // Nuevo flujo access/refresh
+    fun saveTokens(accessToken: String, refreshToken: String) {
+        prefs.edit()
+            .putString(KEY_ACCESS, accessToken)
+            .putString(KEY_REFRESH, refreshToken)
+            .putString(KEY_LEGACY_ACCESS, accessToken)
+            .apply()
+    }
+
+    fun updateAccessToken(accessToken: String) {
+        prefs.edit()
+            .putString(KEY_ACCESS, accessToken)
+            .putString(KEY_LEGACY_ACCESS, accessToken)
+            .apply()
+    }
+
+    fun getAccessToken(): String? = prefs.getString(KEY_ACCESS, null)
+
+    fun getRefreshToken(): String? = prefs.getString(KEY_REFRESH, null)
+
+    fun clearAll() {
+        prefs.edit()
+            .remove(KEY_LEGACY_ACCESS)
+            .remove(KEY_ACCESS)
+            .remove(KEY_REFRESH)
+            .apply()
+    }
 }
-

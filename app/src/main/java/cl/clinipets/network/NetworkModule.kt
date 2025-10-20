@@ -2,9 +2,17 @@ package cl.clinipets.network
 
 import android.content.Context
 import cl.clinipets.BuildConfig
-import okhttp3.*
+import cl.clinipets.auth.AuthEvents
+import okhttp3.Authenticator
+import okhttp3.Cookie
+import okhttp3.CookieJar
+import okhttp3.HttpUrl
+import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
 import org.json.JSONArray
 import org.json.JSONObject
@@ -23,9 +31,13 @@ object NetworkModule {
 
         val authInterceptor = Interceptor { chain ->
             val req = chain.request()
-            val token = tokenStore.getToken()
-            val newReq = if (!token.isNullOrEmpty()) {
-                req.newBuilder().addHeader("Authorization", "Bearer $token").build()
+            val path = req.url.encodedPath
+            if (path.endsWith("/api/auth/refresh") || path.endsWith("/api/auth/google")) {
+                return@Interceptor chain.proceed(req)
+            }
+            val access = tokenStore.getAccessToken() ?: tokenStore.getToken()
+            val newReq = if (!access.isNullOrEmpty()) {
+                req.newBuilder().addHeader("Authorization", "Bearer $access").build()
             } else req
             chain.proceed(newReq)
         }
@@ -50,29 +62,57 @@ object NetworkModule {
             }
 
             try {
+                val refreshToken = tokenStore.getRefreshToken()
+                val refreshUrl = BuildConfig.BASE_URL.trimEnd('/') + "/api/auth/refresh"
+                val mediaType = "application/json".toMediaTypeOrNull()
+                val bodyStr = if (!refreshToken.isNullOrBlank()) {
+                    // Nuevo flujo: enviar refreshToken en el body
+                    JSONObject().put("refreshToken", refreshToken).toString()
+                } else {
+                    // Compatibilidad: algunos backends refrescan por cookie
+                    "{}"
+                }
                 val refreshRequest = Request.Builder()
-                    .url(BuildConfig.BASE_URL.trimEnd('/') + "/api/auth/refresh")
-                    .post("{}".toRequestBody("application/json".toMediaTypeOrNull()))
+                    .url(refreshUrl)
+                    .post(bodyStr.toRequestBody(mediaType))
                     .build()
+
                 val refreshResp = baseClient.newCall(refreshRequest).execute()
                 if (!refreshResp.isSuccessful) {
-                    tokenStore.clearToken()
+                    tokenStore.clearAll()
+                    AuthEvents.notifySessionExpired()
                     return@Authenticator null
                 }
-                val bodyStr = refreshResp.body?.string() ?: return@Authenticator null
-                val token = try {
-                    JSONObject(bodyStr).getString("token")
-                } catch (_: Exception) { null }
-                if (token.isNullOrEmpty()) {
-                    tokenStore.clearToken()
+                val payload = refreshResp.body?.string() ?: run {
+                    tokenStore.clearAll()
+                    AuthEvents.notifySessionExpired()
                     return@Authenticator null
                 }
-                tokenStore.saveToken(token)
+
+                // Intentar parsear ambos formatos: {accessToken, refreshToken} o {token}
+                val json = try { JSONObject(payload) } catch (_: Exception) { null }
+                val newAccess = json?.optString("accessToken")?.takeIf { it.isNotBlank() }
+                    ?: json?.optString("token")?.takeIf { it.isNotBlank() }
+                val newRefresh = json?.optString("refreshToken")?.takeIf { it.isNotBlank() }
+
+                if (newAccess.isNullOrBlank()) {
+                    tokenStore.clearAll()
+                    AuthEvents.notifySessionExpired()
+                    return@Authenticator null
+                }
+
+                if (!newRefresh.isNullOrBlank()) {
+                    tokenStore.saveTokens(newAccess, newRefresh)
+                } else {
+                    tokenStore.updateAccessToken(newAccess)
+                }
+
                 return@Authenticator originalRequest.newBuilder()
-                    .header("Authorization", "Bearer $token")
+                    .header("Authorization", "Bearer $newAccess")
                     .build()
             } catch (_: Exception) {
-                tokenStore.clearToken()
+                tokenStore.clearAll()
+                AuthEvents.notifySessionExpired()
                 null
             }
         }
@@ -147,16 +187,16 @@ private class PersistentCookieJar(context: Context) : CookieJar {
         return try {
             val root = JSONObject(json)
             val result = mutableMapOf<String, MutableList<Cookie>>()
-            val keys = root.keys()
-            while (keys.hasNext()) {
-                val host = keys.next()
-                val arr = root.optJSONArray(host) ?: continue
+            val keysIter = root.keys()
+            while (keysIter.hasNext()) {
+                val hostKey = keysIter.next() as String
+                val arr = root.optJSONArray(hostKey) ?: continue
                 val list = mutableListOf<Cookie>()
                 for (i in 0 until arr.length()) {
                     val obj = arr.optJSONObject(i) ?: continue
                     decodeObj(obj)?.let { list.add(it) }
                 }
-                if (list.isNotEmpty()) result[host] = list
+                if (list.isNotEmpty()) result[hostKey] = list
             }
             result
         } catch (_: Exception) {
@@ -190,17 +230,20 @@ private class PersistentCookieJar(context: Context) : CookieJar {
 
     private fun decodeObj(obj: JSONObject): Cookie? {
         return try {
-            val name = obj.optString("name", null) ?: return null
-            val value = obj.optString("value", null) ?: return null
+            val nameStr = obj.optString("name")
+            if (nameStr.isNullOrEmpty()) return null
+            val valueStr = obj.optString("value")
+            if (valueStr.isNullOrEmpty()) return null
             val expiresAt = obj.optLong("expiresAt", 0L).takeIf { it > 0 } ?: return null
-            val domain = obj.optString("domain", null) ?: return null
+            val domainStr = obj.optString("domain")
+            if (domainStr.isNullOrEmpty()) return null
             val path = obj.optString("path", "/")
             val secure = obj.optBoolean("secure", false)
             val httpOnly = obj.optBoolean("httpOnly", false)
             Cookie.Builder()
-                .name(name)
-                .value(value)
-                .domain(domain)
+                .name(nameStr)
+                .value(valueStr)
+                .domain(domainStr)
                 .path(path)
                 .expiresAt(expiresAt)
                 .apply { if (secure) secure() }

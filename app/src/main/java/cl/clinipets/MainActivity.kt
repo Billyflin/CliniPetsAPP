@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -32,6 +33,7 @@ import cl.clinipets.ui.screens.SplashScreen
 import cl.clinipets.ui.theme.ClinipetsTheme
 import cl.clinipets.veterinario.OnboardingVetScreen
 import cl.clinipets.veterinario.VeterinarioViewModelFactory
+import cl.clinipets.auth.AuthEvents
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,6 +48,17 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     // Única instancia compartida de AuthViewModel
                     val authVm: AuthViewModel = viewModel(factory = AuthViewModelFactory(applicationContext))
+
+                    // Redirección global a Login si la sesión expira (refresh fallido)
+                    LaunchedEffect(Unit) {
+                        AuthEvents.sessionExpired.collect {
+                            // Limpia estado y navega a login
+                            authVm.signOut()
+                            navController.navigate("login") {
+                                popUpTo("splash") { inclusive = true }
+                            }
+                        }
+                    }
 
                     NavHost(navController = navController, startDestination = "splash") {
                         composable("splash") {
