@@ -333,7 +333,8 @@ paths:
       summary: "Autenticación con Google"
       description: "\n            Autentica un usuario mediante Google Sign-In. \n\
         \            Intercambia un Google ID Token válido por un JWT propio del sistema.\n\
-        \            Si el usuario no existe, se crea automáticamente.\n        "
+        \            Si el usuario no existe, se crea automáticamente.\n         \
+        \   También emite un refresh token en cookie HttpOnly.\n        "
       operationId: ""
       requestBody:
         content:
@@ -348,6 +349,31 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/TokenResponse"
+  /api/auth/refresh:
+    post:
+      summary: "Refrescar sesión"
+      description: "Lee el refresh token de la cookie HttpOnly y entrega un nuevo\
+        \ access token (y rota el refresh)."
+      operationId: ""
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Object"
+  /api/auth/logout:
+    post:
+      summary: "Cerrar sesión"
+      description: "Elimina la cookie de refresh y cierra la sesión en el cliente."
+      operationId: ""
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "string"
   /api/auth/me:
     get:
       summary: "Obtener perfil actual"
@@ -1231,6 +1257,9 @@ components:
       required:
         - "token"
         - "usuario"
+    Object:
+      type: "object"
+      properties: { }
     MeResponse:
       type: "object"
       properties:
