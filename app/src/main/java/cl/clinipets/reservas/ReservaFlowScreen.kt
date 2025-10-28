@@ -39,7 +39,7 @@ import com.google.android.gms.location.LocationServices
 private enum class Paso { MASCOTA, PROCEDIMIENTO, VETERINARIO, FECHA_BLOQUE, CONFIRMAR }
 
 @Composable
-fun ReservaFlowScreen(viewModelFactory: androidx.lifecycle.ViewModelProvider.Factory) {
+fun ReservaFlowScreen(viewModelFactory: androidx.lifecycle.ViewModelProvider.Factory, initialSku: String? = null, initialEspecie: String? = null) {
     val vm: ReservaFlowViewModel = viewModel(factory = viewModelFactory)
 
     val mascotas by vm.mascotas.collectAsState()
@@ -50,6 +50,29 @@ fun ReservaFlowScreen(viewModelFactory: androidx.lifecycle.ViewModelProvider.Fac
     val error by vm.error.collectAsState()
 
     var paso by remember { mutableStateOf(Paso.MASCOTA) }
+    var bootstrapped by remember { mutableStateOf(false) }
+
+    // Bootstrap: si viene initialEspecie, precarga procedimientos para acelerar el paso 2
+    LaunchedEffect(Unit) {
+        if (!bootstrapped) {
+            vm.cargarMascotas()
+            if (!initialEspecie.isNullOrBlank()) {
+                vm.cargarProcedimientos(initialEspecie)
+            }
+            bootstrapped = true
+        }
+    }
+
+    // Si hay initialSku y ya cargamos procedimientos, autoseleccionamos y avanzamos al paso de veterinario
+    LaunchedEffect(initialSku, procedimientos) {
+        if (!initialSku.isNullOrBlank() && paso == Paso.PROCEDIMIENTO) {
+            val match = procedimientos.firstOrNull { it.sku == initialSku }
+            if (match != null) {
+                vm.selectedProcedimiento = match
+                paso = Paso.VETERINARIO
+            }
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text("Nueva reserva", style = MaterialTheme.typography.headlineMedium)
@@ -59,7 +82,7 @@ fun ReservaFlowScreen(viewModelFactory: androidx.lifecycle.ViewModelProvider.Fac
 
         when (paso) {
             Paso.MASCOTA -> PasoMascota(vm, mascotas) { paso = Paso.PROCEDIMIENTO }
-            Paso.PROCEDIMIENTO -> PasoProcedimiento(vm, procedimientos) {
+            Paso.PROCEDIMIENTO -> PasoProcedimiento(vm, procedimientos, initialSku) {
                 paso = Paso.VETERINARIO
             }
             Paso.VETERINARIO -> PasoVeterinario(vm, veterinarios) { paso = Paso.FECHA_BLOQUE }
@@ -90,9 +113,20 @@ private fun PasoMascota(vm: ReservaFlowViewModel, mascotas: List<Mascota>, onNex
 }
 
 @Composable
-private fun PasoProcedimiento(vm: ReservaFlowViewModel, procedimientos: List<Procedimiento>, onNext: () -> Unit) {
+private fun PasoProcedimiento(vm: ReservaFlowViewModel, procedimientos: List<Procedimiento>, initialSku: String?, onNext: () -> Unit) {
     Text("2) Selecciona el procedimiento", style = MaterialTheme.typography.titleMedium)
     Spacer(modifier = Modifier.height(8.dp))
+
+    // Si hay initialSku y aún no se ha seleccionado, intentar autoseleccionar
+    LaunchedEffect(procedimientos, initialSku) {
+        if (!initialSku.isNullOrBlank() && vm.selectedProcedimiento == null) {
+            procedimientos.firstOrNull { it.sku == initialSku }?.let {
+                vm.selectedProcedimiento = it
+                onNext()
+            }
+        }
+    }
+
     LazyColumn(modifier = Modifier.fillMaxWidth()) {
         items(procedimientos) { p ->
             Column(modifier = Modifier.fillMaxWidth().clickable {

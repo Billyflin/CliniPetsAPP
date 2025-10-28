@@ -27,11 +27,11 @@ class DescubrimientoViewModel(private val repo: DescubrimientoRepository) : View
     private val _ofertas = MutableStateFlow<List<Oferta>>(emptyList())
     val ofertas: StateFlow<List<Oferta>> = _ofertas
 
-    fun buscarVeterinarios(lat: Double? = null, lng: Double? = null, radioKm: Int? = 10, especie: String? = null, procedimientoSku: String? = null) {
+    fun buscarVeterinarios(lat: Double? = null, lng: Double? = null, radioKm: Int? = 10, especie: String? = null, procedimientoSku: String? = null, abiertoAhora: Boolean? = null) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
-            val res = repo.veterinarios(lat, lng, radioKm, null, especie, procedimientoSku, null)
+            val res = repo.veterinarios(lat, lng, radioKm, null, especie, procedimientoSku, abiertoAhora)
             if (res.isSuccess) {
                 _veterinarios.value = res.getOrNull() ?: emptyList()
             } else {
@@ -77,4 +77,3 @@ class DescubrimientoViewModelFactory(private val context: Context) : ViewModelPr
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
-

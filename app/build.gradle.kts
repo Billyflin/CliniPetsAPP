@@ -22,7 +22,7 @@ android {
     // Lee BASE_URL_DEBUG (para debug) con fallback a la IP indicada por el usuario
     val baseUrlDebug: String = providers.gradleProperty("BASE_URL_DEBUG").orNull
         ?: System.getenv("BASE_URL_DEBUG")
-        ?: "http://192.168.1.13:8080/"
+        ?: "https://clinipets.cl/"
 
     defaultConfig {
         applicationId = "cl.clinipets"

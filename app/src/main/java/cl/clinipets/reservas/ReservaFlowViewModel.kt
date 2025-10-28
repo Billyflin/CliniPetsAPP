@@ -14,6 +14,7 @@ import cl.clinipets.network.VetItem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 class ReservaFlowViewModel(
     private val mascotasRepo: MascotasRepository,
@@ -113,8 +114,22 @@ class ReservaFlowViewModel(
                 notas = notas
             )
             _isLoading.value = false
-            if (res.isSuccess) onResult(true, res.getOrNull()) else {
-                _error.value = res.exceptionOrNull()?.localizedMessage
+            if (res.isSuccess) {
+                onResult(true, res.getOrNull())
+            } else {
+                val ex = res.exceptionOrNull()
+                if (ex is HttpException && ex.code() == 400) {
+                    // Bloque no disponible: recargar disponibilidad para la fecha actual
+                    val fecha = selectedFecha
+                    if (!fecha.isNullOrBlank()) {
+                        cargarBloques(vet.id, fecha)
+                        _error.value = "Ese bloque ya no está disponible. Actualizamos la disponibilidad."
+                    } else {
+                        _error.value = "Ese bloque ya no está disponible. Elige otra hora."
+                    }
+                } else {
+                    _error.value = ex?.localizedMessage
+                }
                 onResult(false, null)
             }
         }

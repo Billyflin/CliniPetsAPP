@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +17,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -37,7 +39,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.android.gms.maps.model.LatLng
 
 @Composable
-fun DescubrimientoScreen(viewModelFactory: androidx.lifecycle.ViewModelProvider.Factory) {
+fun DescubrimientoScreen(viewModelFactory: androidx.lifecycle.ViewModelProvider.Factory, onReservarDesdeOferta: (sku: String, especie: String?) -> Unit) {
     val vm: DescubrimientoViewModel = viewModel(factory = viewModelFactory)
     val vets by vm.veterinarios.collectAsState()
     val procedimientos by vm.procedimientos.collectAsState()
@@ -47,10 +49,11 @@ fun DescubrimientoScreen(viewModelFactory: androidx.lifecycle.ViewModelProvider.
 
     var query by remember { mutableStateOf("") }
     var especie by remember { mutableStateOf("") }
+    var abiertoAhora by remember { mutableStateOf(false) }
 
     // Ubicación actual y búsqueda con geo
     GeoHeader(onGeoReady = { lat, lng ->
-        vm.buscarVeterinarios(lat = lat, lng = lng, radioKm = 10, especie = if (especie.isBlank()) null else especie)
+        vm.buscarVeterinarios(lat = lat, lng = lng, radioKm = 10, especie = if (especie.isBlank()) null else especie, abiertoAhora = abiertoAhora)
     })
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -60,6 +63,15 @@ fun DescubrimientoScreen(viewModelFactory: androidx.lifecycle.ViewModelProvider.
         OutlinedTextField(value = query, onValueChange = { query = it }, label = { Text("Buscar procedimiento") }, modifier = Modifier.fillMaxWidth())
         Spacer(modifier = Modifier.height(8.dp))
 
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text("Abierto ahora", modifier = Modifier.padding(end = 8.dp))
+            Switch(checked = abiertoAhora, onCheckedChange = {
+                abiertoAhora = it
+                vm.buscarVeterinarios(lat = null, lng = null, radioKm = 10, especie = if (especie.isBlank()) null else especie, abiertoAhora = abiertoAhora)
+            })
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = { vm.cargarProcedimientos(especie = if (especie.isBlank()) null else especie, q = if (query.isBlank()) null else query) }, modifier = Modifier.fillMaxWidth()) {
             Text("Buscar procedimientos")
         }
@@ -69,7 +81,7 @@ fun DescubrimientoScreen(viewModelFactory: androidx.lifecycle.ViewModelProvider.
         LazyColumn { items(procedimientos) { p: Procedimiento -> ProcedimientoRow(p) } }
 
         Spacer(modifier = Modifier.height(12.dp))
-        Button(onClick = { vm.buscarVeterinarios(null, null, 10, especie = if (especie.isBlank()) null else especie) }, modifier = Modifier.fillMaxWidth()) {
+        Button(onClick = { vm.buscarVeterinarios(null, null, 10, especie = if (especie.isBlank()) null else especie, abiertoAhora = abiertoAhora) }, modifier = Modifier.fillMaxWidth()) {
             Text("Buscar veterinarios cercanos")
         }
 
@@ -88,7 +100,7 @@ fun DescubrimientoScreen(viewModelFactory: androidx.lifecycle.ViewModelProvider.
 
         Spacer(modifier = Modifier.height(12.dp))
         Text("Ofertas", style = MaterialTheme.typography.titleMedium)
-        LazyColumn { items(ofertas) { o: Oferta -> OfertaRow(o) } }
+        LazyColumn { items(ofertas) { o: Oferta -> OfertaRow(o) { sku, esp -> onReservarDesdeOferta(sku, esp) } } }
 
         if (!error.isNullOrEmpty()) {
             Text(error ?: "", color = MaterialTheme.colorScheme.error)
@@ -120,10 +132,17 @@ private fun VetRow(v: VetItem) {
 }
 
 @Composable
-private fun OfertaRow(o: Oferta) {
+private fun OfertaRow(o: Oferta, onReservar: (sku: String, especie: String?) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(o.procedimientoNombre + " - $${o.precio}", style = MaterialTheme.typography.titleMedium)
         Text("Duración: ${o.duracionMinutos} min", style = MaterialTheme.typography.bodySmall)
+        // Acción primaria: Reservar con esta oferta
+        Button(onClick = {
+            val especie = o.compatibleEspecies.firstOrNull()
+            onReservar(o.procedimientoSku, especie)
+        }, modifier = Modifier.padding(top = 6.dp)) {
+            Text("Reservar con esta oferta")
+        }
     }
 }
 
