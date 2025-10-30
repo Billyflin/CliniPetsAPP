@@ -3,11 +3,12 @@ package cl.clinipets
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.navigation.compose.rememberNavController
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import cl.clinipets.feature.auth.presentation.AuthGate
+import cl.clinipets.feature.mascotas.presentation.MisMascotasRoute
 import cl.clinipets.ui.theme.ClinipetsTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -19,12 +20,17 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ClinipetsTheme {
-                val navController = rememberNavController()
-
-                var startDestination by remember { mutableStateOf("loading") }
-
-
+                ClinipetsApp()
             }
+        }
+    }
+}
+
+@Composable
+private fun ClinipetsApp() {
+    Surface(modifier = Modifier.fillMaxSize()) {
+        AuthGate { _, onCerrarSesion ->
+            MisMascotasRoute(onCerrarSesion = onCerrarSesion)
         }
     }
 }
