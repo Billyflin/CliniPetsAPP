@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.openapi.generator)
+    alias(libs.plugins.hilt)
+    kotlin("kapt")
 }
 
 android {
@@ -84,10 +86,10 @@ openApiGenerate {
     inputSpec.set(project.file("$rootDir/backend-openapi.yaml").toURI().toString())
     // La salida real utilizada por el generador en tu entorno
     outputDir.set(layout.buildDirectory.dir("generate-resources/main").get().asFile.absolutePath)
-    apiPackage.set("cl.clinipets.backend.openapi.apis")
-    modelPackage.set("cl.clinipets.backend.openapi.models")
-    packageName.set("cl.clinipets.backend.openapi")
-    invokerPackage.set("cl.clinipets.backend.openapi.infrastructure")
+    apiPackage.set("cl.clinipets.openapi.apis")
+    modelPackage.set("cl.clinipets.openapi.models")
+    packageName.set("cl.clinipets.openapi")
+    invokerPackage.set("cl.clinipets.openapi.infrastructure")
 
     validateSpec.set(false)
 
@@ -96,7 +98,8 @@ openApiGenerate {
             "library" to "jvm-retrofit2",
             "dateLibrary" to "java8",
             "serializationLibrary" to "gson",
-            "useTags" to "false",
+            "generateOneOfAnyOfWrappers" to "true",
+            "idea" to "true",
             "useOperationIdAsMethodName" to "false",
             "enumPropertyNaming" to "UPPERCASE",
             "nullableReferenceTypes" to "true",
@@ -142,7 +145,8 @@ dependencies {
     // Google Sign-In con Credential Manager (usa catálogo)
     implementation(libs.credentials)
     implementation(libs.credentials.play.services.auth)
-    implementation(libs.googleid)
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+    implementation("com.google.android.gms:play-services-auth:21.4.0") // TODO: Replace with latest version
 
     // Google Maps
     implementation(libs.play.services.maps)
@@ -155,6 +159,11 @@ dependencies {
     // Material Icons
     implementation(libs.androidx.compose.material.icons.extended)
 
+    // Hilt
+    implementation(libs.hilt)
+    kapt(libs.hilt.compiler)
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0") // TODO: Check for latest version
+
     testImplementation(libs.junit)
     testImplementation(libs.okhttp3.mockwebserver)
     androidTestImplementation(libs.androidx.junit)
@@ -164,6 +173,12 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     testImplementation(kotlin("test"))
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.9.0")
+    }
 }
 
 tasks.named("preBuild") {

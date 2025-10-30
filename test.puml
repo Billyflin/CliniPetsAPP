@@ -1,0 +1,404 @@
+@startuml
+enum cl.clinipets.openapi.models.Veterinario$Estado {
++  ONLINE
++  OCUPADO
++  OFFLINE
+}
+
+enum cl.clinipets.openapi.models.Veterinario$ModosAtencion {
++  DOMICILIO
++  CLINICA
++  URGENCIA
+}
+
+class cl.clinipets.openapi.models.Veterinario {
+}
+enum cl.clinipets.openapi.models.CambiarEstadoReserva$NuevoEstado {
++  PENDIENTE
++  CONFIRMADA
++  EN_CURSO
++  COMPLETADA
++  CANCELADA_CLIENTE
++  CANCELADA_VETERINARIO
+}
+
+class cl.clinipets.openapi.models.CambiarEstadoReserva {
+}
+class cl.clinipets.openapi.models.IniciarJunta {
+}
+enum cl.clinipets.openapi.models.CrearReserva$Modo {
++  DOMICILIO
++  CLINICA
++  URGENCIA
+}
+
+class cl.clinipets.openapi.models.CrearReserva {
+}
+enum cl.clinipets.openapi.models.OfertaItem$CompatibleCon {
++  PERRO
++  GATO
++  AMBOS
+}
+
+class cl.clinipets.openapi.models.OfertaItem {
+}
+class cl.clinipets.openapi.models.Rol {
+}
+class cl.clinipets.openapi.models.Usuario {
+}
+class cl.clinipets.openapi.models.TokenResponse {
+}
+enum cl.clinipets.openapi.models.CrearMascota$Especie {
++  PERRO
++  GATO
+}
+
+class cl.clinipets.openapi.models.CrearMascota {
+}
+class cl.clinipets.openapi.models.Oferta {
+}
+enum cl.clinipets.openapi.models.ActualizarPerfilRequest$ModosAtencion {
++  DOMICILIO
++  CLINICA
++  URGENCIA
+}
+
+class cl.clinipets.openapi.models.ActualizarPerfilRequest {
+}
+enum cl.clinipets.openapi.models.Junta$Estado {
++  INICIADA
++  EN_CAMINO
++  EN_SITIO
++  FINALIZADA
+}
+
+class cl.clinipets.openapi.models.Junta {
+}
+enum cl.clinipets.openapi.models.VeterinarioPerfil$ModosAtencion {
++  DOMICILIO
++  CLINICA
++  URGENCIA
+}
+
+class cl.clinipets.openapi.models.VeterinarioPerfil {
+}
+class cl.clinipets.openapi.models.GoogleLoginRequest {
+}
+class cl.clinipets.openapi.models.MeResponse {
+}
+enum cl.clinipets.openapi.models.CrearExcepcion$Tipo {
++  DIA_NO_DISPONIBLE
++  BLOQUE_ESPECIAL
+}
+
+class cl.clinipets.openapi.models.CrearExcepcion {
+}
+class cl.clinipets.openapi.models.UsuarioInfo {
+}
+class cl.clinipets.openapi.infrastructure.OffsetDateTimeAdapter {
++ void write(JsonWriter?,OffsetDateTime?)
++ OffsetDateTime? read(JsonReader?)
+}
+
+class cl.clinipets.openapi.models.FinalizarJunta {
+}
+enum cl.clinipets.openapi.models.CrearReglaSemanal$DiaSemana {
++  MONDAY
++  TUESDAY
++  WEDNESDAY
++  THURSDAY
++  FRIDAY
++  SATURDAY
++  SUNDAY
+}
+
+class cl.clinipets.openapi.models.CrearReglaSemanal {
+}
+enum cl.clinipets.openapi.models.Mascota$Especie {
++  PERRO
++  GATO
+}
+
+class cl.clinipets.openapi.models.Mascota {
+}
+class cl.clinipets.openapi.infrastructure.ByteArrayAdapter {
++ void write(JsonWriter?,ByteArray?)
++ ByteArray? read(JsonReader?)
+}
+
+enum cl.clinipets.openapi.models.ProcedimientoItem$CompatibleCon {
++  PERRO
++  GATO
++  AMBOS
+}
+
+class cl.clinipets.openapi.models.ProcedimientoItem {
+}
+class cl.clinipets.openapi.models.SugerenciasDiagnosticoRequest {
+}
+class cl.clinipets.openapi.models.VerificarRequest {
+}
+enum cl.clinipets.openapi.apis.DefaultApi$EspecieApiDescubrimientoOfertasGet {
++  PERRO
++  GATO
+}
+
+enum cl.clinipets.openapi.apis.DefaultApi$EspecieApiDescubrimientoProcedimientosGet {
++  PERRO
++  GATO
+}
+
+enum cl.clinipets.openapi.apis.DefaultApi$ModoApiDescubrimientoVeterinariosGet {
++  DOMICILIO
++  CLINICA
++  URGENCIA
+}
+
+enum cl.clinipets.openapi.apis.DefaultApi$EspecieApiDescubrimientoVeterinariosGet {
++  PERRO
++  GATO
+}
+
+interface cl.clinipets.openapi.apis.DefaultApi {
++ Response<Junta> actualizarEstadoJunta(java.util.UUID,ActualizarEstadoJunta)
++ Response<Mascota> actualizarMascota(java.util.UUID,ActualizarMascota)
++ Response<Junta> actualizarUbicacionJunta(java.util.UUID,ActualizarUbicacionJunta)
++ Response<TokenResponse> apiAuthGooglePost(GoogleLoginRequest)
++ Response<kotlin.String> apiAuthLogoutPost()
++ Response<MeResponse> apiAuthMeGet()
++ Response<kotlin.Any> apiAuthRefreshPost()
++ Response<Unit> apiCatalogoOfertasIdDelete(kotlin.Long)
++ Response<Oferta> apiCatalogoOfertasIdPut(kotlin.Long,ActualizarOfertaRequest)
++ Response<Oferta> apiCatalogoOfertasPost(CrearOfertaRequest)
++ Response<Procedimiento> apiCatalogoProcedimientosPost(CrearProcedimientoRequest)
++ Response<Unit> apiCatalogoProcedimientosSkuDelete(kotlin.String)
++ Response<Procedimiento> apiCatalogoProcedimientosSkuPut(kotlin.String,ActualizarProcedimientoRequest)
++ Response<kotlin.collections.List<kotlin.String>> apiClinicaSugerenciasDiagnosticoPost(SugerenciasDiagnosticoRequest)
++ Response<kotlin.collections.List<kotlin.String>> apiClinicaSugerenciasTratamientoPost(RecomendacionesTratamientoRequest)
++ Response<kotlin.collections.List<OfertaItem>> apiDescubrimientoOfertasGet(EspecieApiDescubrimientoOfertasGet?,kotlin.String?,java.util.UUID?,kotlin.Boolean?,kotlin.Double?,kotlin.Double?,kotlin.Double?,kotlin.Int?,kotlin.Int?)
++ Response<kotlin.collections.List<ProcedimientoItem>> apiDescubrimientoProcedimientosGet(EspecieApiDescubrimientoProcedimientosGet?,kotlin.String?,kotlin.Int?,kotlin.Int?)
++ Response<kotlin.collections.List<VetItem>> apiDescubrimientoVeterinariosGet(kotlin.Double?,kotlin.Double?,kotlin.Double?,ModoApiDescubrimientoVeterinariosGet?,EspecieApiDescubrimientoVeterinariosGet?,kotlin.String?,kotlin.Boolean?,kotlin.Int?,kotlin.Int?)
++ Response<Unit> apiDisponibilidadReglasReglaIdDelete(java.util.UUID)
++ Response<ExcepcionDisponibilidad> apiDisponibilidadVeterinarioVeterinarioIdExcepcionesPost(java.util.UUID,CrearExcepcion)
++ Response<kotlin.collections.List<BloqueHorario>> apiDisponibilidadVeterinarioVeterinarioIdGet(java.util.UUID,java.time.LocalDate)
++ Response<ReglaSemanal> apiDisponibilidadVeterinarioVeterinarioIdReglasPost(java.util.UUID,CrearReglaSemanal)
++ Response<kotlin.String> apiInventarioReservarPost(ReservarItemRequest)
++ Response<kotlin.String> apiInventarioVerificarPost(VerificarDisponibilidadRequest)
++ Response<kotlin.collections.List<Reserva>> apiReservasMiasGet()
++ Response<kotlin.collections.List<Reserva>> apiReservasVeterinarioVeterinarioIdGet(java.util.UUID)
++ Response<VeterinarioPerfil> apiVeterinariosIdVerificarPut(java.util.UUID,VerificarRequest?)
++ Response<VeterinarioPerfil> apiVeterinariosMiPerfilGet()
++ Response<VeterinarioPerfil> apiVeterinariosMiPerfilPut(ActualizarPerfilRequest)
++ Response<VeterinarioPerfil> apiVeterinariosPost(RegistrarVeterinarioRequest)
++ Response<Reserva> cambiarEstadoReserva(java.util.UUID,CambiarEstadoReserva)
++ Response<Mascota> crearMascota(CrearMascota)
++ Response<Reserva> crearReserva(CrearReserva)
++ Response<Mascota> detalleMascota(java.util.UUID)
++ Response<Unit> eliminarMascota(java.util.UUID)
++ Response<Junta> finalizarJunta(java.util.UUID,FinalizarJunta)
++ Response<Junta> iniciarJunta(IniciarJunta)
++ Response<kotlin.collections.List<Mascota>> listarMisMascotas()
++ Response<Junta> obtenerJunta(java.util.UUID)
+}
+
+class cl.clinipets.openapi.models.ActualizarUbicacionJunta {
+}
+class cl.clinipets.openapi.infrastructure.CollectionFormats$CSVParams {
++ List<String> params
++ String toString()
+}
+
+
+class cl.clinipets.openapi.infrastructure.CollectionFormats$SSVParams {
++ String toString()
+}
+
+class cl.clinipets.openapi.infrastructure.CollectionFormats$TSVParams {
++ String toString()
+}
+
+class cl.clinipets.openapi.infrastructure.CollectionFormats$PIPESParams {
++ String toString()
+}
+
+class cl.clinipets.openapi.infrastructure.CollectionFormats$SPACEParams {
+}
+class cl.clinipets.openapi.infrastructure.CollectionFormats {
+}
+enum cl.clinipets.openapi.models.ExcepcionDisponibilidad$Tipo {
++  DIA_NO_DISPONIBLE
++  BLOQUE_ESPECIAL
+}
+
+class cl.clinipets.openapi.models.ExcepcionDisponibilidad {
+}
+class cl.clinipets.openapi.infrastructure.LocalDateTimeAdapter {
++ void write(JsonWriter?,LocalDateTime?)
++ LocalDateTime? read(JsonReader?)
+}
+
+class cl.clinipets.openapi.models.RecomendacionesTratamientoRequest {
+}
+enum cl.clinipets.openapi.models.VetItem$ModosAtencion {
++  DOMICILIO
++  CLINICA
++  URGENCIA
+}
+
+class cl.clinipets.openapi.models.VetItem {
+}
+class cl.clinipets.openapi.models.ReservarItemRequest {
+}
+class cl.clinipets.openapi.models.VerificarDisponibilidadRequest {
+}
+class cl.clinipets.openapi.models.CrearOfertaRequest {
+}
+enum cl.clinipets.openapi.models.CrearProcedimientoRequest$CompatibleCon {
++  PERRO
++  GATO
++  AMBOS
+}
+
+class cl.clinipets.openapi.models.CrearProcedimientoRequest {
+}
+class cl.clinipets.openapi.models.ActualizarMascota {
+}
+class cl.clinipets.openapi.models.BloqueHorario {
+}
+enum cl.clinipets.openapi.models.ActualizarProcedimientoRequest$CompatibleCon {
++  PERRO
++  GATO
++  AMBOS
+}
+
+class cl.clinipets.openapi.models.ActualizarProcedimientoRequest {
+}
+enum cl.clinipets.openapi.models.RegistrarVeterinarioRequest$ModosAtencion {
++  DOMICILIO
++  CLINICA
++  URGENCIA
+}
+
+class cl.clinipets.openapi.models.RegistrarVeterinarioRequest {
+}
+enum cl.clinipets.openapi.models.ReglaSemanal$DiaSemana {
++  MONDAY
++  TUESDAY
++  WEDNESDAY
++  THURSDAY
++  FRIDAY
++  SATURDAY
++  SUNDAY
+}
+
+class cl.clinipets.openapi.models.ReglaSemanal {
+}
+enum cl.clinipets.openapi.models.Procedimiento$CompatibleCon {
++  PERRO
++  GATO
++  AMBOS
+}
+
+class cl.clinipets.openapi.models.Procedimiento {
+}
+class cl.clinipets.openapi.infrastructure.ApiClient$Companion {
+# String baseUrlKey
++ String defaultBasePath
+}
+
+class cl.clinipets.openapi.infrastructure.ApiClient {
+-  apiAuthorizations
++ ((String) -> Unit)? logger
+- Retrofit.Builder retrofitBuilder
+- OkHttpClient.Builder clientBuilder
+- OkHttpClient.Builder defaultClientBuilder
++ ApiClient addAuthorization(String,Interceptor)
++ ApiClient setLogger((String) -> Unit)
++ S createService(Class<S>)
+- void normalizeBaseUrl()
+- void runOnFirst(U.() -> Unit)
+}
+
+
+class cl.clinipets.openapi.infrastructure.LocalDateAdapter {
++ void write(JsonWriter?,LocalDate?)
++ LocalDate? read(JsonReader?)
+}
+
+class cl.clinipets.openapi.models.ActualizarOfertaRequest {
+}
+class cl.clinipets.openapi.infrastructure.Serializer {
++ GsonBuilder gsonBuilder
++ Gson gson
+}
+
+enum cl.clinipets.openapi.models.ActualizarEstadoJunta$Estado {
++  INICIADA
++  EN_CAMINO
++  EN_SITIO
++  FINALIZADA
+}
+
+class cl.clinipets.openapi.models.ActualizarEstadoJunta {
+}
+enum cl.clinipets.openapi.models.Reserva$Modo {
++  DOMICILIO
++  CLINICA
++  URGENCIA
+}
+
+enum cl.clinipets.openapi.models.Reserva$Estado {
++  PENDIENTE
++  CONFIRMADA
++  EN_CURSO
++  COMPLETADA
++  CANCELADA_CLIENTE
++  CANCELADA_VETERINARIO
+}
+
+class cl.clinipets.openapi.models.Reserva {
+}
+
+
+cl.clinipets.openapi.models.Veterinario +.. cl.clinipets.openapi.models.Veterinario$Estado
+cl.clinipets.openapi.models.Veterinario +.. cl.clinipets.openapi.models.Veterinario$ModosAtencion
+cl.clinipets.openapi.models.CambiarEstadoReserva +.. cl.clinipets.openapi.models.CambiarEstadoReserva$NuevoEstado
+cl.clinipets.openapi.models.CrearReserva +.. cl.clinipets.openapi.models.CrearReserva$Modo
+cl.clinipets.openapi.models.OfertaItem +.. cl.clinipets.openapi.models.OfertaItem$CompatibleCon
+cl.clinipets.openapi.models.CrearMascota +.. cl.clinipets.openapi.models.CrearMascota$Especie
+cl.clinipets.openapi.models.ActualizarPerfilRequest +.. cl.clinipets.openapi.models.ActualizarPerfilRequest$ModosAtencion
+cl.clinipets.openapi.models.Junta +.. cl.clinipets.openapi.models.Junta$Estado
+cl.clinipets.openapi.models.VeterinarioPerfil +.. cl.clinipets.openapi.models.VeterinarioPerfil$ModosAtencion
+cl.clinipets.openapi.models.CrearExcepcion +.. cl.clinipets.openapi.models.CrearExcepcion$Tipo
+com.google.gson.TypeAdapter <|-- cl.clinipets.openapi.infrastructure.OffsetDateTimeAdapter
+cl.clinipets.openapi.models.CrearReglaSemanal +.. cl.clinipets.openapi.models.CrearReglaSemanal$DiaSemana
+cl.clinipets.openapi.models.Mascota +.. cl.clinipets.openapi.models.Mascota$Especie
+com.google.gson.TypeAdapter <|-- cl.clinipets.openapi.infrastructure.ByteArrayAdapter
+cl.clinipets.openapi.models.ProcedimientoItem +.. cl.clinipets.openapi.models.ProcedimientoItem$CompatibleCon
+cl.clinipets.openapi.apis.DefaultApi +.. cl.clinipets.openapi.apis.DefaultApi$EspecieApiDescubrimientoOfertasGet
+cl.clinipets.openapi.apis.DefaultApi +.. cl.clinipets.openapi.apis.DefaultApi$EspecieApiDescubrimientoProcedimientosGet
+cl.clinipets.openapi.apis.DefaultApi +.. cl.clinipets.openapi.apis.DefaultApi$ModoApiDescubrimientoVeterinariosGet
+cl.clinipets.openapi.apis.DefaultApi +.. cl.clinipets.openapi.apis.DefaultApi$EspecieApiDescubrimientoVeterinariosGet
+cl.clinipets.openapi.infrastructure.CollectionFormats +.. cl.clinipets.openapi.infrastructure.CollectionFormats$CSVParams
+cl.clinipets.openapi.infrastructure.CollectionFormats +.. cl.clinipets.openapi.infrastructure.CollectionFormats$SSVParams
+cl.clinipets.openapi.infrastructure.CSVParams <|.. cl.clinipets.openapi.infrastructure.CollectionFormats$SSVParams
+cl.clinipets.openapi.infrastructure.CollectionFormats +.. cl.clinipets.openapi.infrastructure.CollectionFormats$TSVParams
+cl.clinipets.openapi.infrastructure.CSVParams <|.. cl.clinipets.openapi.infrastructure.CollectionFormats$TSVParams
+cl.clinipets.openapi.infrastructure.CollectionFormats +.. cl.clinipets.openapi.infrastructure.CollectionFormats$PIPESParams
+cl.clinipets.openapi.infrastructure.CSVParams <|.. cl.clinipets.openapi.infrastructure.CollectionFormats$PIPESParams
+cl.clinipets.openapi.infrastructure.CollectionFormats +.. cl.clinipets.openapi.infrastructure.CollectionFormats$SPACEParams
+cl.clinipets.openapi.infrastructure.SSVParams <|-- cl.clinipets.openapi.infrastructure.CollectionFormats$SPACEParams
+cl.clinipets.openapi.models.ExcepcionDisponibilidad +.. cl.clinipets.openapi.models.ExcepcionDisponibilidad$Tipo
+com.google.gson.TypeAdapter <|-- cl.clinipets.openapi.infrastructure.LocalDateTimeAdapter
+cl.clinipets.openapi.models.VetItem +.. cl.clinipets.openapi.models.VetItem$ModosAtencion
+cl.clinipets.openapi.models.CrearProcedimientoRequest +.. cl.clinipets.openapi.models.CrearProcedimientoRequest$CompatibleCon
+cl.clinipets.openapi.models.ActualizarProcedimientoRequest +.. cl.clinipets.openapi.models.ActualizarProcedimientoRequest$CompatibleCon
+cl.clinipets.openapi.models.RegistrarVeterinarioRequest +.. cl.clinipets.openapi.models.RegistrarVeterinarioRequest$ModosAtencion
+cl.clinipets.openapi.models.ReglaSemanal +.. cl.clinipets.openapi.models.ReglaSemanal$DiaSemana
+cl.clinipets.openapi.models.Procedimiento +.. cl.clinipets.openapi.models.Procedimiento$CompatibleCon
+cl.clinipets.openapi.infrastructure.ApiClient +.. cl.clinipets.openapi.infrastructure.ApiClient$Companion
+com.google.gson.TypeAdapter <|-- cl.clinipets.openapi.infrastructure.LocalDateAdapter
+cl.clinipets.openapi.models.ActualizarEstadoJunta +.. cl.clinipets.openapi.models.ActualizarEstadoJunta$Estado
+cl.clinipets.openapi.models.Reserva +.. cl.clinipets.openapi.models.Reserva$Modo
+cl.clinipets.openapi.models.Reserva +.. cl.clinipets.openapi.models.Reserva$Estado
+@enduml
