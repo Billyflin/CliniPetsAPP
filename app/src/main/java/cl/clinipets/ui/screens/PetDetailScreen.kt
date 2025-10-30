@@ -24,6 +24,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import cl.clinipets.util.Result
 import java.util.UUID
+import androidx.compose.ui.res.stringResource
+import cl.clinipets.R
+import androidx.compose.ui.text.input.KeyboardType
 
 @Composable
 fun PetDetailScreen(navController: NavController, petId: String, petDetailViewModel: PetDetailViewModel = hiltViewModel()) {
@@ -60,13 +63,13 @@ fun PetDetailScreen(navController: NavController, petId: String, petDetailViewMo
             is Result.Loading -> CircularProgressIndicator()
             is Result.Error -> Text(text = "Error: ${(petState as Result.Error).exception.message}", color = androidx.compose.ui.graphics.Color.Red)
             is Result.Success -> {
-                Text(text = "Pet Details", style = androidx.compose.material3.MaterialTheme.typography.headlineMedium)
+                Text(text = stringResource(R.string.pet_details_screen_title), style = androidx.compose.material3.MaterialTheme.typography.headlineMedium)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Name") },
+                    label = { Text(stringResource(R.string.add_pet_name_label)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -74,7 +77,7 @@ fun PetDetailScreen(navController: NavController, petId: String, petDetailViewMo
                 OutlinedTextField(
                     value = species,
                     onValueChange = { species = it },
-                    label = { Text("Species") },
+                    label = { Text(stringResource(R.string.add_pet_species_label)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -82,7 +85,7 @@ fun PetDetailScreen(navController: NavController, petId: String, petDetailViewMo
                 OutlinedTextField(
                     value = breed,
                     onValueChange = { breed = it },
-                    label = { Text("Breed") },
+                    label = { Text(stringResource(R.string.add_pet_breed_label)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -90,7 +93,8 @@ fun PetDetailScreen(navController: NavController, petId: String, petDetailViewMo
                 OutlinedTextField(
                     value = weight,
                     onValueChange = { weight = it },
-                    label = { Text("Weight (kg)") },
+                    label = { Text(stringResource(R.string.add_pet_weight_label)) },
+                    keyboardOptions = androidx.compose.ui.text.input.KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -98,7 +102,8 @@ fun PetDetailScreen(navController: NavController, petId: String, petDetailViewMo
                 OutlinedTextField(
                     value = birthDate,
                     onValueChange = { birthDate = it },
-                    label = { Text("Birth Date (YYYY-MM-DD)") },
+                    label = { Text(stringResource(R.string.add_pet_birth_date_label)) },
+                    keyboardOptions = androidx.compose.ui.text.input.KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -111,9 +116,9 @@ fun PetDetailScreen(navController: NavController, petId: String, petDetailViewMo
                 }, modifier = Modifier.fillMaxWidth(), enabled = updatePetState !is Result.Loading) {
                     if (updatePetState is Result.Loading) {
                         CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
-                        Text("Updating Pet...")
+                        Text(stringResource(R.string.loading_updating_pet))
                     } else {
-                        Text(text = "Update Pet")
+                        Text(text = stringResource(R.string.button_update_pet))
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -123,9 +128,9 @@ fun PetDetailScreen(navController: NavController, petId: String, petDetailViewMo
                 }, modifier = Modifier.fillMaxWidth(), enabled = deletePetState !is Result.Loading) {
                     if (deletePetState is Result.Loading) {
                         CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
-                        Text("Deleting Pet...")
+                        Text(stringResource(R.string.loading_deleting_pet))
                     } else {
-                        Text(text = "Delete Pet")
+                        Text(text = stringResource(R.string.button_delete_pet))
                     }
                 }
 

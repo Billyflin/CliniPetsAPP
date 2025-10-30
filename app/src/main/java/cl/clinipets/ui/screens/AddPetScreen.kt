@@ -21,6 +21,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import cl.clinipets.util.Result
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.res.stringResource
+import cl.clinipets.R
+import androidx.compose.ui.text.input.KeyboardType
 
 @Composable
 fun AddPetScreen(navController: NavController, addPetViewModel: AddPetViewModel = hiltViewModel()) {
@@ -35,13 +38,13 @@ fun AddPetScreen(navController: NavController, addPetViewModel: AddPetViewModel 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp)
     ) {
-        Text(text = "Add New Pet", style = androidx.compose.material3.MaterialTheme.typography.headlineMedium)
+        Text(text = stringResource(R.string.add_pet_screen_title), style = androidx.compose.material3.MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text("Name") },
+            label = { Text(stringResource(R.string.add_pet_name_label)) },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -49,7 +52,7 @@ fun AddPetScreen(navController: NavController, addPetViewModel: AddPetViewModel 
         OutlinedTextField(
             value = species,
             onValueChange = { species = it },
-            label = { Text("Species") },
+            label = { Text(stringResource(R.string.add_pet_species_label)) },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -57,7 +60,7 @@ fun AddPetScreen(navController: NavController, addPetViewModel: AddPetViewModel 
         OutlinedTextField(
             value = breed,
             onValueChange = { breed = it },
-            label = { Text("Breed") },
+            label = { Text(stringResource(R.string.add_pet_breed_label)) },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -65,7 +68,8 @@ fun AddPetScreen(navController: NavController, addPetViewModel: AddPetViewModel 
         OutlinedTextField(
             value = weight,
             onValueChange = { weight = it },
-            label = { Text("Weight (kg)") },
+            label = { Text(stringResource(R.string.add_pet_weight_label)) },
+            keyboardOptions = androidx.compose.ui.text.input.KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -73,7 +77,8 @@ fun AddPetScreen(navController: NavController, addPetViewModel: AddPetViewModel 
         OutlinedTextField(
             value = birthDate,
             onValueChange = { birthDate = it },
-            label = { Text("Birth Date (YYYY-MM-DD)") },
+            label = { Text(stringResource(R.string.add_pet_birth_date_label)) },
+            keyboardOptions = androidx.compose.ui.text.input.KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -90,9 +95,9 @@ fun AddPetScreen(navController: NavController, addPetViewModel: AddPetViewModel 
         }, modifier = Modifier.fillMaxWidth(), enabled = addPetState !is Result.Loading) {
             if (addPetState is Result.Loading) {
                 CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
-                Text("Adding Pet...")
+                Text(stringResource(R.string.loading_adding_pet))
             } else {
-                Text(text = "Add Pet")
+                Text(text = stringResource(R.string.button_add_pet))
             }
         }
 

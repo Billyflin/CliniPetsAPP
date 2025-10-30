@@ -1,3 +1,76 @@
 <resources>
     <string name="app_name">Clinipets</string>
+
+    <!-- Login Screen -->
+    <string name="login_screen_title">CliniPets</string>
+    <string name="login_screen_subtitle">Inicia sesión para continuar</string>
+    <string name="button_continue_with_google">Continuar con Google</string>
+    <string name="loading_connecting">Conectando...</string>
+
+    <!-- Home Screen -->
+    <string name="home_screen_title">Bienvenido</string>
+    <string name="home_screen_your_pets">Tus Mascotas:</string>
+    <string name="home_screen_no_pets_registered">No tienes mascotas registradas.</string>
+    <string name="button_add_new_pet">Añadir Nueva Mascota</string>
+    <string name="button_discover">Descubrir</string>
+    <string name="button_my_reservations">Mis Reservas</string>
+    <string name="button_logout">Cerrar Sesión</string>
+    <string name="loading_logging_out">Cerrando sesión...</string>
+
+    <!-- Add Pet Screen -->
+    <string name="add_pet_screen_title">Añadir Nueva Mascota</string>
+    <string name="add_pet_name_label">Nombre</string>
+    <string name="add_pet_species_label">Especie</string>
+    <string name="add_pet_breed_label">Raza</string>
+    <string name="add_pet_weight_label">Peso (kg)</string>
+    <string name="add_pet_birth_date_label">Fecha de Nacimiento (AAAA-MM-DD)</string>
+    <string name="button_add_pet">Añadir Mascota</string>
+    <string name="loading_adding_pet">Añadiendo Mascota...</string>
+
+    <!-- Pet Details Screen -->
+    <string name="pet_details_screen_title">Detalles de la Mascota</string>
+    <string name="button_update_pet">Actualizar Mascota</string>
+    <string name="button_delete_pet">Eliminar Mascota</string>
+    <string name="loading_updating_pet">Actualizando Mascota...</string>
+    <string name="loading_deleting_pet">Eliminando Mascota...</string>
+
+    <!-- Discovery Screen -->
+    <string name="discovery_screen_title">Descubrir</string>
+    <string name="discovery_offers_title">Ofertas:</string>
+    <string name="discovery_no_offers_available">No hay ofertas disponibles.</string>
+    <string name="discovery_procedures_title">Procedimientos:</string>
+    <string name="discovery_no_procedures_available">No hay procedimientos disponibles.</string>
+    <string name="discovery_veterinarians_title">Veterinarios:</string>
+    <string name="discovery_no_veterinarians_available">No hay veterinarios disponibles.</string>
+
+    <!-- Vet Detail Screen -->
+    <string name="vet_detail_screen_title">Detalles del Veterinario</string>
+    <string name="vet_detail_specialty">Especialidad:</string>
+    <string name="vet_detail_attention_mode">Modo de atención:</string>
+    <string name="vet_detail_availability_for">Disponibilidad para %s:</string>
+    <string name="vet_detail_no_availability">No hay disponibilidad para esta fecha.</string>
+    <string name="button_update_availability">Actualizar Disponibilidad</string>
+    <string name="button_book_appointment">Reservar Cita</string>
+    <string name="loading_creating_reservation">Creando Reserva...</string>
+    <string name="error_creating_reservation">Error al crear reserva:</string>
+
+    <!-- My Reservations Screen -->
+    <string name="my_reservations_screen_title">Mis Reservas</string>
+    <string name="my_reservations_no_reservations">No tienes reservas.</string>
+    <string name="my_reservations_veterinarian">Veterinario:</string>
+    <string name="my_reservations_pet">Mascota:</string>
+    <string name="my_reservations_procedure">Procedimiento:</string>
+    <string name="my_reservations_date">Fecha:</string>
+    <string name="my_reservations_time">Hora:</string>
+    <string name="my_reservations_status">Estado:</string>
+    <string name="button_cancel_reservation">Cancelar Reserva</string>
+    <string name="loading_cancelling_reservation">Cancelando...</string>
+    <string name="error_updating_reservation">Error al actualizar reserva:</string>
+
+    <!-- General Errors -->
+    <string name="error_unknown">Error desconocido</string>
+    <string name="error_name_empty">El nombre no puede estar vacío.</string>
+    <string name="error_species_empty">La especie no puede estar vacía.</string>
+    <string name="error_invalid_species">Especie inválida.</string>
+
 </resources>

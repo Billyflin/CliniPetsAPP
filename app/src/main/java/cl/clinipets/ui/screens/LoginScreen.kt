@@ -14,34 +14,31 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
-import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
 import cl.clinipets.BuildConfig
+import cl.clinipets.R
 import cl.clinipets.auth.AuthViewModel
 import cl.clinipets.util.Result
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import androidx.credentials.CustomCredential
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import kotlinx.coroutines.launch
 
 private const val TAG = "LoginScreen"
@@ -78,24 +75,25 @@ fun LoginScreen(viewModel: AuthViewModel, onLoginSuccess: () -> Unit) {
                             if (!idToken.isNullOrEmpty()) {
                                 viewModel.loginWithGoogle(idToken) { onLoginSuccess() }
                             } else {
-                                Log.w("LoginCM", "GoogleIdTokenCredential sin token")
-                                viewModel.setLoginError(Exception("GoogleIdTokenCredential sin token"))
+                                Log.w(TAG, "GoogleIdTokenCredential sin token")
+                                viewModel.setLoginError(Exception(stringResource(R.string.error_unknown)))
                             }
-                        } else {
-                            Log.w("LoginCM", "CustomCredential tipo no soportado: ${cred.type}")
-                            viewModel.setLoginError(Exception("CustomCredential tipo no soportado: ${cred.type}"))
+                        }
+                        else {
+                            Log.w(TAG, "CustomCredential tipo no soportado: ${cred.type}")
+                            viewModel.setLoginError(Exception(stringResource(R.string.error_unknown)))
                         }
                     }
                     else -> {
-                        Log.w("LoginCM", "Credential no soportada: ${cred::class.java.name}")
-                        viewModel.setLoginError(Exception("Credential no soportada: ${cred::class.java.name}"))
+                        Log.w(TAG, "Credential no soportada: ${cred::class.java.name}")
+                        viewModel.setLoginError(Exception(stringResource(R.string.error_unknown)))
                     }
                 }
             } catch (e: GetCredentialException) {
-                Log.w("LoginCM", "getCredential falló: ${e.message}", e)
+                Log.w(TAG, "getCredential falló: ${e.message}", e)
                 viewModel.setLoginError(e)
             } catch (e: Exception) {
-                Log.e("LoginCM", "Error general en sign-in", e)
+                Log.e(TAG, "Error general en sign-in", e)
                 viewModel.setLoginError(e)
             }
         }
@@ -115,13 +113,13 @@ fun LoginScreen(viewModel: AuthViewModel, onLoginSuccess: () -> Unit) {
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "CliniPets",
+                    text = stringResource(R.string.login_screen_title),
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Inicia sesión para continuar",
+                    text = stringResource(R.string.login_screen_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -136,18 +134,18 @@ fun LoginScreen(viewModel: AuthViewModel, onLoginSuccess: () -> Unit) {
                 ) {
                     if (loginState is Result.Loading) {
                         CircularProgressIndicator(modifier = Modifier.padding(end = 12.dp))
-                        Text("Conectando...")
+                        Text(stringResource(R.string.loading_connecting))
                     } else {
                         Icon(imageVector = Icons.AutoMirrored.Filled.Login, contentDescription = null)
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text("Continuar con Google")
+                        Text(stringResource(R.string.button_continue_with_google))
                     }
                 }
 
                 loginState.let { state ->
                     if (state is Result.Error) {
                         LaunchedEffect(state) {
-                            snackbarHostState.showSnackbar(state.exception.message ?: "Unknown error")
+                            snackbarHostState.showSnackbar(state.exception.message ?: stringResource(R.string.error_unknown))
                         }
                     }
                 }

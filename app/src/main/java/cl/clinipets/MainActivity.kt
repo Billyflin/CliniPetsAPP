@@ -14,9 +14,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import cl.clinipets.auth.AuthViewModel
 import cl.clinipets.ui.screens.AddPetScreen
+import cl.clinipets.ui.screens.DiscoveryScreen
 import cl.clinipets.ui.screens.HomeScreen
 import cl.clinipets.ui.screens.LoginScreen
+import cl.clinipets.ui.screens.MyReservationsScreen
 import cl.clinipets.ui.screens.PetDetailScreen
+import cl.clinipets.ui.screens.VetDetailScreen
 import cl.clinipets.ui.theme.ClinipetsTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -55,6 +58,18 @@ class MainActivity : ComponentActivity() {
                             petId?.let { id ->
                                 PetDetailScreen(navController = navController, petId = id)
                             }
+                        }
+                        composable("discovery") {
+                            DiscoveryScreen(navController = navController)
+                        }
+                        composable("vet_detail/{vetId}") {
+                            val vetId = it.arguments?.getString("vetId")
+                            vetId?.let { id ->
+                                VetDetailScreen(navController = navController, vetId = id)
+                            }
+                        }
+                        composable("my_reservations") {
+                            MyReservationsScreen(navController = navController)
                         }
                     }
                 }

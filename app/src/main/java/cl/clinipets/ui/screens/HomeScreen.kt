@@ -17,9 +17,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import cl.clinipets.R
 import cl.clinipets.util.Result
 
 @Composable
@@ -37,19 +39,19 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hilt
             is Result.Error -> Text(text = "Error: ${(meResponseState as Result.Error).exception.message}", color = androidx.compose.ui.graphics.Color.Red)
             is Result.Success -> {
                 val me = (meResponseState as Result.Success).data
-                Text(text = "Welcome, ${me.email ?: ""}!")
+                Text(text = stringResource(R.string.home_screen_title) + ", ${me.email ?: ""}!")
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
             }
         }
 
-        Text(text = "Your Pets:")
+        Text(text = stringResource(R.string.home_screen_your_pets))
         when (petsState) {
             is Result.Loading -> CircularProgressIndicator()
             is Result.Error -> Text(text = "Error: ${(petsState as Result.Error).exception.message}", color = androidx.compose.ui.graphics.Color.Red)
             is Result.Success -> {
                 val pets = (petsState as Result.Success).data
                 if (pets.isEmpty()) {
-                    Text(text = "No pets registered.")
+                    Text(text = stringResource(R.string.home_screen_no_pets_registered))
                 } else {
                     LazyColumn {
                         items(pets) {
@@ -65,7 +67,19 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hilt
         Button(onClick = { navController.navigate("add_pet") },
             modifier = Modifier.padding(top = 8.dp))
         {
-            Text(text = "Add New Pet")
+            Text(text = stringResource(R.string.button_add_new_pet))
+        }
+
+        Button(onClick = { navController.navigate("discovery") },
+            modifier = Modifier.padding(top = 8.dp))
+        {
+            Text(text = stringResource(R.string.button_discover))
+        }
+
+        Button(onClick = { navController.navigate("my_reservations") },
+            modifier = Modifier.padding(top = 8.dp))
+        {
+            Text(text = stringResource(R.string.button_my_reservations))
         }
 
         Button(onClick = { homeViewModel.logout { navController.navigate("login") { popUpTo("home") { inclusive = true } } } },
@@ -73,9 +87,9 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hilt
         {
             if (logoutState is Result.Loading) {
                 CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
-                Text("Logging out...")
+                Text(stringResource(R.string.loading_logging_out))
             } else {
-                Text(text = "Logout")
+                Text(text = stringResource(R.string.button_logout))
             }
         }
     }
