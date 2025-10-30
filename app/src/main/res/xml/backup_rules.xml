@@ -6,8 +6,13 @@
    See https://developer.android.com/about/versions/12/backup-restore
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <!-- Excluir EncryptedSharedPreferences (no deben restaurarse en otro dispositivo) -->
+    <exclude domain="sharedpref" path="secret_shared_prefs.xml"/>
+    <!-- Excluir el keyset de Tink almacenado en SharedPreferences -->
+    <exclude domain="sharedpref" path="clinipets_aead_keyset_prefs.xml"/>
+
+    <!-- Excluir DataStore que guarda tokens (sensibles) -->
+    <exclude domain="file" path="datastore/secure_prefs.preferences_pb"/>
+    <!-- Si existe journal del DataStore, exclúyelo también -->
+    <exclude domain="file" path="datastore/secure_prefs.preferences_pb-journal"/>
 </full-backup-content>

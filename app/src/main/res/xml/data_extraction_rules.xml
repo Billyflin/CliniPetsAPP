@@ -5,15 +5,18 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <!-- Excluir preferencias cifradas -->
+        <exclude domain="sharedpref" path="secret_shared_prefs.xml"/>
+        <!-- Excluir keyset Tink guardado en SharedPreferences -->
+        <exclude domain="sharedpref" path="clinipets_aead_keyset_prefs.xml"/>
+        <!-- Excluir DataStore sensible de tokens -->
+        <exclude domain="file" path="datastore/secure_prefs.preferences_pb"/>
+        <exclude domain="file" path="datastore/secure_prefs.preferences_pb-journal"/>
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="sharedpref" path="secret_shared_prefs.xml"/>
+        <exclude domain="sharedpref" path="clinipets_aead_keyset_prefs.xml"/>
+        <exclude domain="file" path="datastore/secure_prefs.preferences_pb"/>
+        <exclude domain="file" path="datastore/secure_prefs.preferences_pb-journal"/>
     </device-transfer>
-    -->
 </data-extraction-rules>

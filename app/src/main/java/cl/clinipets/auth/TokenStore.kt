@@ -1,78 +1,53 @@
+// cl/clinipets/auth/TokenStore.kt — primera implementación (DataStore + Tink)
 package cl.clinipets.auth
 
 import android.content.Context
-import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+private val Context.secureDataStore by preferencesDataStore(name = "secure_prefs")
 
 class TokenStore(private val context: Context) {
-    private val prefs: SharedPreferences by lazy {
-        try {
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
+    private val KEY_ACCESS = stringPreferencesKey("access_token_enc")
+    private val KEY_REFRESH = stringPreferencesKey("refresh_token_enc")
+    private val aead by lazy { Crypto.aead(context) }
+    private val ds get() = context.secureDataStore
 
-            EncryptedSharedPreferences.create(
-                context,
-                "clinipets_secure_prefs",
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-        } catch (e: Exception) {
-            // Fallback simple prefs
-            context.getSharedPreferences("clinipets_prefs", Context.MODE_PRIVATE)
+    suspend fun saveTokens(accessToken: String, refreshToken: String) {
+        ds.edit { p ->
+            p[KEY_ACCESS] = encrypt(accessToken)
+            p[KEY_REFRESH] = encrypt(refreshToken)
         }
     }
 
-    companion object {
-        private const val KEY_LEGACY_ACCESS = "key_jwt" // compatibilidad anterior
-        private const val KEY_ACCESS = "access_token"
-        private const val KEY_REFRESH = "refresh_token"
+    suspend fun updateAccessToken(accessToken: String) {
+        ds.edit { it[KEY_ACCESS] = encrypt(accessToken) }
     }
 
-    // Compatibilidad: antes solo se guardaba un token (lo tratamos como access)
-    fun saveToken(token: String) {
-        prefs.edit()
-            .putString(KEY_LEGACY_ACCESS, token)
-            .putString(KEY_ACCESS, token)
-            .apply()
+    val accessToken: Flow<String?> = ds.data.map { p -> p[KEY_ACCESS]?.let(::decrypt) }
+    val refreshToken: Flow<String?> = ds.data.map { p -> p[KEY_REFRESH]?.let(::decrypt) }
+
+    suspend fun clearAll() {
+        ds.edit { it.clear() }
     }
 
-    fun getToken(): String? = getAccessToken() ?: prefs.getString(KEY_LEGACY_ACCESS, null)
-
-    fun clearToken() {
-        prefs.edit()
-            .remove(KEY_LEGACY_ACCESS)
-            .remove(KEY_ACCESS)
-            .apply()
+    private fun encrypt(plain: String): String {
+        val ct = aead.encrypt(plain.toByteArray(), null)
+        return android.util.Base64.encodeToString(
+            ct,
+            android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP
+        )
     }
 
-    // Nuevo flujo access/refresh
-    fun saveTokens(accessToken: String, refreshToken: String) {
-        prefs.edit()
-            .putString(KEY_ACCESS, accessToken)
-            .putString(KEY_REFRESH, refreshToken)
-            .putString(KEY_LEGACY_ACCESS, accessToken)
-            .apply()
-    }
-
-    fun updateAccessToken(accessToken: String) {
-        prefs.edit()
-            .putString(KEY_ACCESS, accessToken)
-            .putString(KEY_LEGACY_ACCESS, accessToken)
-            .apply()
-    }
-
-    fun getAccessToken(): String? = prefs.getString(KEY_ACCESS, null)
-
-    fun getRefreshToken(): String? = prefs.getString(KEY_REFRESH, null)
-
-    fun clearAll() {
-        prefs.edit()
-            .remove(KEY_LEGACY_ACCESS)
-            .remove(KEY_ACCESS)
-            .remove(KEY_REFRESH)
-            .apply()
-    }
+    private fun decrypt(enc: String): String? = runCatching {
+        val bytes = android.util.Base64.decode(
+            enc,
+            android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP
+        )
+        val pt = aead.decrypt(bytes, null)
+        String(pt)
+    }.getOrNull()
 }

@@ -5,8 +5,11 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.openapi.generator)
 }
+
 android {
+
     signingConfigs {
         create("clinipets") {
         }
@@ -63,7 +66,47 @@ android {
     buildFeatures {
         buildConfig = true
         compose = true
+        
     }
+    // Incluye fuentes generadas por OpenAPI en el source set principal
+    sourceSets {
+        getByName("main") {
+            val genSrc =
+                layout.buildDirectory.dir("generate-resources/main/src/main/kotlin").get().asFile
+            java.srcDir(genSrc)
+        }
+    }
+}
+
+// Configuración de generación OpenAPI
+openApiGenerate {
+    generatorName.set("kotlin")
+    inputSpec.set(project.file("$rootDir/backend-openapi.yaml").toURI().toString())
+    // La salida real utilizada por el generador en tu entorno
+    outputDir.set(layout.buildDirectory.dir("generate-resources/main").get().asFile.absolutePath)
+    apiPackage.set("cl.clinipets.backend.openapi.apis")
+    modelPackage.set("cl.clinipets.backend.openapi.models")
+    packageName.set("cl.clinipets.backend.openapi")
+    invokerPackage.set("cl.clinipets.backend.openapi.infrastructure")
+
+    validateSpec.set(false)
+
+    configOptions.set(
+        mapOf(
+            "library" to "jvm-retrofit2",
+            "dateLibrary" to "java8",
+            "serializationLibrary" to "gson",
+            "useTags" to "false",
+            "useOperationIdAsMethodName" to "false",
+            "enumPropertyNaming" to "UPPERCASE",
+            "nullableReferenceTypes" to "true",
+            "useCoroutines" to "true",
+            "useResponseAsReturnType" to "true",
+            "sourceFolder" to "src/main/kotlin"
+        )
+    )
+    skipValidateSpec.set(true)
+    generateAliasAsModel.set(false)
 }
 
 dependencies {
@@ -88,20 +131,18 @@ dependencies {
     implementation(libs.okhttp3.logging)
     implementation(libs.retrofit2)
     implementation(libs.retrofit2.scalars)
-    implementation(libs.retrofit.kotlinx.serialization)
-    // Retrofit Gson converter
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    // Retrofit Coroutine adapter (if needed)
-    implementation("com.jakewharton.retrofit:retrofit2-kotlin-coroutines-adapter:0.9.2")
+    // Gson para Retrofit (cliente generado y legacy)
+    implementation(libs.retrofit2.gson)
 
-
+    implementation("com.google.crypto.tink:tink-android:1.13.0")
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
     // Seguridad para JWT storage
     implementation(libs.security.crypto)
 
-    // Google Sign-In con Credential Manager
-    implementation("androidx.credentials:credentials:1.6.0-beta01")
-    implementation("androidx.credentials:credentials-play-services-auth:1.6.0-beta01")
-    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+    // Google Sign-In con Credential Manager (usa catálogo)
+    implementation(libs.credentials)
+    implementation(libs.credentials.play.services.auth)
+    implementation(libs.googleid)
 
     // Google Maps
     implementation(libs.play.services.maps)
@@ -113,7 +154,6 @@ dependencies {
 
     // Material Icons
     implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.google.googleid)
 
     testImplementation(libs.junit)
     testImplementation(libs.okhttp3.mockwebserver)
@@ -124,4 +164,8 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     testImplementation(kotlin("test"))
+}
+
+tasks.named("preBuild") {
+    dependsOn(tasks.named("openApiGenerate"))
 }
