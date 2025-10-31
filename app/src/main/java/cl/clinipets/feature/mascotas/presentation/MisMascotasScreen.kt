@@ -8,14 +8,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,12 +33,14 @@ import cl.clinipets.openapi.models.Mascota
 fun MisMascotasRoute(
     viewModel: MisMascotasViewModel = hiltViewModel(),
     onCerrarSesion: () -> Unit,
+    onNavigateBack: () -> Unit,
 ) {
     val estado by viewModel.estado.collectAsState()
     MisMascotasScreen(
         estado = estado,
         onReintentar = viewModel::recargar,
         onCerrarSesion = onCerrarSesion,
+        onNavigateBack = onNavigateBack,
     )
 }
 
@@ -44,6 +50,7 @@ fun MisMascotasScreen(
     estado: MisMascotasUiState,
     onReintentar: () -> Unit,
     onCerrarSesion: () -> Unit,
+    onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -51,6 +58,14 @@ fun MisMascotasScreen(
         topBar = {
             TopAppBar(
                 title = { Text(text = "Mis Mascotas") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver",
+                        )
+                    }
+                },
                 actions = {
                     TextButton(onClick = onCerrarSesion) {
                         Text(text = "Cerrar sesión")

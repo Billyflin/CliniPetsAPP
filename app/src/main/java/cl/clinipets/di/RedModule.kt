@@ -9,6 +9,9 @@ import cl.clinipets.feature.auth.domain.AuthRepositorio
 import cl.clinipets.feature.mascotas.data.MascotasRepositorioImpl
 import cl.clinipets.feature.mascotas.domain.MascotasRepositorio
 import cl.clinipets.openapi.apis.AutenticacinApi
+import cl.clinipets.feature.descubrimiento.data.DescubrimientoRepositorioImpl
+import cl.clinipets.feature.descubrimiento.domain.DescubrimientoRepositorio
+import cl.clinipets.openapi.apis.DescubrimientoApi
 import cl.clinipets.openapi.apis.MascotasApi
 import cl.clinipets.openapi.infrastructure.ApiClient
 import dagger.Binds
@@ -55,6 +58,11 @@ object RedModule {
     @Singleton
     fun proveeMascotasApi(apiClient: ApiClient): MascotasApi =
         apiClient.createService(MascotasApi::class.java)
+
+    @Provides
+    @Singleton
+    fun proveeDescubrimientoApi(apiClient: ApiClient): DescubrimientoApi =
+        apiClient.createService(DescubrimientoApi::class.java)
 }
 
 @Module
@@ -78,4 +86,10 @@ abstract class RepositoriosModule {
     abstract fun vinculaSesionLocalDataSource(
         impl: AuthPreferencesDataSource,
     ): SesionLocalDataSource
+
+    @Binds
+    @Singleton
+    abstract fun vinculaDescubrimientoRepositorio(
+        impl: DescubrimientoRepositorioImpl,
+    ): DescubrimientoRepositorio
 }

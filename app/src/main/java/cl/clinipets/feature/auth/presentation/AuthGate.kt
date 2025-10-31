@@ -11,7 +11,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun AuthGate(
     viewModel: AuthViewModel = hiltViewModel(),
-    contenidoProtegido: @Composable (AuthUiState, () -> Unit) -> Unit,
+    contenidoProtegido: @Composable (AuthUiState, () -> Unit, () -> Unit) -> Unit,
 ) {
     val estado by viewModel.estado.collectAsState()
     val launcher = rememberLauncherForActivityResult(
@@ -32,6 +32,6 @@ fun AuthGate(
             },
         )
     } else {
-        contenidoProtegido(estado, viewModel::cerrarSesion)
+        contenidoProtegido(estado, viewModel::cerrarSesion, viewModel::refrescarPerfil)
     }
 }

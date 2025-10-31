@@ -1,5 +1,6 @@
 package cl.clinipets.feature.auth.presentation
 
+import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.core.Resultado
@@ -10,7 +11,6 @@ import cl.clinipets.feature.auth.domain.ObtenerPerfilUseCase
 import cl.clinipets.feature.auth.domain.ObservarSesionUseCase
 import cl.clinipets.feature.auth.domain.Sesion
 import cl.clinipets.openapi.models.MeResponse
-import android.content.Intent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -108,6 +108,10 @@ class AuthViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun refrescarPerfil() {
+        cargarPerfil()
     }
 
     private fun cargarPerfil() {
