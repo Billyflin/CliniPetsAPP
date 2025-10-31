@@ -1,5 +1,6 @@
 package cl.clinipets.feature.auth.data
 
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import okhttp3.Interceptor
@@ -22,6 +23,19 @@ class AuthInterceptor @Inject constructor(
             .header("Authorization", "Bearer $token")
             .build()
 
-        return chain.proceed(request)
+        return try {
+            val response = chain.proceed(request)
+            if (response.code in CODIGOS_ERROR_SERVIDOR) {
+                tokenProvider.invalidarSesionPorError()
+            }
+            response
+        } catch (io: IOException) {
+            tokenProvider.invalidarSesionPorError()
+            throw io
+        }
+    }
+
+    companion object {
+        private val CODIGOS_ERROR_SERVIDOR = 500..599
     }
 }

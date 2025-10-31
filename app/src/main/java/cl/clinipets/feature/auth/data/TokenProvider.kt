@@ -30,4 +30,11 @@ class TokenProvider @Inject constructor(
     }
 
     fun obtenerTokenActual(): String? = tokenActual
+
+    fun invalidarSesionPorError() {
+        tokenActual = null
+        scope.launch {
+            sesionLocal.limpiarSesion()
+        }
+    }
 }
