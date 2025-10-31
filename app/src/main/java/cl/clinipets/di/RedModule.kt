@@ -11,8 +11,12 @@ import cl.clinipets.feature.mascotas.domain.MascotasRepositorio
 import cl.clinipets.openapi.apis.AutenticacinApi
 import cl.clinipets.feature.descubrimiento.data.DescubrimientoRepositorioImpl
 import cl.clinipets.feature.descubrimiento.domain.DescubrimientoRepositorio
+import cl.clinipets.feature.veterinario.data.VeterinarioRepositorioImpl
+import cl.clinipets.feature.veterinario.domain.VeterinarioRepositorio
 import cl.clinipets.openapi.apis.DescubrimientoApi
+import cl.clinipets.openapi.apis.DisponibilidadApi
 import cl.clinipets.openapi.apis.MascotasApi
+import cl.clinipets.openapi.apis.VeterinariosApi
 import cl.clinipets.openapi.infrastructure.ApiClient
 import dagger.Binds
 import dagger.Module
@@ -63,6 +67,16 @@ object RedModule {
     @Singleton
     fun proveeDescubrimientoApi(apiClient: ApiClient): DescubrimientoApi =
         apiClient.createService(DescubrimientoApi::class.java)
+
+    @Provides
+    @Singleton
+    fun proveeVeterinariosApi(apiClient: ApiClient): VeterinariosApi =
+        apiClient.createService(VeterinariosApi::class.java)
+
+    @Provides
+    @Singleton
+    fun proveeDisponibilidadApi(apiClient: ApiClient): DisponibilidadApi =
+        apiClient.createService(DisponibilidadApi::class.java)
 }
 
 @Module
@@ -92,4 +106,10 @@ abstract class RepositoriosModule {
     abstract fun vinculaDescubrimientoRepositorio(
         impl: DescubrimientoRepositorioImpl,
     ): DescubrimientoRepositorio
+
+    @Binds
+    @Singleton
+    abstract fun vinculaVeterinarioRepositorio(
+        impl: VeterinarioRepositorioImpl,
+    ): VeterinarioRepositorio
 }

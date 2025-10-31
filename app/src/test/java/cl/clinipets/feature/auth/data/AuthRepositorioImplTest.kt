@@ -1,7 +1,6 @@
 package cl.clinipets.feature.auth.data
 
 import cl.clinipets.core.Resultado
-import cl.clinipets.feature.auth.data.SesionLocalDataSource
 import cl.clinipets.feature.auth.domain.Sesion
 import cl.clinipets.openapi.apis.AutenticacinApi
 import cl.clinipets.openapi.infrastructure.ApiClient
@@ -9,8 +8,6 @@ import cl.clinipets.openapi.infrastructure.Serializer
 import cl.clinipets.openapi.models.LoginResponse
 import cl.clinipets.openapi.models.MeResponse
 import cl.clinipets.openapi.models.UsuarioInfo
-import java.time.OffsetDateTime
-import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -23,6 +20,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.OffsetDateTime
+import java.util.UUID
 
 class AuthRepositorioImplTest {
 
@@ -65,8 +64,12 @@ class AuthRepositorioImplTest {
     @Test
     fun `obtener perfil devuelve exito y no altera sesion`() = runTest {
         val me = MeResponse(
-            autenticado = true,
-            usuario = crearLoginResponse().usuario,
+            authenticated =  true,
+            id = crearLoginResponse().usuario.id,
+            email = crearLoginResponse().usuario.email,
+            roles = crearLoginResponse().usuario.roles,
+            nombre = crearLoginResponse().usuario.nombre,
+            fotoUrl = null,
         )
         servidor.enqueue(
             MockResponse()

@@ -10,8 +10,10 @@ import cl.clinipets.feature.mascotas.domain.ObtenerMisMascotasUseCase
 import cl.clinipets.openapi.models.Mascota
 import cl.clinipets.openapi.models.Rol
 import cl.clinipets.openapi.models.Usuario
-import java.time.OffsetDateTime
-import java.util.UUID
+import cl.clinipets.openapi.models.CrearMascota
+import cl.clinipets.openapi.models.ActualizarMascota
+import cl.clinipets.openapi.models.CrearMascota
+import cl.clinipets.openapi.models.ActualizarMascota
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -21,6 +23,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.time.OffsetDateTime
+import java.util.UUID
 
 class MisMascotasViewModelTest {
 
@@ -88,7 +92,6 @@ class MisMascotasViewModelTest {
         return Mascota(
             nombre = "Bobby",
             especie = Mascota.Especie.PERRO,
-            tutor = usuario,
             creadoEn = ahora,
             modificadoEn = ahora,
             id = UUID.fromString("11111111-2222-3333-4444-555555555555"),
@@ -100,6 +103,20 @@ class MisMascotasViewModelTest {
         private var resultado: Resultado<List<Mascota>>,
     ) : MascotasRepositorio {
         override suspend fun obtenerMisMascotas(): Resultado<List<Mascota>> = resultado
+
+        override suspend fun obtenerMascota(id: UUID): Resultado<Mascota> =
+            throw UnsupportedOperationException("No se usa en esta prueba")
+
+        override suspend fun crearMascota(datos: CrearMascota): Resultado<Mascota> =
+            throw UnsupportedOperationException("No se usa en esta prueba")
+
+        override suspend fun actualizarMascota(
+            id: UUID,
+            datos: ActualizarMascota,
+        ): Resultado<Mascota> = throw UnsupportedOperationException("No se usa en esta prueba")
+
+        override suspend fun eliminarMascota(id: UUID): Resultado<Unit> =
+            throw UnsupportedOperationException("No se usa en esta prueba")
     }
 
     private class FakeAuthRepositorio(

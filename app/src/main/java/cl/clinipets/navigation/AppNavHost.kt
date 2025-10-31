@@ -3,14 +3,21 @@ package cl.clinipets.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import cl.clinipets.feature.auth.presentation.AuthUiState
 import cl.clinipets.feature.descubrimiento.presentation.DescubrimientoRoute
 import cl.clinipets.feature.home.presentation.HomeAction
 import cl.clinipets.feature.home.presentation.HomeRoute
+import cl.clinipets.feature.mascotas.presentation.MascotaDetalleRoute
+import cl.clinipets.feature.mascotas.presentation.MascotaFormRoute
 import cl.clinipets.feature.mascotas.presentation.MisMascotasRoute
 import cl.clinipets.feature.perfil.presentation.PerfilRoute
+import cl.clinipets.feature.veterinario.presentation.VeterinarioAgendaRoute
+import cl.clinipets.feature.veterinario.presentation.VeterinarioOnboardingRoute
+import cl.clinipets.feature.veterinario.presentation.VeterinarioPerfilRoute
 
 @Composable
 fun AppNavHost(
@@ -38,16 +45,55 @@ fun AppNavHost(
                         HomeAction.MIS_MASCOTAS -> navController.navigate(AppDestination.MisMascotas.route)
                         HomeAction.DESCUBRIR -> navController.navigate(AppDestination.Descubrir.route)
                         HomeAction.PERFIL -> navController.navigate(AppDestination.Perfil.route)
+                        HomeAction.VETERINARIO -> navController.navigate(AppDestination.VeterinarioPerfil.route)
                     }
                 },
-                onLogout = performLogout,
                 onRefreshProfile = onRefreshProfile,
             )
         }
         composable(AppDestination.MisMascotas.route) {
             MisMascotasRoute(
-                onCerrarSesion = performLogout,
                 onNavigateBack = { navController.popBackStack() },
+                onAgregarMascota = { navController.navigate(AppDestination.MascotaCrear.route) },
+                onMascotaSeleccionada = { id ->
+                    navController.navigate(AppDestination.MascotaDetalle.createRoute(id))
+                },
+            )
+        }
+        composable(AppDestination.MascotaCrear.route) {
+            MascotaFormRoute(
+                onBack = { navController.popBackStack() },
+                onMascotaGuardada = { id, _ ->
+                    navController.popBackStack()
+                    navController.navigate(AppDestination.MascotaDetalle.createRoute(id))
+                },
+            )
+        }
+        composable(
+            route = AppDestination.MascotaDetalle.route,
+            arguments = listOf(navArgument(AppDestination.MascotaDetalle.ARG_ID) { type = NavType.StringType }),
+        ) {
+            MascotaDetalleRoute(
+                onBack = { navController.popBackStack() },
+                onEditar = { id -> navController.navigate(AppDestination.MascotaEditar.createRoute(id)) },
+                onMascotaEliminada = {
+                    navController.popBackStack()
+                },
+            )
+        }
+        composable(
+            route = AppDestination.MascotaEditar.route,
+            arguments = listOf(navArgument(AppDestination.MascotaEditar.ARG_ID) { type = NavType.StringType }),
+        ) {
+            MascotaFormRoute(
+                onBack = { navController.popBackStack() },
+                onMascotaGuardada = { id, fueEdicion ->
+                    navController.popBackStack()
+                    if (fueEdicion) {
+                        navController.popBackStack()
+                    }
+                    navController.navigate(AppDestination.MascotaDetalle.createRoute(id))
+                },
             )
         }
         composable(AppDestination.Descubrir.route) {
@@ -60,7 +106,42 @@ fun AppNavHost(
                 estado = authState,
                 onBack = { navController.popBackStack() },
                 onCerrarSesion = performLogout,
-                onIrOnboardingVet = { /* TODO: Navegar a onboarding veterinario */ },
+                onIrOnboardingVet = { navController.navigate(AppDestination.VeterinarioOnboarding.route) },
+                onIrPerfilVet = { navController.navigate(AppDestination.VeterinarioPerfil.route) },
+            )
+        }
+        composable(AppDestination.VeterinarioOnboarding.route) {
+            VeterinarioOnboardingRoute(
+                onBack = { navController.popBackStack() },
+                onCompletado = {
+                    val removioPerfilAnterior = navController.popBackStack(
+                        AppDestination.VeterinarioPerfil.route,
+                        inclusive = true,
+                    )
+                    if (!removioPerfilAnterior) {
+                        val regresoAPerfil = navController.popBackStack(
+                            AppDestination.Perfil.route,
+                            inclusive = false,
+                        )
+                        if (!regresoAPerfil) {
+                            navController.popBackStack()
+                        }
+                    }
+                    onRefreshProfile()
+                    navController.navigate(AppDestination.VeterinarioPerfil.route)
+                },
+            )
+        }
+        composable(AppDestination.VeterinarioPerfil.route) {
+            VeterinarioPerfilRoute(
+                onBack = { navController.popBackStack() },
+                onIrAgenda = { navController.navigate(AppDestination.VeterinarioAgenda.route) },
+                onIrOnboarding = { navController.navigate(AppDestination.VeterinarioOnboarding.route) },
+            )
+        }
+        composable(AppDestination.VeterinarioAgenda.route) {
+            VeterinarioAgendaRoute(
+                onBack = { navController.popBackStack() },
             )
         }
     }

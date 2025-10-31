@@ -1,5 +1,6 @@
 package cl.clinipets.feature.mascotas.presentation
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -18,29 +20,35 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.Mascota
+import java.util.UUID
 
 @Composable
 fun MisMascotasRoute(
     viewModel: MisMascotasViewModel = hiltViewModel(),
-    onCerrarSesion: () -> Unit,
     onNavigateBack: () -> Unit,
+    onAgregarMascota: () -> Unit,
+    onMascotaSeleccionada: (UUID) -> Unit,
 ) {
     val estado by viewModel.estado.collectAsState()
+    LaunchedEffect(Unit) {
+        viewModel.recargar()
+    }
     MisMascotasScreen(
         estado = estado,
         onReintentar = viewModel::recargar,
-        onCerrarSesion = onCerrarSesion,
         onNavigateBack = onNavigateBack,
+        onAgregarMascota = onAgregarMascota,
+        onMascotaSeleccionada = onMascotaSeleccionada,
     )
 }
 
@@ -49,8 +57,9 @@ fun MisMascotasRoute(
 fun MisMascotasScreen(
     estado: MisMascotasUiState,
     onReintentar: () -> Unit,
-    onCerrarSesion: () -> Unit,
     onNavigateBack: () -> Unit,
+    onAgregarMascota: () -> Unit,
+    onMascotaSeleccionada: (UUID) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -67,8 +76,11 @@ fun MisMascotasScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = onCerrarSesion) {
-                        Text(text = "Cerrar sesión")
+                    IconButton(onClick = onAgregarMascota) {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = "Agregar mascota",
+                        )
                     }
                 },
             )
@@ -93,7 +105,10 @@ fun MisMascotasScreen(
                     onReintentar = onReintentar,
                 )
                 estado.mascotas.isEmpty() -> VacioContenido(onReintentar = onReintentar)
-                else -> ListaMascotasContenido(mascotas = estado.mascotas)
+                else -> ListaMascotasContenido(
+                    mascotas = estado.mascotas,
+                    onSeleccionar = onMascotaSeleccionada,
+                )
             }
         }
     }
@@ -133,14 +148,20 @@ private fun VacioContenido(onReintentar: () -> Unit) {
 }
 
 @Composable
-private fun ListaMascotasContenido(mascotas: List<Mascota>) {
+private fun ListaMascotasContenido(
+    mascotas: List<Mascota>,
+    onSeleccionar: (UUID) -> Unit,
+) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(mascotas, key = { it.id ?: it.nombre }) { mascota ->
-            MascotaItem(mascota = mascota)
+            MascotaItem(
+                mascota = mascota,
+                onSeleccionar = onSeleccionar,
+            )
         }
     }
 }
@@ -158,9 +179,16 @@ private fun SesionRequeridaContenido() {
 }
 
 @Composable
-private fun MascotaItem(mascota: Mascota) {
+private fun MascotaItem(
+    mascota: Mascota,
+    onSeleccionar: (UUID) -> Unit,
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                mascota.id?.let(onSeleccionar)
+            },
     ) {
         Column(
             modifier = Modifier

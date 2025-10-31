@@ -22,6 +22,7 @@ Kotlin files use 4-space indentation, trailing commas where the Kotlin style gui
 - Los módulos de DI globales viven en `cl.clinipets.di` y publican `ApiClient`, las APIs generadas y los repositorios concretos.
 - La capa de autenticación reside en `cl.clinipets.feature.auth` y controla la sesión mediante `SesionLocalDataSource` (DataStore) y un `AuthInterceptor` que añade el token Bearer a cada request.
 - `AuthGate` ejecuta el flujo real de Google Sign-In utilizando `GoogleAuthProvider` (configurado con `BuildConfig.GOOGLE_SERVER_CLIENT_ID`) y envía el ID token recibido al backend a través del `AuthRepositorio`.
+- Las funcionalidades de descubrimiento, perfil y veterinarios viven en `feature.descubrimiento`, `feature.perfil` y `feature.veterinario` respectivamente, haciendo uso directo de los modelos y APIs generados para mantener la paridad con el contrato.
 
 ## Testing Guidelines
 Write fast unit tests with JUnit4 and Mockito/Kotlin test utilities in `app/src/test/java`. Instrument UI flows with Espresso or Compose testing APIs in `app/src/androidTest/java`. Name tests after the behavior under test (`ReservationRepositoryTest`). Maintain coverage on new repositories and view models by asserting repository contracts and navigation start destinations. Always run the relevant Gradle test task locally and attach logs when a failure needs diagnosis.

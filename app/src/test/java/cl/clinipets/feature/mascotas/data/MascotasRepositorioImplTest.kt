@@ -4,11 +4,10 @@ import cl.clinipets.core.Resultado
 import cl.clinipets.openapi.apis.MascotasApi
 import cl.clinipets.openapi.infrastructure.ApiClient
 import cl.clinipets.openapi.infrastructure.Serializer
+import cl.clinipets.openapi.models.CrearMascota
 import cl.clinipets.openapi.models.Mascota
 import cl.clinipets.openapi.models.Rol
 import cl.clinipets.openapi.models.Usuario
-import java.time.OffsetDateTime
-import java.util.UUID
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -18,6 +17,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.OffsetDateTime
+import java.util.UUID
 
 class MascotasRepositorioImplTest {
 
@@ -57,7 +58,6 @@ class MascotasRepositorioImplTest {
         val dato = (resultado as Resultado.Exito).dato
         assertEquals(1, dato.size)
         assertEquals(mascota.nombre, dato.first().nombre)
-        assertEquals(mascota.tutor.email, dato.first().tutor.email)
     }
 
     @Test
@@ -91,6 +91,59 @@ class MascotasRepositorioImplTest {
         assertEquals(Resultado.Tipo.RED, error.tipo)
     }
 
+    @Test
+    fun `obtener detalle de mascota devuelve exito`() = runTest {
+        val mascota = crearMascota()
+        val cuerpo = Serializer.gson.toJson(mascota)
+        servidor.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setBody(cuerpo)
+                .addHeader("Content-Type", "application/json"),
+        )
+
+        val resultado = repositorio.obtenerMascota(mascota.id!!)
+
+        assertTrue(resultado is Resultado.Exito)
+        val dato = (resultado as Resultado.Exito).dato
+        assertEquals(mascota.id, dato.id)
+    }
+
+    @Test
+    fun `crear mascota devuelve exito`() = runTest {
+        val mascota = crearMascota()
+        servidor.enqueue(
+            MockResponse()
+                .setResponseCode(201)
+                .setBody(Serializer.gson.toJson(mascota))
+                .addHeader("Content-Type", "application/json"),
+        )
+
+        val resultado = repositorio.crearMascota(
+            CrearMascota(
+                nombre = mascota.nombre,
+                especie = CrearMascota.Especie.valueOf(mascota.especie.name),
+                raza = mascota.raza,
+            ),
+        )
+
+        assertTrue(resultado is Resultado.Exito)
+        val dato = (resultado as Resultado.Exito).dato
+        assertEquals(mascota.nombre, dato.nombre)
+    }
+
+    @Test
+    fun `eliminar mascota devuelve exito`() = runTest {
+        servidor.enqueue(
+            MockResponse()
+                .setResponseCode(204),
+        )
+
+        val resultado = repositorio.eliminarMascota(UUID.randomUUID())
+
+        assertTrue(resultado is Resultado.Exito)
+    }
+
     private fun crearMascota(): Mascota {
         val ahora = OffsetDateTime.parse("2024-01-01T12:00:00Z")
         val rol = Rol(
@@ -110,7 +163,6 @@ class MascotasRepositorioImplTest {
         return Mascota(
             nombre = "Bobby",
             especie = Mascota.Especie.PERRO,
-            tutor = tutor,
             creadoEn = ahora,
             modificadoEn = ahora,
             id = UUID.fromString("11111111-2222-3333-4444-555555555555"),

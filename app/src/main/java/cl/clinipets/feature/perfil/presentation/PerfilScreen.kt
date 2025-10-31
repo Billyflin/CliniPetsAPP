@@ -25,12 +25,14 @@ fun PerfilRoute(
     onBack: () -> Unit,
     onCerrarSesion: () -> Unit,
     onIrOnboardingVet: () -> Unit,
+    onIrPerfilVet: () -> Unit,
 ) {
     PerfilScreen(
         estado = estado,
         onBack = onBack,
         onCerrarSesion = onCerrarSesion,
         onIrOnboardingVet = onIrOnboardingVet,
+        onIrPerfilVet = onIrPerfilVet,
     )
 }
 
@@ -41,6 +43,7 @@ private fun PerfilScreen(
     onBack: () -> Unit,
     onCerrarSesion: () -> Unit,
     onIrOnboardingVet: () -> Unit,
+    onIrPerfilVet: () -> Unit,
 ) {
     val perfil = estado.perfil
     Scaffold(
@@ -69,16 +72,25 @@ private fun PerfilScreen(
             perfil?.nombre?.takeIf { it.isNotBlank() }?.let {
                 Text(text = it)
             }
-            if (perfil?.roles != null) {
-                Text(text = "Roles: ${perfil.roles.joinToString()}")
-                if (!perfil.roles.contains("VETERINARIO")) {
-                    Button(
-                        onClick = onIrOnboardingVet,
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !estado.cargando,
-                    ) {
-                        Text(text = "Quiero ser veterinario")
-                    }
+            val roles = perfil?.roles.orEmpty()
+            if (roles.isNotEmpty()) {
+                Text(text = "Roles: ${roles.joinToString()}")
+            }
+
+            if (!roles.contains("VETERINARIO")) {
+                Button(
+                    onClick = onIrOnboardingVet,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !estado.cargando,
+                ) {
+                    Text(text = "Quiero ser veterinario")
+                }
+            } else {
+                Button(
+                    onClick = onIrPerfilVet,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(text = "Ver perfil veterinario")
                 }
             }
 

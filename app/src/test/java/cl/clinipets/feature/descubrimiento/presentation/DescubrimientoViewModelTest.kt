@@ -13,6 +13,8 @@ import cl.clinipets.feature.mascotas.domain.ObtenerMisMascotasUseCase
 import cl.clinipets.openapi.models.Mascota
 import cl.clinipets.openapi.models.ProcedimientoItem
 import cl.clinipets.openapi.models.VetItem
+import cl.clinipets.openapi.models.CrearMascota
+import cl.clinipets.openapi.models.ActualizarMascota
 import java.time.OffsetDateTime
 import java.util.UUID
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -107,6 +109,20 @@ class DescubrimientoViewModelTest {
         private val resultado: Resultado<List<Mascota>>,
     ) : MascotasRepositorio {
         override suspend fun obtenerMisMascotas(): Resultado<List<Mascota>> = resultado
+
+        override suspend fun obtenerMascota(id: UUID): Resultado<Mascota> =
+            throw UnsupportedOperationException("No se usa en esta prueba")
+
+        override suspend fun crearMascota(datos: CrearMascota): Resultado<Mascota> =
+            throw UnsupportedOperationException("No se usa en esta prueba")
+
+        override suspend fun actualizarMascota(
+            id: UUID,
+            datos: ActualizarMascota,
+        ): Resultado<Mascota> = throw UnsupportedOperationException("No se usa en esta prueba")
+
+        override suspend fun eliminarMascota(id: UUID): Resultado<Unit> =
+            throw UnsupportedOperationException("No se usa en esta prueba")
     }
 
     private class FakeDescubrimientoRepositorio(

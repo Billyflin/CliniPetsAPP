@@ -27,19 +27,18 @@ enum class HomeAction {
     MIS_MASCOTAS,
     DESCUBRIR,
     PERFIL,
+    VETERINARIO,
 }
 
 @Composable
 fun HomeRoute(
     estadoAuth: AuthUiState,
     onAction: (HomeAction) -> Unit,
-    onLogout: () -> Unit,
     onRefreshProfile: () -> Unit,
 ) {
     HomeScreen(
         estadoAuth = estadoAuth,
         onNavigate = onAction,
-        onLogout = onLogout,
         onRefreshProfile = onRefreshProfile,
     )
 }
@@ -49,7 +48,6 @@ fun HomeRoute(
 private fun HomeScreen(
     estadoAuth: AuthUiState,
     onNavigate: (HomeAction) -> Unit,
-    onLogout: () -> Unit,
     onRefreshProfile: () -> Unit,
 ) {
     Scaffold(
@@ -102,25 +100,25 @@ private fun HomeScreen(
                 }
             }
 
-            Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 HomeButton(
                     text = "Mis Mascotas",
                     onClick = { onNavigate(HomeAction.MIS_MASCOTAS) },
                 )
                 HomeButton(
-                    text = "Descubrir",
+                    text = "Descubrir servicios",
                     onClick = { onNavigate(HomeAction.DESCUBRIR) },
                 )
                 HomeButton(
-                    text = "Perfil",
+                    text = "Mi perfil",
                     onClick = { onNavigate(HomeAction.PERFIL) },
                 )
-                HomeButton(
-                    text = "Cerrar sesión",
-                    onClick = onLogout,
-                )
+                if (perfil?.roles?.contains("VETERINARIO") == true) {
+                    HomeButton(
+                        text = "Panel veterinario",
+                        onClick = { onNavigate(HomeAction.VETERINARIO) },
+                    )
+                }
             }
             estadoAuth.error?.let { error ->
                 Text(
