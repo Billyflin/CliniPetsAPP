@@ -1,6 +1,8 @@
 package cl.clinipets.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -101,34 +103,39 @@ fun AppNavHost(
                 onBack = { navController.popBackStack() },
             )
         }
-        composable(AppDestination.Perfil.route) {
+        composable(AppDestination.Perfil.route) { backStackEntry ->
+            val refrescarVeterinario by backStackEntry
+                .savedStateHandle
+                .getStateFlow("vetRefresh", false)
+                .collectAsState()
             PerfilRoute(
                 estado = authState,
                 onBack = { navController.popBackStack() },
                 onCerrarSesion = performLogout,
                 onIrOnboardingVet = { navController.navigate(AppDestination.VeterinarioOnboarding.route) },
                 onIrPerfilVet = { navController.navigate(AppDestination.VeterinarioPerfil.route) },
+                shouldRefreshVeterinario = refrescarVeterinario,
+                onVeterinarioRefreshConsumed = {
+                    backStackEntry.savedStateHandle["vetRefresh"] = false
+                },
             )
         }
         composable(AppDestination.VeterinarioOnboarding.route) {
             VeterinarioOnboardingRoute(
                 onBack = { navController.popBackStack() },
                 onCompletado = {
-                    val removioPerfilAnterior = navController.popBackStack(
-                        AppDestination.VeterinarioPerfil.route,
-                        inclusive = true,
-                    )
-                    if (!removioPerfilAnterior) {
-                        val regresoAPerfil = navController.popBackStack(
-                            AppDestination.Perfil.route,
-                            inclusive = false,
-                        )
-                        if (!regresoAPerfil) {
-                            navController.popBackStack()
-                        }
-                    }
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("vetRefresh", true)
                     onRefreshProfile()
-                    navController.navigate(AppDestination.VeterinarioPerfil.route)
+                    val regresoAPerfil = navController.popBackStack(
+                        AppDestination.Perfil.route,
+                        inclusive = false,
+                    )
+                    if (!regresoAPerfil) {
+                        navController.popBackStack(AppDestination.Home.route, inclusive = false)
+                        navController.navigate(AppDestination.Perfil.route)
+                    }
                 },
             )
         }

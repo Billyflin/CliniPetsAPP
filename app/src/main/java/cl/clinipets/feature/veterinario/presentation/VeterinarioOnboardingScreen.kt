@@ -6,22 +6,29 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -35,10 +42,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.RegistrarVeterinarioRequest
@@ -116,64 +127,180 @@ private fun VeterinarioOnboardingScreen(
             )
         },
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(scrollState)
-                .padding(horizontal = 24.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Text(text = "Completa tus datos para activar tu cuenta de veterinario.")
-            estado.error?.let { error ->
-                Text(text = error.mensaje ?: "No pudimos completar el registro.")
+        when {
+            estado.cargandoInicial -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
             }
 
-            OutlinedTextField(
-                value = estado.nombreCompleto,
-                onValueChange = onNombreChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(text = "Nombre completo") },
-                isError = estado.nombreError != null,
-                supportingText = estado.nombreError?.let { { Text(text = it) } },
-            )
-
-            OutlinedTextField(
-                value = estado.numeroLicencia,
-                onValueChange = onNumeroLicenciaChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(text = "Número de licencia (opcional)") },
-            )
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = "Modos de atención")
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    chips.forEach { modo ->
-                        FilterChip(
-                            selected = estado.modosAtencion.contains(modo),
-                            onClick = { onToggleModo(modo) },
-                            label = { Text(text = modo.value) },
+            else -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .verticalScroll(scrollState)
+                        .padding(horizontal = 24.dp, vertical = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = if (estado.esEdicion) {
+                                "Actualiza tu información profesional"
+                            } else {
+                                "Conviértete en veterinario CliniPets"
+                            },
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                        )
+                        Text(
+                            text = "Esta información nos permite validar tu perfil y mostrarte a tutores que buscan atención.",
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     }
-                }
-            }
 
-            UbicacionSelector(
-                estado = estado,
-                onUbicacionSeleccionada = onUbicacionSeleccionada,
-                onRadioChange = onRadioChange,
-                onLimpiarUbicacion = onLimpiarUbicacion,
-            )
+                    estado.error?.let { error ->
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                            ),
+                            shape = RoundedCornerShape(20.dp),
+                        ) {
+                            Text(
+                                text = error.mensaje ?: "No pudimos completar el registro. Intenta nuevamente.",
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
 
-            Button(
-                onClick = onRegistrar,
-                enabled = !estado.cargando,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                if (estado.cargando) {
-                    CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
+                    Card(
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            AssistChip(
+                                onClick = {},
+                                label = { Text(text = "Paso 1 · Detalles profesionales") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                                    labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    leadingIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                ),
+                            )
+                            Text(
+                                text = "Cuéntanos quién eres y cómo atiendes a tus pacientes.",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+
+                            OutlinedTextField(
+                                value = estado.nombreCompleto,
+                                onValueChange = onNombreChange,
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text(text = "Nombre completo") },
+                                isError = estado.nombreError != null,
+                                supportingText = estado.nombreError?.let { { Text(text = it) } },
+                            )
+
+                            OutlinedTextField(
+                                value = estado.numeroLicencia,
+                                onValueChange = onNumeroLicenciaChange,
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text(text = "Número de licencia (opcional)") },
+                            )
+
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = "Modos de atención",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                                )
+                                Text(
+                                    text = "Selecciona todas las modalidades con las que atiendes actualmente.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    chips.forEach { modo ->
+                                        FilterChip(
+                                            selected = estado.modosAtencion.contains(modo),
+                                            onClick = { onToggleModo(modo) },
+                                            label = { Text(text = modo.value) },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Card(
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            AssistChip(
+                                onClick = {},
+                                label = { Text(text = "Paso 2 · Cobertura en mapa") },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                ),
+                            )
+                            Text(
+                                text = "Marca tu punto de atención y define el radio para atenciones a domicilio.",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+
+                            UbicacionSelector(
+                                estado = estado,
+                                onUbicacionSeleccionada = onUbicacionSeleccionada,
+                                onRadioChange = onRadioChange,
+                                onLimpiarUbicacion = onLimpiarUbicacion,
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(
+                        onClick = onRegistrar,
+                        enabled = !estado.cargando,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                    ) {
+                        if (estado.cargando) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.padding(end = 8.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        }
+                        Text(text = if (estado.esEdicion) "Guardar cambios" else "Enviar solicitud")
+                    }
+
+                    Text(
+                        text = "Nuestro equipo revisará la información y podrás editarla nuevamente cuando lo necesites.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
-                Text(text = "Registrar")
             }
         }
     }
@@ -295,7 +422,10 @@ private fun UbicacionSelector(
             }
 
             Text(text = "Coordenadas seleccionadas: $coords")
-            Text(text = "Radio de cobertura: ${estado.radioCoberturaKm.toInt()} km")
+            Text(
+                text = "Radio de cobertura",
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+            )
             Slider(
                 value = estado.radioCoberturaKm.toFloat(),
                 onValueChange = { nuevo ->
@@ -303,6 +433,10 @@ private fun UbicacionSelector(
                 },
                 valueRange = 1f..50f,
                 steps = 48,
+            )
+            Text(
+                text = "${estado.radioCoberturaKm.toInt()} km alrededor de tu punto seleccionado.",
+                style = MaterialTheme.typography.bodySmall,
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -313,7 +447,7 @@ private fun UbicacionSelector(
                 }
             }
         } else {
-            Text(text = "Toca el mapa para seleccionar tu zona de atención.")
+            Text(text = "Toca el mapa para seleccionar tu zona de atención. Puedes ajustar el radio después.")
         }
     }
 }
