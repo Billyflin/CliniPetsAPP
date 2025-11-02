@@ -1,5 +1,5 @@
 // auth/ui/LoginViewModel.kt
-package cl.clinipets.auth.ui
+package cl.clinipets.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

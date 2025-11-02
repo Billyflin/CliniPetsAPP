@@ -1,4 +1,4 @@
-package cl.clinipets.mascotas.ui
+package cl.clinipets.ui.mascotas
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.openapi.apis.MascotasApi

@@ -19,8 +19,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.rememberNavController
 import cl.clinipets.BuildConfig
-import cl.clinipets.auth.ui.LoginViewModel
-import cl.clinipets.auth.ui.requestGoogleIdToken
+import cl.clinipets.ui.auth.LoginViewModel
+import cl.clinipets.ui.auth.requestGoogleIdToken
 import cl.clinipets.ui.navigation.AppNavGraph
 import cl.clinipets.ui.navigation.AppRoute
 import kotlinx.coroutines.launch

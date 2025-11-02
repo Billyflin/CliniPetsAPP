@@ -1,4 +1,4 @@
-package cl.clinipets.mascotas.ui
+package cl.clinipets.ui.mascotas
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

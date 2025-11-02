@@ -1,4 +1,4 @@
-package cl.clinipets.auth.ui
+package cl.clinipets.ui.auth
 
 import android.content.Context
 import androidx.credentials.CredentialManager

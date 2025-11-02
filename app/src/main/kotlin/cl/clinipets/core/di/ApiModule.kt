@@ -1,4 +1,4 @@
-package cl.clinipets.di
+package cl.clinipets.core.di
 
 import cl.clinipets.BuildConfig
 import cl.clinipets.openapi.apis.AutenticacinApi

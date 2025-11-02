@@ -1,4 +1,4 @@
-package cl.clinipets.auth.ui
+package cl.clinipets.ui.auth
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
