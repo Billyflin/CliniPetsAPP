@@ -1,30 +1,39 @@
+// ui/navigation/NavGraph.kt — NavHost usando rutas tipadas (Compose Navigation 2.8+)
 package cl.clinipets.ui.navigation
 
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 import cl.clinipets.ui.auth.LoginScreen
 import cl.clinipets.ui.auth.LoginViewModel
 import cl.clinipets.ui.discover.DiscoverScreen
 import cl.clinipets.ui.home.HomeScreen
+import cl.clinipets.ui.mascotas.MascotaDetailScreen
+import cl.clinipets.ui.mascotas.MascotaFormScreen
 import cl.clinipets.ui.mascotas.MascotasScreen
 import cl.clinipets.ui.onboarding.VeterinarianOnboardingScreen
 import cl.clinipets.ui.profile.ProfileScreen
+import kotlinx.serialization.Serializable
+import java.util.UUID
 
-sealed class AppRoute(val route: String) {
-    data object Login : AppRoute("login")
-    data object Home : AppRoute("home")
-    data object Mascotas : AppRoute("mascotas")
-    data object Profile : AppRoute("profile")
-    data object Discover : AppRoute("discover")
-    data object VeterinarianOnboarding : AppRoute("vet_onboarding")
-}
+@Serializable object LoginRoute
+@Serializable object HomeRoute
+@Serializable object MascotasRoute
+@Serializable object ProfileRoute
+@Serializable object DiscoverRoute
+@Serializable object VeterinarianOnboardingRoute
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Serializable
+data class MascotaDetailRoute(val id: String)
+
+@Serializable
+data class MascotaFormRoute(val id: String? = null)
+
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalStdlibApi::class)
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
@@ -34,71 +43,70 @@ fun AppNavGraph(
     onLogout: () -> Unit,
     onRefreshProfile: () -> Unit
 ) {
+
     NavHost(
         navController = navController,
-        startDestination = AppRoute.Login.route,
-        modifier = Modifier.fillMaxSize()
+        startDestination = LoginRoute
     ) {
-        composable(AppRoute.Login.route) {
-            LoginScreen(
-                busy = busy, error = uiState.error, onLoginClick = onLoginClick
-            )
+        composable<LoginRoute> {
+            LoginScreen(busy = busy, error = uiState.error, onLoginClick = onLoginClick)
         }
-        composable(AppRoute.Home.route) {
+        composable<HomeRoute> {
             HomeScreen(
                 displayName = uiState.displayName,
                 roles = uiState.roles,
-                onNavigateToMascotas = {
-                    navController.navigate(AppRoute.Mascotas.route) {
-                        launchSingleTop = true
-                    }
-
-                },
-                onNavigateToDiscover = {
-                    navController.navigate(AppRoute.Discover.route) {
-                        launchSingleTop = true
-                    }
-                },
-                onNavigateToProfile = {
-                    navController.navigate(AppRoute.Profile.route) {
-                        launchSingleTop = true
-                    }
-                },
+                onNavigateToMascotas = { navController.navigate(MascotasRoute) },
+                onNavigateToDiscover = { navController.navigate(DiscoverRoute) },
+                onNavigateToProfile = { navController.navigate(ProfileRoute) },
                 onLogout = onLogout
             )
         }
-        composable(AppRoute.Mascotas.route) {
+        composable<MascotasRoute> {
             MascotasScreen(
                 displayName = uiState.displayName,
-                roles = uiState.roles,
+                onNavigateToMascotaDetail = { id: UUID ->
+                    navController.navigate(MascotaDetailRoute(id.toString()))
+                },
                 onBack = { navController.popBackStack() },
-                onLogout = onLogout
+                onNavigateToMascotaForm = {
+                    navController.navigate(MascotaFormRoute)
+                }
             )
         }
-        composable(AppRoute.Profile.route) {
+        composable<MascotaFormRoute> { backStackEntry ->
+            val args = backStackEntry.toRoute<MascotaFormRoute>()
+            MascotaFormScreen(
+                mascotaId = UUID.fromString(args.id),
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable<MascotaDetailRoute> { backStackEntry ->
+            val args = backStackEntry.toRoute<MascotaDetailRoute>()
+            MascotaDetailScreen(
+                mascotaId = UUID.fromString(args.id),
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable<ProfileRoute> {
             ProfileScreen(
                 state = uiState,
                 onBack = { navController.popBackStack() },
-                onBecomeVeterinarian = {
-                    navController.navigate(AppRoute.VeterinarianOnboarding.route) {
-                        launchSingleTop = true
-                    }
-                },
+                onBecomeVeterinarian = { navController.navigate(VeterinarianOnboardingRoute) },
                 onLogout = onLogout
             )
         }
-        composable(AppRoute.VeterinarianOnboarding.route) {
+        composable<VeterinarianOnboardingRoute> {
             VeterinarianOnboardingScreen(
                 suggestedName = uiState.displayName ?: uiState.me?.nombre,
                 onBack = { navController.popBackStack() },
                 onCompleted = {
-                    navController.popBackStack(AppRoute.Profile.route, false)
+                    navController.popBackStack()
                     onRefreshProfile()
-                })
+                }
+            )
         }
-        composable(AppRoute.Discover.route) {
-            DiscoverScreen(
-                onBack = { navController.popBackStack() })
+        composable<DiscoverRoute> {
+            DiscoverScreen(onBack = { navController.popBackStack() })
         }
     }
 }

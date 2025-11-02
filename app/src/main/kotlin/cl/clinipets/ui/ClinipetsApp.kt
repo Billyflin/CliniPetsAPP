@@ -22,7 +22,8 @@ import cl.clinipets.BuildConfig
 import cl.clinipets.ui.auth.LoginViewModel
 import cl.clinipets.ui.auth.requestGoogleIdToken
 import cl.clinipets.ui.navigation.AppNavGraph
-import cl.clinipets.ui.navigation.AppRoute
+import cl.clinipets.ui.navigation.HomeRoute
+import cl.clinipets.ui.navigation.LoginRoute
 import kotlinx.coroutines.launch
 
 @Composable
@@ -43,12 +44,12 @@ fun ClinipetsApp(vm: LoginViewModel = hiltViewModel()) {
             }
             else -> {
                 LaunchedEffect(state.ok) {
-                    val target = if (state.ok) AppRoute.Home.route else AppRoute.Login.route
+                    val target = if (state.ok) HomeRoute else LoginRoute
                     val current = navController.currentDestination?.route
                     if (current != target) {
                         navController.navigate(target) {
                             popUpTo(navController.graph.findStartDestination().id) {
-                                inclusive = target == AppRoute.Login.route
+                                inclusive = target == LoginRoute
                             }
                             launchSingleTop = true
                         }
