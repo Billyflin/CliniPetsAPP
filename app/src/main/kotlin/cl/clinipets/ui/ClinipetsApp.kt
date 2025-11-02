@@ -75,7 +75,8 @@ fun ClinipetsApp(vm: LoginViewModel = hiltViewModel()) {
                             }
                         }
                     },
-                    onLogout = { vm.logout() }
+                    onLogout = { vm.logout() },
+                    onRefreshProfile = { vm.refreshProfile() }
                 )
             }
         }

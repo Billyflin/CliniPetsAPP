@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,6 +36,7 @@ import cl.clinipets.openapi.models.Mascota
 fun MascotasScreen(
     displayName: String?,
     roles: List<String>,
+    onBack: () -> Unit,
     onLogout: () -> Unit,
     vm: MascotasViewModel = hiltViewModel()
 ) {
@@ -55,6 +57,11 @@ fun MascotasScreen(
                         text = "Mis mascotas",
                         style = MaterialTheme.typography.titleLarge
                     )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Volver")
+                    }
                 },
                 actions = {
                     IconButton(onClick = onLogout) {

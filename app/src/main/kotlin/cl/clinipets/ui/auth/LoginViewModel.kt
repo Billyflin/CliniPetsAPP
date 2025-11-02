@@ -89,6 +89,7 @@ class LoginViewModel @Inject constructor(
     }
 
     private fun fetchProfile() {
+        hasRequestedProfile = true
         viewModelScope.launch {
             val result = runCatching { authApi.authMe() }
             result.onSuccess { response ->
@@ -128,5 +129,10 @@ class LoginViewModel @Inject constructor(
             hasRequestedProfile = false
             _ui.update { UiState(isCheckingSession = false) }
         }
+    }
+
+    fun refreshProfile() {
+        hasRequestedProfile = false
+        fetchProfile()
     }
 }
