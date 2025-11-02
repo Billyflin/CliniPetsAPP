@@ -5,10 +5,7 @@ import cl.clinipets.MainDispatcherRule
 import cl.clinipets.core.Resultado
 import cl.clinipets.feature.auth.data.GoogleAuthProvider
 import cl.clinipets.feature.auth.domain.AuthRepositorio
-import cl.clinipets.feature.auth.domain.CerrarSesionUseCase
-import cl.clinipets.feature.auth.domain.IniciarSesionConGoogleUseCase
-import cl.clinipets.feature.auth.domain.ObtenerPerfilUseCase
-import cl.clinipets.feature.auth.domain.ObservarSesionUseCase
+import cl.clinipets.feature.auth.domain.AuthInteractor
 import cl.clinipets.feature.auth.domain.Sesion
 import cl.clinipets.openapi.models.LoginResponse
 import cl.clinipets.openapi.models.MeResponse
@@ -92,11 +89,9 @@ class AuthViewModelTest {
         repo: FakeAuthRepositorio,
         google: FakeGoogleAuthProvider,
     ): AuthViewModel {
+        val interactor = AuthInteractor(repo)
         return AuthViewModel(
-            observarSesion = ObservarSesionUseCase(repo),
-            iniciarSesionConGoogle = IniciarSesionConGoogleUseCase(repo),
-            obtenerPerfil = ObtenerPerfilUseCase(repo),
-            cerrarSesion = CerrarSesionUseCase(repo),
+            authInteractor = interactor,
             googleAuthProvider = google,
         )
     }

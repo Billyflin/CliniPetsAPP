@@ -6,8 +6,6 @@ import cl.clinipets.feature.descubrimiento.domain.DescubrimientoRepositorio
 import cl.clinipets.feature.descubrimiento.domain.FiltrosOfertas
 import cl.clinipets.feature.descubrimiento.domain.FiltrosProcedimientos
 import cl.clinipets.feature.descubrimiento.domain.FiltrosVeterinarios
-import cl.clinipets.feature.descubrimiento.domain.ObtenerProcedimientosUseCase
-import cl.clinipets.feature.descubrimiento.domain.ObtenerVeterinariosUseCase
 import cl.clinipets.feature.mascotas.domain.MascotasRepositorio
 import cl.clinipets.feature.mascotas.domain.ObtenerMisMascotasUseCase
 import cl.clinipets.openapi.models.Mascota
