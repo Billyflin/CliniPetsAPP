@@ -1,4 +1,3 @@
-// auth/ui/LoginViewModel.kt
 package cl.clinipets.ui.auth
 
 import androidx.lifecycle.ViewModel
@@ -6,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import cl.clinipets.core.session.SessionManager
 import cl.clinipets.openapi.apis.AutenticacinApi
 import cl.clinipets.openapi.models.GoogleLoginRequest
+import cl.clinipets.openapi.models.MeResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +22,9 @@ class LoginViewModel @Inject constructor(
     data class UiState(
         val isCheckingSession: Boolean = true,
         val isAuthenticating: Boolean = false,
+        val me: MeResponse? = null,
+        val roles: List<String> = emptyList(),
+        val displayName: String? = null,
         val error: String? = null,
         val ok: Boolean = false
     )
@@ -29,15 +32,29 @@ class LoginViewModel @Inject constructor(
     private val _ui = MutableStateFlow(UiState())
     val ui = _ui.asStateFlow()
 
+    private var hasRequestedProfile = false
+
     init {
         viewModelScope.launch {
-            session.tokenFlow.collect { token ->
+            session.sessionFlow.collect { snapshot ->
+                val hasToken = !snapshot.token.isNullOrBlank()
+                if (!hasToken) {
+                    hasRequestedProfile = false
+                }
+
                 _ui.update { current ->
                     current.copy(
                         isCheckingSession = false,
-                        ok = !token.isNullOrBlank(),
-                        error = if (!token.isNullOrBlank()) null else current.error
+                        ok = hasToken && (current.me?.authenticated != false),
+                        roles = snapshot.roles,
+                        displayName = snapshot.displayName,
+                        error = if (hasToken) current.error else null
                     )
+                }
+
+                if (hasToken && !hasRequestedProfile) {
+                    hasRequestedProfile = true
+                    fetchProfile()
                 }
             }
         }
@@ -51,8 +68,8 @@ class LoginViewModel @Inject constructor(
                 if (r.isSuccessful) {
                     val token = r.body()?.token.orEmpty()
                     if (token.isNotBlank()) {
+                        hasRequestedProfile = false
                         session.setAndPersist(token)
-                        _ui.update { it.copy(ok = true, error = null) }
                     } else {
                         _ui.update { it.copy(error = "Token vacío") }
                     }
@@ -71,10 +88,45 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    private fun fetchProfile() {
+        viewModelScope.launch {
+            val result = runCatching { authApi.authMe() }
+            result.onSuccess { response ->
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null) {
+                        session.persistProfile(body)
+                        _ui.update {
+                            it.copy(
+                                ok = body.authenticated,
+                                me = body,
+                                roles = body.roles.orEmpty(),
+                                displayName = body.nombre,
+                                error = null
+                            )
+                        }
+                    } else {
+                        _ui.update { it.copy(ok = false, error = "Perfil vacío") }
+                    }
+                } else {
+                    _ui.update {
+                        it.copy(
+                            ok = false,
+                            error = "HTTP ${response.code()}: ${response.errorBody()?.string()}"
+                        )
+                    }
+                }
+            }.onFailure { throwable ->
+                _ui.update { it.copy(ok = false, error = throwable.message ?: "Error inesperado") }
+            }
+        }
+    }
+
     fun logout() {
         viewModelScope.launch {
             session.clear()
-            _ui.update { it.copy(error = null) }
+            hasRequestedProfile = false
+            _ui.update { UiState(isCheckingSession = false) }
         }
     }
 }

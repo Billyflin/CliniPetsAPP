@@ -57,8 +57,8 @@ fun ClinipetsApp(vm: LoginViewModel = hiltViewModel()) {
 
                 AppNavGraph(
                     navController = navController,
+                    uiState = state,
                     busy = busy,
-                    error = state.error,
                     onLoginClick = {
                         scope.launch {
                             try {

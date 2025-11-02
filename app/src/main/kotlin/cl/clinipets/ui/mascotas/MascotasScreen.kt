@@ -33,19 +33,29 @@ import cl.clinipets.openapi.models.Mascota
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MascotasScreen(
+    displayName: String?,
+    roles: List<String>,
     onLogout: () -> Unit,
     vm: MascotasViewModel = hiltViewModel()
 ) {
     val mascotas by vm.items.collectAsState()
+    val canSeeMascotas = roles.any { it.equals("CLIENTE", ignoreCase = true) }
 
-    LaunchedEffect(Unit) {
-        vm.cargar()
+    LaunchedEffect(canSeeMascotas) {
+        if (canSeeMascotas) {
+            vm.cargar()
+        }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mis mascotas") },
+                title = {
+                    Text(
+                        text = "Mis mascotas",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                },
                 actions = {
                     IconButton(onClick = onLogout) {
                         Icon(Icons.Filled.Logout, contentDescription = "Cerrar sesión")
@@ -54,6 +64,21 @@ fun MascotasScreen(
             )
         }
     ) { padding ->
+        if (!canSeeMascotas) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Tu rol actual no tiene acceso a esta sección.",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+            return@Scaffold
+        }
+
         if (mascotas.isEmpty()) {
             Box(
                 modifier = Modifier
@@ -61,7 +86,11 @@ fun MascotasScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Aún no tienes mascotas registradas.")
+                Text(
+                    text = displayName?.let { "No hay mascotas registradas para $it." }
+                        ?: "Aún no tienes mascotas registradas.",
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
         } else {
             LazyColumn(
