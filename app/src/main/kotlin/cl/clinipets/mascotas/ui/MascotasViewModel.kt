@@ -7,6 +7,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.logging.Logger
 import javax.inject.Inject
 
 @HiltViewModel
@@ -18,6 +19,7 @@ class MascotasViewModel @Inject constructor(
 
     fun cargar() = viewModelScope.launch {
         val r = api.listarMisMascotas()
+        Logger.getLogger("MascotasViewModel").warning(r.body().toString())
         if (r.isSuccessful) _items.value = r.body().orEmpty()
     }
 }

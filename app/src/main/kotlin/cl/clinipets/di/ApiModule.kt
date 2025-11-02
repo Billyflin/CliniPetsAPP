@@ -19,7 +19,7 @@ object ApiModule {
     @Provides
     @Singleton
     fun provideApiClient(): ApiClient {
-        return ApiClient(baseUrl = BuildConfig.BASE_URL)
+        return ApiClient(baseUrl = BuildConfig.BASE_URL, authNames = arrayOf("bearerAuth"))
     }
 
     @Provides
