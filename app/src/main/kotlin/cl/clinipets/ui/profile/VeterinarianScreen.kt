@@ -1,4 +1,4 @@
-package cl.clinipets.ui.onboarding
+package cl.clinipets.ui.profile
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -7,95 +7,93 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import cl.clinipets.openapi.models.ActualizarPerfilRequest
 import cl.clinipets.openapi.models.RegistrarVeterinarioRequest
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VeterinarianOnboardingScreen(
+fun VeterinarianScreen(
     suggestedName: String?,
     onBack: () -> Unit,
     onCompleted: () -> Unit,
-    vm: VeterinarianOnboardingViewModel = hiltViewModel()
+    vm: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by vm.ui.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
+    // Campos de formulario (compartidos para crear/actualizar)
     var nombre by rememberSaveable { mutableStateOf(suggestedName.orEmpty()) }
     var licencia by rememberSaveable { mutableStateOf("") }
     var latitud by rememberSaveable { mutableStateOf("") }
     var longitud by rememberSaveable { mutableStateOf("") }
     var radio by rememberSaveable { mutableStateOf("") }
-    var selectedModes by remember { mutableStateOf(setOf<RegistrarVeterinarioRequest.ModosAtencion>()) }
+    var selectedModes by remember { mutableStateOf(setOf<String>()) }
+
+    // Estado local para saber si ya precargamos los campos desde el perfil
+    var didPrefill by rememberSaveable { mutableStateOf(false) }
+    // Estado para mostrar diálogo de éxito post acción
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var lastAction by rememberSaveable { mutableStateOf("idle") } // "idle" | "create" | "update"
 
-    LaunchedEffect(uiState.error) {
-        uiState.error?.let { message ->
-            scope.launch { snackbarHostState.showSnackbar(message) }
-            vm.resetMessages()
+    // Cargar perfil al entrar
+    LaunchedEffect(Unit) { vm.loadMyProfile() }
+
+    // Prefill cuando llegue el perfil por primera vez
+    LaunchedEffect(uiState.perfil) {
+        val p = uiState.perfil
+        if (p != null && !didPrefill) {
+            nombre = p.nombreCompleto
+            licencia = p.numeroLicencia.orEmpty()
+            latitud = p.latitud?.toString().orEmpty()
+            longitud = p.longitud?.toString().orEmpty()
+            radio = p.radioCobertura?.toString().orEmpty()
+            selectedModes = p.modosAtencion.map { it.name }.toSet()
+            didPrefill = true
         }
-    }
-
-    LaunchedEffect(uiState.successMessage) {
-        if (uiState.successMessage != null) {
+        if (p != null && lastAction != "idle") {
             showSuccessDialog = true
-            vm.resetMessages()
         }
     }
 
     if (showSuccessDialog) {
         AlertDialog(
             onDismissRequest = {},
-            title = { Text("Solicitud enviada") },
-            text = { Text("Tu perfil está pendiente de verificación.") },
+            title = { Text(if (lastAction == "update") "Perfil actualizado" else "Solicitud enviada") },
+            text = { Text(if (lastAction == "update") "Tus datos profesionales fueron actualizados." else "Tu perfil está pendiente de verificación.") },
             confirmButton = {
                 TextButton(onClick = {
                     showSuccessDialog = false
+                    lastAction = "idle"
                     onCompleted()
-                }) {
-                    Text("Aceptar")
-                }
+                }) { Text("Aceptar") }
             }
         )
     }
 
+    val isUpdating = uiState.perfil != null
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Ser veterinario") },
+                title = { Text("Datos profesionales") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 }
             )
@@ -109,7 +107,7 @@ fun VeterinarianOnboardingScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             Text(
-                text = "Completa tus datos para comenzar el proceso de verificación.",
+                text = if (isUpdating) "Actualiza tus datos profesionales." else "Completa tus datos para comenzar el proceso de verificación.",
                 style = MaterialTheme.typography.bodyLarge
             )
 
@@ -134,12 +132,8 @@ fun VeterinarianOnboardingScreen(
 
             ModeSelector(
                 selectedModes = selectedModes,
-                onToggle = { mode ->
-                    selectedModes = if (selectedModes.contains(mode)) {
-                        selectedModes - mode
-                    } else {
-                        selectedModes + mode
-                    }
+                onToggle = { modeName ->
+                    selectedModes = if (selectedModes.contains(modeName)) selectedModes - modeName else selectedModes + modeName
                 }
             )
 
@@ -170,25 +164,38 @@ fun VeterinarianOnboardingScreen(
 
             Button(
                 onClick = {
-                    val request = RegistrarVeterinarioRequest(
-                        nombreCompleto = nombre,
-                        numeroLicencia = licencia.takeIf { it.isNotBlank() },
-                        modosAtencion = if (selectedModes.isEmpty()) null else selectedModes,
-                        latitud = latitud.toDoubleOrNull(),
-                        longitud = longitud.toDoubleOrNull(),
-                        radioCobertura = radio.toDoubleOrNull()
-                    )
-                    vm.submit(request)
+                    if (isUpdating) {
+                        val req = ActualizarPerfilRequest(
+                            nombreCompleto = nombre.takeIf { it.isNotBlank() },
+                            numeroLicencia = licencia.takeIf { it.isNotBlank() },
+                            modosAtencion = selectedModes.takeIf { it.isNotEmpty() }?.map {
+                                ActualizarPerfilRequest.ModosAtencion.valueOf(it)
+                            }?.toSet(),
+                            latitud = latitud.toDoubleOrNull(),
+                            longitud = longitud.toDoubleOrNull(),
+                            radioCobertura = radio.toDoubleOrNull()
+                        )
+                        lastAction = "update"
+                        vm.updateMyProfile(req)
+                    } else {
+                        val req = RegistrarVeterinarioRequest(
+                            nombreCompleto = nombre,
+                            numeroLicencia = licencia.takeIf { it.isNotBlank() },
+                            modosAtencion = selectedModes.takeIf { it.isNotEmpty() }?.map {
+                                RegistrarVeterinarioRequest.ModosAtencion.valueOf(it)
+                            }?.toSet(),
+                            latitud = latitud.toDoubleOrNull(),
+                            longitud = longitud.toDoubleOrNull(),
+                            radioCobertura = radio.toDoubleOrNull()
+                        )
+                        lastAction = "create"
+                        vm.submit(req)
+                    }
                 },
-                enabled = nombre.isNotBlank() && !uiState.submitting,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isLoading
             ) {
-                if (uiState.submitting) {
-                    Text("Enviando…")
-                } else {
-                    Icon(Icons.Filled.Check, contentDescription = null)
-                    Text("Enviar solicitud", modifier = Modifier.padding(start = 8.dp))
-                }
+                Text(if (isUpdating) "Actualizar" else "Registrar")
             }
         }
     }
@@ -197,16 +204,17 @@ fun VeterinarianOnboardingScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ModeSelector(
-    selectedModes: Set<RegistrarVeterinarioRequest.ModosAtencion>,
-    onToggle: (RegistrarVeterinarioRequest.ModosAtencion) -> Unit
+    selectedModes: Set<String>,
+    onToggle: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        RegistrarVeterinarioRequest.ModosAtencion.values().forEach { mode ->
+        RegistrarVeterinarioRequest.ModosAtencion.entries.forEach { mode ->
+            val name = mode.name
             FilterChip(
-                selected = selectedModes.contains(mode),
-                onClick = { onToggle(mode) },
-                label = { Text(mode.name) },
-                leadingIcon = if (selectedModes.contains(mode)) {
+                selected = selectedModes.contains(name),
+                onClick = { onToggle(name) },
+                label = { Text(name) },
+                leadingIcon = if (selectedModes.contains(name)) {
                     { Icon(Icons.Filled.Check, contentDescription = null) }
                 } else null
             )

@@ -14,8 +14,8 @@ import cl.clinipets.ui.home.HomeScreen
 import cl.clinipets.ui.mascotas.MascotaDetailScreen
 import cl.clinipets.ui.mascotas.MascotaFormScreen
 import cl.clinipets.ui.mascotas.MascotasScreen
-import cl.clinipets.ui.onboarding.VeterinarianOnboardingScreen
 import cl.clinipets.ui.profile.ProfileScreen
+import cl.clinipets.ui.profile.VeterinarianScreen
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
@@ -24,7 +24,7 @@ import java.util.UUID
 @Serializable object MascotasRoute
 @Serializable object ProfileRoute
 @Serializable object DiscoverRoute
-@Serializable object VeterinarianOnboardingRoute
+@Serializable object VeterinarianRoute
 
 @Serializable
 data class MascotaDetailRoute(val id: String)
@@ -93,12 +93,13 @@ fun AppNavGraph(
             ProfileScreen(
                 state = uiState,
                 onBack = { navController.popBackStack() },
-                onBecomeVeterinarian = { navController.navigate(VeterinarianOnboardingRoute) },
+                onBecomeVeterinarian = { navController.navigate(VeterinarianRoute) },
+                onEditProfessional = { navController.navigate(VeterinarianRoute) },
                 onLogout = onLogout
             )
         }
-        composable<VeterinarianOnboardingRoute> {
-            VeterinarianOnboardingScreen(
+        composable<VeterinarianRoute> {
+            VeterinarianScreen(
                 suggestedName = uiState.displayName ?: uiState.me?.nombre,
                 onBack = { navController.popBackStack() },
                 onCompleted = {

@@ -125,6 +125,9 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.material3)
 
+    // Imágenes en Compose
+    implementation(libs.coil.compose)
+
     // Coroutines y Serialization
     implementation(libs.coroutines.android)
     implementation(libs.serialization.json)
