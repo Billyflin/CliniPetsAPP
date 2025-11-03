@@ -69,14 +69,15 @@ fun AppNavGraph(
                 },
                 onBack = { navController.popBackStack() },
                 onNavigateToMascotaForm = {
-                    navController.navigate(MascotaFormRoute)
+                    navController.navigate(MascotaFormRoute())
                 }
             )
         }
         composable<MascotaFormRoute> { backStackEntry ->
             val args = backStackEntry.toRoute<MascotaFormRoute>()
+            val mascotaId = args.id?.let { runCatching { UUID.fromString(it) }.getOrNull() }
             MascotaFormScreen(
-                mascotaId = UUID.fromString(args.id),
+                mascotaId = mascotaId,
                 onBack = { navController.popBackStack() }
             )
         }
@@ -84,7 +85,8 @@ fun AppNavGraph(
             val args = backStackEntry.toRoute<MascotaDetailRoute>()
             MascotaDetailScreen(
                 mascotaId = UUID.fromString(args.id),
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onEdit = { id -> navController.navigate(MascotaFormRoute(id.toString())) }
             )
         }
         composable<ProfileRoute> {

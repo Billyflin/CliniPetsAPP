@@ -40,10 +40,12 @@ fun MascotasScreen(
     LaunchedEffect(Unit) { vm.cargar() }
 
     Column(modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
-        Button(
-            onClick = { onNavigateToMascotaForm() },
-            modifier = androidx.compose.ui.Modifier
-        ) { }
+        Button(onClick = onNavigateToMascotaForm, modifier = androidx.compose.ui.Modifier) {
+            Text("Crear")
+        }
+        Button(onClick = { vm.refrescar() }, modifier = androidx.compose.ui.Modifier) {
+            Text("Refrescar")
+        }
         when {
             cargando -> {
                 Box(
@@ -72,11 +74,7 @@ fun MascotasScreen(
                     items(mascotas, key = { it.id ?: it.nombre }) { mascota ->
                         MascotaCard(
                             mascota = mascota,
-                            onClick = {
-                                mascota.id?.let {
-                                    onNavigateToMascotaDetail(mascota.id)
-                                }
-                            }
+                            onClick = { mascota.id?.let { onNavigateToMascotaDetail(mascota.id) } }
                         )
                     }
                 }

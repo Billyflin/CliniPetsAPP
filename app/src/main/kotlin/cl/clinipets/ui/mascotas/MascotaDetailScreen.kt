@@ -23,7 +23,10 @@ import java.util.UUID
 
 @Composable
 fun MascotaDetailScreen(
-    mascotaId: UUID, onBack: () -> Unit, vm: MascotasViewModel = hiltViewModel()
+    mascotaId: UUID,
+    onBack: () -> Unit,
+    onEdit: (UUID) -> Unit,
+    vm: MascotasViewModel = hiltViewModel()
 ) {
     val cargando by vm.cargando.collectAsState()
     val mascota by vm.seleccionada.collectAsState()
@@ -65,6 +68,9 @@ fun MascotaDetailScreen(
                     Spacer(Modifier.height(4.dp))
                     Text("Raza: $raza")
                 }
+                // Botón para navegar al formulario con el id actual
+                Button(onClick = { onEdit(mascotaId) }, content = { Text("Editar") })
+                Spacer(Modifier.height(8.dp))
                 Button(onClick = { vm.eliminar(mascotaId) }, content = { Text("Borrar") })
             }
         }
