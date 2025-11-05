@@ -53,24 +53,12 @@ security:
 tags:
   - name: Herramientas Clínicas
     description: Asistencia clínica inteligente para veterinarios (IA/ML)
-  - name: Inventario
-    description: Gestión de inventario de medicamentos y materiales (DEMO/Stub)
   - name: Autenticación
     description: Endpoints de autenticación y gestión de sesión
-  - name: Catálogo
-    description: Gestión interna de procedimientos y ofertas (privado)
-  - name: Juntas
-    description: Seguimiento en tiempo real de citas veterinarias (complementa WebSocket)
   - name: Veterinarios
     description: "Gestión de veterinarios: registro, perfil y verificación"
-  - name: Disponibilidad
-    description: Gestión de horarios y disponibilidad de veterinarios
-  - name: Reservas
-    description: Gestión de citas y reservas de atención veterinaria
   - name: Mascotas
     description: Gestión de mascotas del usuario
-  - name: Descubrimiento
-    description: Búsqueda y exploración de servicios veterinarios disponibles
 paths:
   /api/veterinarios/{id}/verificar:
     put:
@@ -128,6 +116,68 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/VeterinarioPerfil"
+  /api/veterinarios/mi-disponibilidad:
+    get:
+      tags:
+        - Veterinarios
+      summary: Consultar mi disponibilidad semanal
+      operationId: miDisponibilidad
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DisponibilidadSemanalResponse"
+    put:
+      tags:
+        - Veterinarios
+      summary: Actualizar mi disponibilidad semanal
+      operationId: actualizarMiDisponibilidad
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActualizarDisponibilidadRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DisponibilidadSemanalResponse"
+  /api/veterinarios/mi-catalogo:
+    get:
+      tags:
+        - Veterinarios
+      summary: Consultar mi catálogo de procedimientos
+      operationId: miCatalogo
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CatalogoResponse"
+    put:
+      tags:
+        - Veterinarios
+      summary: Reemplazar mi catálogo de procedimientos
+      operationId: actualizarMiCatalogo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActualizarCatalogoRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CatalogoResponse"
   /api/mascotas/{id}:
     get:
       tags:
@@ -240,135 +290,6 @@ paths:
                 $ref: "#/components/schemas/ProblemDetail"
       security:
         - bearerAuth: []
-  /api/catalogo/procedimientos/{sku}:
-    put:
-      tags:
-        - Catálogo
-      summary: Actualizar procedimiento
-      description: Modifica la información de un procedimiento existente identificado
-        por su SKU.
-      operationId: catalogoActualizarProcedimiento
-      parameters:
-        - name: sku
-          in: path
-          description: SKU del procedimiento
-          required: true
-          schema:
-            type: string
-          example: PROC-VAC-001
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ActualizarProcedimientoRequest"
-        required: true
-      responses:
-        "200":
-          description: Procedimiento actualizado correctamente
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/Procedimiento"
-        "404":
-          description: Procedimiento no encontrado
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "400":
-          description: Request inválido
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-      security:
-        - bearerAuth: []
-    delete:
-      tags:
-        - Catálogo
-      summary: Eliminar procedimiento
-      description: Elimina un procedimiento del catálogo.
-      operationId: catalogoEliminarProcedimiento
-      parameters:
-        - name: sku
-          in: path
-          description: SKU del procedimiento a eliminar
-          required: true
-          schema:
-            type: string
-      responses:
-        "204":
-          description: Procedimiento eliminado
-        "404":
-          description: Procedimiento no encontrado
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-      security:
-        - bearerAuth: []
-  /api/catalogo/ofertas/{id}:
-    put:
-      tags:
-        - Catálogo
-      summary: Actualizar oferta
-      description: Modifica el precio o estado de una oferta existente.
-      operationId: catalogoActualizarOferta
-      parameters:
-        - name: id
-          in: path
-          description: Identificador interno de la oferta
-          required: true
-          schema:
-            type: integer
-            format: int64
-          example: 42
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ActualizarOfertaRequest"
-        required: true
-      responses:
-        "200":
-          description: Oferta actualizada
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/Oferta"
-        "404":
-          description: Oferta no encontrada
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-      security:
-        - bearerAuth: []
-    delete:
-      tags:
-        - Catálogo
-      summary: Eliminar oferta
-      description: Elimina una oferta comercial del catálogo.
-      operationId: catalogoEliminarOferta
-      parameters:
-        - name: id
-          in: path
-          description: Identificador interno de la oferta
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        "204":
-          description: Oferta eliminada
-        "404":
-          description: Oferta no encontrada
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-      security:
-        - bearerAuth: []
   /api/veterinarios:
     post:
       tags:
@@ -388,49 +309,6 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/VeterinarioPerfil"
-  /api/reservas:
-    post:
-      tags:
-        - Reservas
-      summary: Crear nueva reserva
-      description: "\n            Crea una nueva reserva de atención veterinaria para\
-        \ una mascota.\n            Se debe especificar el veterinario, mascota, procedimiento,\
-        \ fecha/hora y modo de atención.\n            El sistema valida la disponibilidad\
-        \ del veterinario antes de confirmar la reserva.\n        "
-      operationId: crearReserva
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CrearReserva"
-        required: true
-      responses:
-        "201":
-          description: Reserva creada exitosamente
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/Reserva"
-        "400":
-          description: Datos inválidos o veterinario no disponible
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "401":
-          description: No autenticado
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "404":
-          description: Mascota o veterinario no encontrado
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-      security:
-        - bearerAuth: []
   /api/mascotas:
     post:
       tags:
@@ -465,279 +343,6 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
-      security:
-        - bearerAuth: []
-  /api/juntas:
-    post:
-      tags:
-        - Juntas
-      summary: Iniciar junta/cita
-      description: "\n            Marca el inicio real de una cita veterinaria.\n\
-        \            Convierte una reserva en una junta activa con tracking de ubicació\
-        n y estado.\n            Roles requeridos: VETERINARIO o ADMIN\n        "
-      operationId: iniciarJunta
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/IniciarJunta"
-        required: true
-      responses:
-        "201":
-          description: Junta iniciada exitosamente
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/Junta"
-        "400":
-          description: Reserva no válida para iniciar junta
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "403":
-          description: Sin permisos - requiere rol VETERINARIO o ADMIN
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "404":
-          description: Reserva no encontrada
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-      security:
-        - bearerAuth: []
-  /api/juntas/{id}/finalizar:
-    post:
-      tags:
-        - Juntas
-      summary: Finalizar junta
-      description: "\n            Marca la junta como finalizada con notas opcionales\
-        \ del veterinario.\n            Registra la hora de finalización real y actualiza\
-        \ el estado de la reserva.\n            Roles requeridos: VETERINARIO o ADMIN\n\
-        \        "
-      operationId: finalizarJunta
-      parameters:
-        - name: id
-          in: path
-          description: UUID de la junta
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/FinalizarJunta"
-        required: true
-      responses:
-        "200":
-          description: Junta finalizada exitosamente
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/Junta"
-        "403":
-          description: Sin permisos - requiere rol VETERINARIO o ADMIN
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "404":
-          description: Junta no encontrada
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-      security:
-        - bearerAuth: []
-  /api/inventario/verificar:
-    post:
-      tags:
-        - Inventario
-      summary: Verificar disponibilidad de item
-      description: "\n            Verifica si un medicamento o material está disponible\
-        \ en el inventario.\n            \n            **NOTA:** Este es un endpoint\
-        \ de demostración (stub) que siempre retorna disponible=true.\n          \
-        \  En producción se integraría con un sistema real de gestión de inventario.\n\
-        \            \n            **Requiere rol:** VETERINARIO o ADMIN\n        "
-      operationId: verificarDisponibilidad
-      requestBody:
-        description: SKU del item a verificar
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/VerificarDisponibilidadRequest"
-            example:
-              sku: MED-ANTIBIOTICO-001
-        required: true
-      responses:
-        "200":
-          description: Verificación completada
-          content:
-            application/json:
-              example:
-                disponible: true
-        "403":
-          description: Sin permisos - requiere rol VETERINARIO o ADMIN
-          content:
-            '*/*':
-              schema:
-                type: object
-                additionalProperties:
-                  type: boolean
-      security:
-        - bearerAuth: []
-  /api/inventario/reservar:
-    post:
-      tags:
-        - Inventario
-      summary: Reservar items del inventario
-      description: "\n            Reserva una cantidad específica de un medicamento\
-        \ o material del inventario.\n            \n            **NOTA:** Este es\
-        \ un endpoint de demostración (stub) que siempre retorna éxito=true.\n   \
-        \         En producción se integraría con un sistema real de gestión de inventario\
-        \ que:\n            - Validaría stock disponible\n            - Actualizarí\
-        a cantidades\n            - Registraría la transacción\n            \n   \
-        \         **Requiere rol:** VETERINARIO o ADMIN\n        "
-      operationId: reservarItem
-      requestBody:
-        description: Item y cantidad a reservar
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ReservarItemRequest"
-            example:
-              sku: MED-ANTIBIOTICO-001
-              cantidad: 10
-        required: true
-      responses:
-        "200":
-          description: Reserva procesada
-          content:
-            application/json:
-              example:
-                exito: true
-        "400":
-          description: Cantidad inválida o stock insuficiente
-          content:
-            '*/*':
-              schema:
-                type: object
-                additionalProperties:
-                  type: boolean
-        "403":
-          description: Sin permisos - requiere rol VETERINARIO o ADMIN
-          content:
-            '*/*':
-              schema:
-                type: object
-                additionalProperties:
-                  type: boolean
-      security:
-        - bearerAuth: []
-  /api/disponibilidad/veterinario/{veterinarioId}/reglas:
-    post:
-      tags:
-        - Disponibilidad
-      summary: Crear regla de disponibilidad semanal
-      description: "Define un horario recurrente para un día específico de la semana.\
-        \ Por ejemplo: Todos los lunes de 09:00 a 17:00.Roles requeridos: VETERINARIO\
-        \ o ADMIN"
-      operationId: crearReglaSemanal
-      parameters:
-        - name: veterinarioId
-          in: path
-          description: UUID del veterinario
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CrearReglaSemanal"
-        required: true
-      responses:
-        "201":
-          description: Regla semanal creada exitosamente
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ReglaSemanal"
-        "400":
-          description: "Datos inválidos (horarios superpuestos, etc.)"
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ReglaSemanal"
-        "403":
-          description: Sin permisos - requiere rol VETERINARIO o ADMIN
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ReglaSemanal"
-        "404":
-          description: Veterinario no encontrado
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ReglaSemanal"
-      security:
-        - bearerAuth: []
-  /api/disponibilidad/veterinario/{veterinarioId}/excepciones:
-    post:
-      tags:
-        - Disponibilidad
-      summary: Crear excepción de disponibilidad
-      description: "Bloquea o habilita horarios específicos para una fecha particular.\
-        \ Útil para vacaciones, días festivos, o bloques especiales de atención. Las\
-        \ excepciones tienen prioridad sobre las reglas semanales. Roles requeridos:\
-        \ VETERINARIO o ADMIN"
-      operationId: crearExcepcion
-      parameters:
-        - name: veterinarioId
-          in: path
-          description: UUID del veterinario
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CrearExcepcion"
-        required: true
-      responses:
-        "201":
-          description: Excepción creada exitosamente
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ExcepcionDisponibilidad"
-        "400":
-          description: Datos inválidos
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ExcepcionDisponibilidad"
-        "403":
-          description: Sin permisos - requiere rol VETERINARIO o ADMIN
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ExcepcionDisponibilidad"
-        "404":
-          description: Veterinario no encontrado
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ExcepcionDisponibilidad"
       security:
         - bearerAuth: []
   /api/clinica/sugerencias/tratamiento:
@@ -841,80 +446,6 @@ paths:
                   type: string
       security:
         - bearerAuth: []
-  /api/catalogo/procedimientos:
-    post:
-      tags:
-        - Catálogo
-      summary: Crear procedimiento
-      description: Registra un nuevo procedimiento en el catálogo interno.
-      operationId: catalogoCrearProcedimiento
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CrearProcedimientoRequest"
-        required: true
-      responses:
-        "201":
-          description: Procedimiento creado correctamente
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/Procedimiento"
-        "400":
-          description: Datos inválidos o SKU duplicado
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "401":
-          description: Sesión inválida
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "403":
-          description: El usuario no posee rol ADMIN
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-      security:
-        - bearerAuth: []
-  /api/catalogo/ofertas:
-    post:
-      tags:
-        - Catálogo
-      summary: Crear oferta
-      description: Crea una oferta comercial para un procedimiento del catálogo.
-      operationId: catalogoCrearOferta
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CrearOfertaRequest"
-        required: true
-      responses:
-        "201":
-          description: Oferta creada correctamente
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/Oferta"
-        "400":
-          description: Datos inválidos
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "403":
-          description: El usuario no posee permisos
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-      security:
-        - bearerAuth: []
   /api/auth/refresh:
     post:
       tags:
@@ -995,213 +526,6 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
-  /api/reservas/{id}/estado:
-    patch:
-      tags:
-        - Reservas
-      summary: Cambiar estado de reserva
-      description: "\n            Actualiza el estado de una reserva existente.\n\
-        \            Estados posibles: PENDIENTE, CONFIRMADA, EN_CURSO, COMPLETADA,\n\
-        \            CANCELADA_CLIENTE, CANCELADA_VETERINARIO.\n            Solo el\
-        \ cliente propietario o el veterinario asignado pueden cambiar el estado.\n\
-        \        "
-      operationId: cambiarEstadoReserva
-      parameters:
-        - name: id
-          in: path
-          description: UUID de la reserva
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CambiarEstadoReserva"
-        required: true
-      responses:
-        "200":
-          description: Estado actualizado exitosamente
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/Reserva"
-        "400":
-          description: Transición de estado inválida
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "403":
-          description: Sin permisos para modificar esta reserva
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "404":
-          description: Reserva no encontrada
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-      security:
-        - bearerAuth: []
-  /api/juntas/{id}/ubicacion:
-    patch:
-      tags:
-        - Juntas
-      summary: Actualizar ubicación del veterinario
-      description: "\n            Actualiza la ubicación GPS del veterinario durante\
-        \ una junta activa.\n            Permite tracking en tiempo real para citas\
-        \ a domicilio.\n            Roles requeridos: VETERINARIO o ADMIN\n      \
-        \  "
-      operationId: actualizarUbicacionJunta
-      parameters:
-        - name: id
-          in: path
-          description: UUID de la junta
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ActualizarUbicacionJunta"
-        required: true
-      responses:
-        "200":
-          description: Ubicación actualizada exitosamente
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/Junta"
-        "403":
-          description: Sin permisos - requiere rol VETERINARIO o ADMIN
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "404":
-          description: Junta no encontrada
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-      security:
-        - bearerAuth: []
-  /api/juntas/{id}/estado:
-    patch:
-      tags:
-        - Juntas
-      summary: Actualizar estado de junta
-      description: "\n            Cambia el estado de la junta durante su ejecució\
-        n.\n            Estados válidos: INICIADA, EN_CAMINO, EN_SITIO, FINALIZADA.\n\
-        \            Roles requeridos: VETERINARIO o ADMIN\n        "
-      operationId: actualizarEstadoJunta
-      parameters:
-        - name: id
-          in: path
-          description: UUID de la junta
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ActualizarEstadoJunta"
-        required: true
-      responses:
-        "200":
-          description: Estado actualizado exitosamente
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/Junta"
-        "400":
-          description: Transición de estado inválida
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "403":
-          description: Sin permisos - requiere rol VETERINARIO o ADMIN
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-        "404":
-          description: Junta no encontrada
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-      security:
-        - bearerAuth: []
-  /api/reservas/veterinario/{veterinarioId}:
-    get:
-      tags:
-        - Reservas
-      summary: Reservas del veterinario
-      description: "\n            Lista las reservas asignadas a un veterinario especí\
-        fico.\n            Útil para que los veterinarios vean su agenda de citas.\n\
-        \        "
-      operationId: reservasVeterinario
-      parameters:
-        - name: veterinarioId
-          in: path
-          description: UUID del veterinario
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Reservas del veterinario obtenidas exitosamente
-          content:
-            '*/*':
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Reserva"
-        "404":
-          description: Veterinario no encontrado
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-      security:
-        - bearerAuth: []
-  /api/reservas/mias:
-    get:
-      tags:
-        - Reservas
-      summary: Mis reservas
-      description: "\n            Lista todas las reservas del usuario autenticado,\
-        \ ordenadas por fecha.\n            Incluye reservas pendientes, confirmadas,\
-        \ completadas y canceladas.\n        "
-      operationId: misReservas
-      responses:
-        "200":
-          description: Lista de reservas obtenida exitosamente
-          content:
-            '*/*':
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Reserva"
-        "401":
-          description: No autenticado
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-      security:
-        - bearerAuth: []
   /api/mascotas/mias:
     get:
       tags:
@@ -1226,306 +550,6 @@ paths:
                 $ref: "#/components/schemas/ProblemDetail"
       security:
         - bearerAuth: []
-  /api/juntas/{id}:
-    get:
-      tags:
-        - Juntas
-      summary: Obtener estado de junta
-      description: "\n            Devuelve el estado actual de una junta incluyendo\
-        \ ubicación,\n            tiempos de inicio/fin y notas del veterinario.\n\
-        \        "
-      operationId: obtenerJunta
-      parameters:
-        - name: id
-          in: path
-          description: UUID de la junta
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Junta obtenida exitosamente
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/Junta"
-        "404":
-          description: Junta no encontrada
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ProblemDetail"
-  /api/disponibilidad/veterinario/{veterinarioId}:
-    get:
-      tags:
-        - Disponibilidad
-      summary: Consultar disponibilidad del veterinario
-      description: "\n            Devuelve los bloques horarios disponibles de un\
-        \ veterinario para una fecha específica.\n            Toma en cuenta las reglas\
-        \ semanales, excepciones y reservas ya existentes.\n            Los bloques\
-        \ se retornan en intervalos configurables (ej: cada 30 minutos).\n        "
-      operationId: obtenerDisponibilidad
-      parameters:
-        - name: veterinarioId
-          in: path
-          description: UUID del veterinario
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: fecha
-          in: query
-          description: "Fecha para consultar disponibilidad (formato: YYYY-MM-DD)"
-          required: true
-          schema:
-            type: string
-            format: date
-          example: 2025-10-20
-      responses:
-        "200":
-          description: Disponibilidad obtenida exitosamente
-          content:
-            '*/*':
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/BloqueHorario"
-        "404":
-          description: Veterinario no encontrado
-          content:
-            '*/*':
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/BloqueHorario"
-  /api/descubrimiento/veterinarios:
-    get:
-      tags:
-        - Descubrimiento
-      summary: Buscar veterinarios
-      description: "Busca veterinarios disponibles con soporte de filtros geográficos,\
-        \ especie y modo de atención."
-      operationId: descubrimientoBuscarVeterinarios
-      parameters:
-        - name: lat
-          in: query
-          description: Latitud del usuario para ordenar por distancia
-          required: false
-          schema:
-            type: number
-            format: double
-        - name: lng
-          in: query
-          description: Longitud del usuario para ordenar por distancia
-          required: false
-          schema:
-            type: number
-            format: double
-        - name: radioKm
-          in: query
-          description: Radio máximo en kilómetros para filtrar resultados
-          required: false
-          schema:
-            type: number
-            format: double
-            default: 10.0
-          example: 10.0
-        - name: modo
-          in: query
-          description: "Modo de atención preferido (PRESENCIAL, DOMICILIO, VIRTUAL)"
-          required: false
-          schema:
-            type: string
-            enum:
-              - DOMICILIO
-              - CLINICA
-              - URGENCIA
-        - name: especie
-          in: query
-          description: Especie de mascota para la que se busca atención
-          required: false
-          schema:
-            type: string
-            enum:
-              - PERRO
-              - GATO
-        - name: procedimientoSku
-          in: query
-          description: Procedimiento específico requerido
-          required: false
-          schema:
-            type: string
-        - name: abiertoAhora
-          in: query
-          description: Limitar resultados a los veterinarios abiertos actualmente
-          required: false
-          schema:
-            type: boolean
-        - name: limit
-          in: query
-          description: Cantidad máxima de resultados
-          required: false
-          schema:
-            type: integer
-            format: int32
-            default: 50
-          example: 50
-        - name: offset
-          in: query
-          description: Desplazamiento para paginación
-          required: false
-          schema:
-            type: integer
-            format: int32
-            default: 0
-          example: 0
-      responses:
-        "200":
-          description: Listado de veterinarios encontrados
-          content:
-            '*/*':
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/VetItem"
-  /api/descubrimiento/procedimientos:
-    get:
-      tags:
-        - Descubrimiento
-      summary: Explorar procedimientos
-      description: "Obtiene procedimientos publicados para el catálogo público, con\
-        \ búsqueda y filtros."
-      operationId: descubrimientoBuscarProcedimientos
-      parameters:
-        - name: especie
-          in: query
-          description: Especie compatible con el procedimiento
-          required: false
-          schema:
-            type: string
-            enum:
-              - PERRO
-              - GATO
-        - name: q
-          in: query
-          description: Texto de búsqueda libre (nombre o descripción)
-          required: false
-          schema:
-            type: string
-        - name: limit
-          in: query
-          description: Cantidad máxima de resultados
-          required: false
-          schema:
-            type: integer
-            format: int32
-            default: 50
-          example: 50
-        - name: offset
-          in: query
-          description: Desplazamiento para paginación
-          required: false
-          schema:
-            type: integer
-            format: int32
-            default: 0
-          example: 0
-      responses:
-        "200":
-          description: Lista de procedimientos encontrada
-          content:
-            '*/*':
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ProcedimientoItem"
-  /api/descubrimiento/ofertas:
-    get:
-      tags:
-        - Descubrimiento
-      summary: Explorar ofertas
-      description: "Lista ofertas comerciales activas con filtros opcionales por especie,\
-        \ procedimiento y ubicación."
-      operationId: descubrimientoBuscarOfertas
-      parameters:
-        - name: especie
-          in: query
-          description: Especie compatible con la oferta
-          required: false
-          schema:
-            type: string
-            enum:
-              - PERRO
-              - GATO
-        - name: procedimientoSku
-          in: query
-          description: SKU del procedimiento ofrecido
-          required: false
-          schema:
-            type: string
-        - name: vetId
-          in: query
-          description: Identificador del veterinario que publica la oferta
-          required: false
-          schema:
-            type: string
-            format: uuid
-        - name: activo
-          in: query
-          description: Filtrar por ofertas activas/inactivas
-          required: false
-          schema:
-            type: boolean
-          example: true
-        - name: lat
-          in: query
-          description: Latitud para priorizar ofertas cercanas
-          required: false
-          schema:
-            type: number
-            format: double
-        - name: lng
-          in: query
-          description: Longitud para priorizar ofertas cercanas
-          required: false
-          schema:
-            type: number
-            format: double
-        - name: radioKm
-          in: query
-          description: Radio máximo en kilómetros
-          required: false
-          schema:
-            type: number
-            format: double
-        - name: limit
-          in: query
-          description: Cantidad máxima de resultados
-          required: false
-          schema:
-            type: integer
-            format: int32
-            default: 50
-          example: 50
-        - name: offset
-          in: query
-          description: Desplazamiento para paginación
-          required: false
-          schema:
-            type: integer
-            format: int32
-            default: 0
-          example: 0
-      responses:
-        "200":
-          description: Listado de ofertas disponibles
-          content:
-            '*/*':
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/OfertaItem"
   /api/auth/me:
     get:
       tags:
@@ -1542,32 +566,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MeResponse"
-      security:
-        - bearerAuth: []
-  /api/disponibilidad/reglas/{reglaId}:
-    delete:
-      tags:
-        - Disponibilidad
-      summary: Eliminar regla semanal
-      description: " Elimina una regla de disponibilidad recurrente. Esto no afecta\
-        \ las reservas ya creadas basadas en esta regla. Roles requeridos: VETERINARIO\
-        \ o ADMIN"
-      operationId: eliminarReglaSemanal
-      parameters:
-        - name: reglaId
-          in: path
-          description: UUID de la regla semanal
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "204":
-          description: Regla eliminada exitosamente
-        "403":
-          description: Sin permisos - requiere rol VETERINARIO o ADMIN
-        "404":
-          description: Regla no encontrada
       security:
         - bearerAuth: []
 components:
@@ -1639,6 +637,131 @@ components:
         radioCobertura:
           type: number
           format: double
+    ActualizarDisponibilidadRequest:
+      type: object
+      properties:
+        bloques:
+          type: array
+          items:
+            $ref: "#/components/schemas/BloqueHorarioDto"
+      required:
+        - bloques
+    BloqueHorarioDto:
+      type: object
+      properties:
+        dia:
+          type: string
+          enum:
+            - MONDAY
+            - TUESDAY
+            - WEDNESDAY
+            - THURSDAY
+            - FRIDAY
+            - SATURDAY
+            - SUNDAY
+        inicio:
+          type: string
+        fin:
+          type: string
+        habilitado:
+          type: boolean
+      required:
+        - dia
+        - fin
+        - habilitado
+        - inicio
+    DisponibilidadSemanalResponse:
+      type: object
+      properties:
+        bloques:
+          type: array
+          items:
+            $ref: "#/components/schemas/BloqueHorarioDto"
+      required:
+        - bloques
+    ActualizarCatalogoRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CatalogoItemRequest"
+      required:
+        - items
+    CatalogoItemRequest:
+      type: object
+      properties:
+        sku:
+          type: string
+        habilitado:
+          type: boolean
+        duracionMinutosOverride:
+          type: integer
+          format: int32
+        modosHabilitados:
+          type: array
+          items:
+            type: string
+            enum:
+              - DOMICILIO
+              - CLINICA
+              - URGENCIA
+          uniqueItems: true
+      required:
+        - habilitado
+        - sku
+    CatalogoItemResponse:
+      type: object
+      properties:
+        sku:
+          type: string
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        compatibleCon:
+          type: string
+          enum:
+            - PERRO
+            - GATO
+            - AMBOS
+        duracionBaseMin:
+          type: integer
+          format: int32
+        duracionOverrideMin:
+          type: integer
+          format: int32
+        duracionEfectivaMin:
+          type: integer
+          format: int32
+        habilitado:
+          type: boolean
+        modosHabilitados:
+          type: array
+          items:
+            type: string
+            enum:
+              - DOMICILIO
+              - CLINICA
+              - URGENCIA
+          uniqueItems: true
+      required:
+        - compatibleCon
+        - duracionBaseMin
+        - duracionEfectivaMin
+        - habilitado
+        - modosHabilitados
+        - nombre
+        - sku
+    CatalogoResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CatalogoItemResponse"
+      required:
+        - items
     ActualizarMascota:
       type: object
       properties:
@@ -1713,107 +836,6 @@ components:
         - especie
         - modificadoEn
         - nombre
-    ActualizarProcedimientoRequest:
-      type: object
-      description: Campos actualizables de un procedimiento.
-      properties:
-        nombre:
-          type: string
-          description: Nuevo nombre del procedimiento
-        descripcion:
-          type: string
-          description: Descripción actualizada
-        compatibleCon:
-          type: string
-          description: Compatibilidad actualizada del procedimiento
-          enum:
-            - PERRO
-            - GATO
-            - AMBOS
-        duracionMinutos:
-          type: integer
-          format: int32
-          description: Duración estimada actualizada en minutos
-    Procedimiento:
-      type: object
-      properties:
-        sku:
-          type: string
-        nombre:
-          type: string
-        descripcion:
-          type: string
-        compatibleCon:
-          type: string
-          enum:
-            - PERRO
-            - GATO
-            - AMBOS
-        duracionMinutos:
-          type: integer
-          format: int32
-        creadoEn:
-          type: string
-          format: date-time
-        modificadoEn:
-          type: string
-          format: date-time
-        creadoPor:
-          type: string
-          format: uuid
-        modificadoPor:
-          type: string
-          format: uuid
-      required:
-        - compatibleCon
-        - creadoEn
-        - duracionMinutos
-        - modificadoEn
-        - nombre
-        - sku
-    ActualizarOfertaRequest:
-      type: object
-      description: Campos actualizables de una oferta.
-      properties:
-        procedimientoSku:
-          type: string
-          description: Nuevo procedimiento asociado a la oferta
-        precio:
-          type: number
-          description: Precio actualizado
-        activa:
-          type: boolean
-          description: Estado de publicación de la oferta
-    Oferta:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        procedimientoSku:
-          type: string
-        precio:
-          type: number
-        activa:
-          type: boolean
-        creadoEn:
-          type: string
-          format: date-time
-        modificadoEn:
-          type: string
-          format: date-time
-        creadoPor:
-          type: string
-          format: uuid
-        modificadoPor:
-          type: string
-          format: uuid
-      required:
-        - activa
-        - creadoEn
-        - modificadoEn
-        - precio
-        - procedimientoSku
     RegistrarVeterinarioRequest:
       type: object
       properties:
@@ -1841,215 +863,6 @@ components:
           format: double
       required:
         - nombreCompleto
-    CrearReserva:
-      type: object
-      properties:
-        mascotaId:
-          type: string
-          format: uuid
-        veterinarioId:
-          type: string
-          format: uuid
-        procedimientoSku:
-          type: string
-        inicio:
-          type: string
-          format: date-time
-        modo:
-          type: string
-          enum:
-            - DOMICILIO
-            - CLINICA
-            - URGENCIA
-        direccionAtencion:
-          type: string
-        notas:
-          type: string
-      required:
-        - inicio
-        - mascotaId
-        - modo
-        - procedimientoSku
-        - veterinarioId
-    Reserva:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        cliente:
-          $ref: "#/components/schemas/Usuario"
-        mascota:
-          $ref: "#/components/schemas/Mascota"
-        veterinario:
-          $ref: "#/components/schemas/Veterinario"
-        procedimientoSku:
-          type: string
-        inicio:
-          type: string
-          format: date-time
-        fin:
-          type: string
-          format: date-time
-        modo:
-          type: string
-          enum:
-            - DOMICILIO
-            - CLINICA
-            - URGENCIA
-        estado:
-          type: string
-          enum:
-            - PENDIENTE
-            - CONFIRMADA
-            - EN_CURSO
-            - COMPLETADA
-            - CANCELADA_CLIENTE
-            - CANCELADA_VETERINARIO
-        direccionAtencion:
-          type: string
-        notas:
-          type: string
-        creadoEn:
-          type: string
-          format: date-time
-        modificadoEn:
-          type: string
-          format: date-time
-        creadoPor:
-          type: string
-          format: uuid
-        modificadoPor:
-          type: string
-          format: uuid
-      required:
-        - cliente
-        - creadoEn
-        - estado
-        - fin
-        - inicio
-        - mascota
-        - modificadoEn
-        - modo
-        - procedimientoSku
-        - veterinario
-    Rol:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        nombre:
-          type: string
-        creadoEn:
-          type: string
-          format: date-time
-        modificadoEn:
-          type: string
-          format: date-time
-        creadoPor:
-          type: string
-          format: uuid
-        modificadoPor:
-          type: string
-          format: uuid
-      required:
-        - creadoEn
-        - modificadoEn
-        - nombre
-    Usuario:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        email:
-          type: string
-        nombre:
-          type: string
-        fotoUrl:
-          type: string
-        roles:
-          type: array
-          items:
-            $ref: "#/components/schemas/Rol"
-          uniqueItems: true
-        creadoEn:
-          type: string
-          format: date-time
-        modificadoEn:
-          type: string
-          format: date-time
-        creadoPor:
-          type: string
-          format: uuid
-        modificadoPor:
-          type: string
-          format: uuid
-      required:
-        - creadoEn
-        - email
-        - modificadoEn
-        - roles
-    Veterinario:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        usuario:
-          $ref: "#/components/schemas/Usuario"
-        nombreCompleto:
-          type: string
-        numeroLicencia:
-          type: string
-        estado:
-          type: string
-          enum:
-            - ONLINE
-            - OCUPADO
-            - OFFLINE
-        modosAtencion:
-          type: array
-          items:
-            type: string
-            enum:
-              - DOMICILIO
-              - CLINICA
-              - URGENCIA
-          uniqueItems: true
-        latitud:
-          type: number
-          format: double
-        longitud:
-          type: number
-          format: double
-        radioCobertura:
-          type: number
-          format: double
-        verificado:
-          type: boolean
-        creadoEn:
-          type: string
-          format: date-time
-        modificadoEn:
-          type: string
-          format: date-time
-        creadoPor:
-          type: string
-          format: uuid
-        modificadoPor:
-          type: string
-          format: uuid
-      required:
-        - creadoEn
-        - estado
-        - id
-        - modificadoEn
-        - modosAtencion
-        - nombreCompleto
-        - usuario
-        - verificado
     CrearMascota:
       type: object
       properties:
@@ -2073,220 +886,6 @@ components:
       required:
         - especie
         - nombre
-    IniciarJunta:
-      type: object
-      properties:
-        reservaId:
-          type: string
-          format: uuid
-      required:
-        - reservaId
-    Junta:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        reserva:
-          $ref: "#/components/schemas/Reserva"
-        estado:
-          type: string
-          enum:
-            - INICIADA
-            - EN_CAMINO
-            - EN_SITIO
-            - FINALIZADA
-        inicioReal:
-          type: string
-          format: date-time
-        finReal:
-          type: string
-          format: date-time
-        ultimaLatitud:
-          type: number
-          format: double
-        ultimaLongitud:
-          type: number
-          format: double
-        ultimaActualizacion:
-          type: string
-          format: date-time
-        notas:
-          type: string
-        creadoEn:
-          type: string
-          format: date-time
-        modificadoEn:
-          type: string
-          format: date-time
-        creadoPor:
-          type: string
-          format: uuid
-        modificadoPor:
-          type: string
-          format: uuid
-      required:
-        - creadoEn
-        - estado
-        - id
-        - modificadoEn
-        - reserva
-    FinalizarJunta:
-      type: object
-      properties:
-        notas:
-          type: string
-    VerificarDisponibilidadRequest:
-      type: object
-      description: Solicitud para verificar disponibilidad de un item en inventario
-      properties:
-        sku:
-          type: string
-          description: SKU del item a verificar
-          example: MED-001
-      required:
-        - sku
-    ReservarItemRequest:
-      type: object
-      description: Solicitud para reservar items del inventario
-      properties:
-        sku:
-          type: string
-          description: SKU del item a reservar
-          example: MED-001
-        cantidad:
-          type: integer
-          format: int32
-          description: Cantidad a reservar
-          example: 5
-      required:
-        - cantidad
-        - sku
-    CrearReglaSemanal:
-      type: object
-      properties:
-        diaSemana:
-          type: string
-          enum:
-            - MONDAY
-            - TUESDAY
-            - WEDNESDAY
-            - THURSDAY
-            - FRIDAY
-            - SATURDAY
-            - SUNDAY
-        horaInicio:
-          type: string
-        horaFin:
-          type: string
-      required:
-        - diaSemana
-        - horaFin
-        - horaInicio
-    ReglaSemanal:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        veterinario:
-          $ref: "#/components/schemas/Veterinario"
-        diaSemana:
-          type: string
-          enum:
-            - MONDAY
-            - TUESDAY
-            - WEDNESDAY
-            - THURSDAY
-            - FRIDAY
-            - SATURDAY
-            - SUNDAY
-        horaInicio:
-          type: string
-        horaFin:
-          type: string
-        activa:
-          type: boolean
-        creadoEn:
-          type: string
-          format: date-time
-        modificadoEn:
-          type: string
-          format: date-time
-        creadoPor:
-          type: string
-          format: uuid
-        modificadoPor:
-          type: string
-          format: uuid
-      required:
-        - activa
-        - creadoEn
-        - diaSemana
-        - horaFin
-        - horaInicio
-        - modificadoEn
-        - veterinario
-    CrearExcepcion:
-      type: object
-      properties:
-        fecha:
-          type: string
-          format: date
-        tipo:
-          type: string
-          enum:
-            - DIA_NO_DISPONIBLE
-            - BLOQUE_ESPECIAL
-        horaInicio:
-          type: string
-        horaFin:
-          type: string
-        motivo:
-          type: string
-      required:
-        - fecha
-        - tipo
-    ExcepcionDisponibilidad:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        veterinario:
-          $ref: "#/components/schemas/Veterinario"
-        fecha:
-          type: string
-          format: date
-        tipo:
-          type: string
-          enum:
-            - DIA_NO_DISPONIBLE
-            - BLOQUE_ESPECIAL
-        horaInicio:
-          type: string
-        horaFin:
-          type: string
-        motivo:
-          type: string
-        creadoEn:
-          type: string
-          format: date-time
-        modificadoEn:
-          type: string
-          format: date-time
-        creadoPor:
-          type: string
-          format: uuid
-        modificadoPor:
-          type: string
-          format: uuid
-      required:
-        - creadoEn
-        - fecha
-        - modificadoEn
-        - tipo
-        - veterinario
     RecomendacionesTratamientoRequest:
       type: object
       description: Solicitud de recomendaciones de tratamiento para un diagnóstico
@@ -2312,58 +911,6 @@ components:
             type: string
       required:
         - sintomas
-    CrearProcedimientoRequest:
-      type: object
-      description: Información requerida para registrar un nuevo procedimiento.
-      properties:
-        sku:
-          type: string
-          description: SKU único del procedimiento
-          example: PROC-VAC-001
-        nombre:
-          type: string
-          description: Nombre público del procedimiento
-          example: Vacunación antirrábica
-        descripcion:
-          type: string
-          description: Descripción detallada del procedimiento
-        compatibleCon:
-          type: string
-          description: Compatibilidad del procedimiento con razas o especies
-          enum:
-            - PERRO
-            - GATO
-            - AMBOS
-        duracionMinutos:
-          type: integer
-          format: int32
-          description: Duración estimada en minutos
-          example: 30
-      required:
-        - compatibleCon
-        - duracionMinutos
-        - nombre
-        - sku
-    CrearOfertaRequest:
-      type: object
-      description: Información requerida para registrar una oferta comercial.
-      properties:
-        procedimientoSku:
-          type: string
-          description: SKU del procedimiento asociado
-          example: PROC-VAC-001
-        precio:
-          type: number
-          description: Precio en CLP o moneda definida
-          example: 19990
-        activa:
-          type: boolean
-          default: true
-          description: Indica si la oferta se publica inmediatamente
-      required:
-        - activa
-        - precio
-        - procedimientoSku
     RefreshResponse:
       type: object
       description: Respuesta tras rotar el token de acceso.
@@ -2454,175 +1001,6 @@ components:
         - expiresAt
         - token
         - usuario
-    CambiarEstadoReserva:
-      type: object
-      properties:
-        nuevoEstado:
-          type: string
-          enum:
-            - PENDIENTE
-            - CONFIRMADA
-            - EN_CURSO
-            - COMPLETADA
-            - CANCELADA_CLIENTE
-            - CANCELADA_VETERINARIO
-        motivo:
-          type: string
-      required:
-        - nuevoEstado
-    ActualizarUbicacionJunta:
-      type: object
-      properties:
-        latitud:
-          type: number
-          format: double
-        longitud:
-          type: number
-          format: double
-      required:
-        - latitud
-        - longitud
-    ActualizarEstadoJunta:
-      type: object
-      properties:
-        estado:
-          type: string
-          enum:
-            - INICIADA
-            - EN_CAMINO
-            - EN_SITIO
-            - FINALIZADA
-      required:
-        - estado
-    BloqueHorario:
-      type: object
-      properties:
-        inicio:
-          type: string
-          format: partial-time
-          description: Hora de inicio del bloque (HH:mm)
-          example: 09:00
-        fin:
-          type: string
-          format: partial-time
-          description: Hora de fin del bloque (HH:mm)
-          example: 17:00
-      required:
-        - fin
-        - inicio
-    VetItem:
-      type: object
-      description: Información resumida de un veterinario para listados públicos.
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Identificador del veterinario
-        nombre:
-          type: string
-          description: Nombre completo o nombre de la clínica
-        fotoUrl:
-          type: string
-          description: URL de la foto de perfil
-        estado:
-          type: string
-          description: "Estado actual del veterinario (por ejemplo, VERIFICADO, PENDIENTE)"
-        modosAtencion:
-          type: array
-          description: Modos de atención disponibles
-          example:
-            - PRESENCIAL
-            - DOMICILIO
-          items:
-            type: string
-            enum:
-              - DOMICILIO
-              - CLINICA
-              - URGENCIA
-          uniqueItems: true
-        latitud:
-          type: number
-          format: double
-          description: Latitud de la ubicación principal
-        longitud:
-          type: number
-          format: double
-          description: Longitud de la ubicación principal
-        distanciaKm:
-          type: number
-          format: double
-          description: Distancia estimada en kilómetros respecto del usuario
-      required:
-        - estado
-        - id
-        - modosAtencion
-        - nombre
-    ProcedimientoItem:
-      type: object
-      description: Procedimiento veterinario disponible para búsqueda pública.
-      properties:
-        sku:
-          type: string
-          description: SKU único del procedimiento
-          example: PROC-VAC-001
-        nombre:
-          type: string
-          description: Nombre del procedimiento
-        descripcion:
-          type: string
-          description: Descripción del procedimiento
-        compatibleCon:
-          type: string
-          description: Compatibilidad declarada
-          enum:
-            - PERRO
-            - GATO
-            - AMBOS
-        duracionMinutos:
-          type: integer
-          format: int32
-          description: Duración estimada en minutos
-      required:
-        - compatibleCon
-        - duracionMinutos
-        - nombre
-        - sku
-    OfertaItem:
-      type: object
-      description: Oferta comercial disponible para un procedimiento veterinario.
-      properties:
-        id:
-          type: integer
-          format: int64
-          description: Identificador de la oferta
-        procedimientoSku:
-          type: string
-          description: SKU del procedimiento asociado a la oferta
-        procedimientoNombre:
-          type: string
-          description: Nombre del procedimiento asociado
-        precio:
-          type: number
-          description: Precio ofertado
-          example: 19990
-        duracionMinutos:
-          type: integer
-          format: int32
-          description: Duración estimada del procedimiento en minutos
-        compatibleCon:
-          type: string
-          description: Compatibilidad de la oferta con especies/razas
-          enum:
-            - PERRO
-            - GATO
-            - AMBOS
-      required:
-        - compatibleCon
-        - duracionMinutos
-        - id
-        - precio
-        - procedimientoNombre
-        - procedimientoSku
     MeResponse:
       type: object
       description: Respuesta al consultar el perfil actual.

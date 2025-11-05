@@ -2,9 +2,7 @@ package cl.clinipets.core.di
 
 import cl.clinipets.BuildConfig
 import cl.clinipets.openapi.apis.AutenticacinApi
-import cl.clinipets.openapi.apis.DescubrimientoApi
 import cl.clinipets.openapi.apis.MascotasApi
-import cl.clinipets.openapi.apis.ReservasApi
 import cl.clinipets.openapi.apis.VeterinariosApi
 import cl.clinipets.openapi.infrastructure.ApiClient
 import dagger.Module
@@ -31,18 +29,8 @@ object ApiModule {
 
     @Provides
     @Singleton
-    fun provideDescubrimientoApi(apiClient: ApiClient): DescubrimientoApi =
-        apiClient.createService(DescubrimientoApi::class.java)
-
-    @Provides
-    @Singleton
     fun provideMascotasApi(apiClient: ApiClient): MascotasApi =
         apiClient.createService(MascotasApi::class.java)
-
-    @Provides
-    @Singleton
-    fun provideReservasApi(apiClient: ApiClient): ReservasApi =
-        apiClient.createService(ReservasApi::class.java)
 
     @Provides
     @Singleton

@@ -15,7 +15,6 @@ import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
@@ -28,7 +27,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -38,10 +36,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.R
-import cl.clinipets.openapi.models.Reserva
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @ExperimentalMaterial3Api
 @Composable
@@ -55,11 +49,6 @@ fun HomeScreen(
     vm: HomeViewModel = hiltViewModel()
 ) {
     val uiState by vm.ui.collectAsState()
-    val isClient = roles.any { it.equals("CLIENTE", ignoreCase = true) }
-
-    LaunchedEffect(isClient) {
-        if (isClient) vm.refresh() else vm.clear()
-    }
 
     Scaffold(
         topBar = {
@@ -97,18 +86,7 @@ fun HomeScreen(
                         onNavigateToProfile = onNavigateToProfile
                     )
                 }
-                item {
-                    ReservationsSection(
-                        isClient = isClient,
-                        state = uiState,
-                        onRetry = vm::refresh
-                    )
-                }
-                if (!isClient && roles.isNotEmpty()) {
-                    item {
-                        RolesSection(roles = roles)
-                    }
-                }
+
             }
         }
     }
@@ -233,18 +211,7 @@ private fun ReservationsSection(
                     }
                 }
 
-                state.reservas.isEmpty() -> {
-                    Text(
-                        text = "Aún no tienes reservas, ¡empieza en Descubrir!",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
 
-                else -> {
-                    state.reservas.take(3).forEach { reserva ->
-                        ReservationRow(reserva = reserva)
-                    }
-                }
             }
         }
     }
@@ -273,37 +240,4 @@ private fun RolesSection(roles: List<String>) {
             }
         }
     }
-}
-
-@Composable
-private fun ReservationRow(reserva: Reserva) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = reserva.mascota.nombre,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
-            )
-            Text(
-                text = formatReservaFecha(reserva),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = "Estado: ${reserva.estado.value}",
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-    }
-}
-
-private fun formatReservaFecha(reserva: Reserva): String {
-    val formatter = DateTimeFormatter.ofPattern("EEE d MMM • HH:mm", Locale.getDefault())
-    val zoned = reserva.inicio.atZoneSameInstant(ZoneId.systemDefault())
-    return formatter.format(zoned)
 }
