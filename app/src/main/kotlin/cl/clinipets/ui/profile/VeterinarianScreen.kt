@@ -9,7 +9,20 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -22,8 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import cl.clinipets.openapi.models.ActualizarPerfilRequest
-import cl.clinipets.openapi.models.RegistrarVeterinarioRequest
+import cl.clinipets.openapi.models.Veterinario
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -165,31 +177,9 @@ fun VeterinarianScreen(
             Button(
                 onClick = {
                     if (isUpdating) {
-                        val req = ActualizarPerfilRequest(
-                            nombreCompleto = nombre.takeIf { it.isNotBlank() },
-                            numeroLicencia = licencia.takeIf { it.isNotBlank() },
-                            modosAtencion = selectedModes.takeIf { it.isNotEmpty() }?.map {
-                                ActualizarPerfilRequest.ModosAtencion.valueOf(it)
-                            }?.toSet(),
-                            latitud = latitud.toDoubleOrNull(),
-                            longitud = longitud.toDoubleOrNull(),
-                            radioCobertura = radio.toDoubleOrNull()
-                        )
-                        lastAction = "update"
-                        vm.updateMyProfile(req)
+
                     } else {
-                        val req = RegistrarVeterinarioRequest(
-                            nombreCompleto = nombre,
-                            numeroLicencia = licencia.takeIf { it.isNotBlank() },
-                            modosAtencion = selectedModes.takeIf { it.isNotEmpty() }?.map {
-                                RegistrarVeterinarioRequest.ModosAtencion.valueOf(it)
-                            }?.toSet(),
-                            latitud = latitud.toDoubleOrNull(),
-                            longitud = longitud.toDoubleOrNull(),
-                            radioCobertura = radio.toDoubleOrNull()
-                        )
-                        lastAction = "create"
-                        vm.submit(req)
+
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -208,7 +198,7 @@ private fun ModeSelector(
     onToggle: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        RegistrarVeterinarioRequest.ModosAtencion.entries.forEach { mode ->
+        Veterinario.ModosAtencion.entries.forEach { mode ->
             val name = mode.name
             FilterChip(
                 selected = selectedModes.contains(name),

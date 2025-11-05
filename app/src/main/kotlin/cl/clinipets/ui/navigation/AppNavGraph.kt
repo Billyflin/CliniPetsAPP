@@ -16,6 +16,8 @@ import cl.clinipets.ui.mascotas.MascotaFormScreen
 import cl.clinipets.ui.mascotas.MascotasScreen
 import cl.clinipets.ui.profile.ProfileScreen
 import cl.clinipets.ui.profile.VeterinarianScreen
+import cl.clinipets.ui.veterinarios.MiCatalogoScreen
+import cl.clinipets.ui.veterinarios.MiDisponibilidadScreen
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
@@ -25,6 +27,8 @@ import java.util.UUID
 @Serializable object ProfileRoute
 @Serializable object DiscoverRoute
 @Serializable object VeterinarianRoute
+@Serializable object MiCatalogoRoute
+@Serializable object MiDisponibilidadRoute
 
 @Serializable
 data class MascotaDetailRoute(val id: String)
@@ -53,12 +57,14 @@ fun AppNavGraph(
         }
         composable<HomeRoute> {
             HomeScreen(
-                displayName = uiState.displayName,
-                roles = uiState.roles,
-                onNavigateToMascotas = { navController.navigate(MascotasRoute) },
-                onNavigateToDiscover = { navController.navigate(DiscoverRoute) },
-                onNavigateToProfile = { navController.navigate(ProfileRoute) },
-                onLogout = onLogout
+                uiState.displayName,
+                uiState.roles,
+                { navController.navigate(MascotasRoute) },
+                { navController.navigate(DiscoverRoute) },
+                { navController.navigate(ProfileRoute) },
+                onLogout,
+                { navController.navigate(MiCatalogoRoute) },
+                { navController.navigate(MiDisponibilidadRoute) }
             )
         }
         composable<MascotasRoute> {
@@ -110,6 +116,12 @@ fun AppNavGraph(
         }
         composable<DiscoverRoute> {
             DiscoverScreen(onBack = { navController.popBackStack() })
+        }
+        composable<MiCatalogoRoute> {
+            MiCatalogoScreen(onBack = { navController.popBackStack() })
+        }
+        composable<MiDisponibilidadRoute> {
+            MiDisponibilidadScreen(onBack = { navController.popBackStack() })
         }
     }
 }

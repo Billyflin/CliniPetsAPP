@@ -12,20 +12,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Pets
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -46,6 +33,8 @@ fun HomeScreen(
     onNavigateToDiscover: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onLogout: () -> Unit,
+    onNavigateToMiCatalogo: () -> Unit,
+    onNavigateToMiDisponibilidad: () -> Unit,
     vm: HomeViewModel = hiltViewModel()
 ) {
     val uiState by vm.ui.collectAsState()
@@ -85,6 +74,14 @@ fun HomeScreen(
                         onNavigateToDiscover = onNavigateToDiscover,
                         onNavigateToProfile = onNavigateToProfile
                     )
+                }
+                if (roles.contains("VETERINARIO")) {
+                    item {
+                        VeterinarianToolsSection(
+                            onNavigateToMiCatalogo = onNavigateToMiCatalogo,
+                            onNavigateToMiDisponibilidad = onNavigateToMiDisponibilidad
+                        )
+                    }
                 }
 
             }
@@ -167,6 +164,32 @@ private fun QuickActionButton(
             text = label,
             modifier = Modifier.padding(start = 12.dp)
         )
+    }
+}
+
+@Composable
+private fun VeterinarianToolsSection(
+    onNavigateToMiCatalogo: () -> Unit,
+    onNavigateToMiDisponibilidad: () -> Unit
+) {
+    ElevatedCard {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Herramientas de veterinario",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+            )
+            Button(onClick = onNavigateToMiCatalogo, modifier = Modifier.fillMaxWidth()) {
+                Text("Mi catálogo")
+            }
+            Button(onClick = onNavigateToMiDisponibilidad, modifier = Modifier.fillMaxWidth()) {
+                Text("Mi disponibilidad")
+            }
+        }
     }
 }
 

@@ -11,6 +11,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import java.util.logging.Logger
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -48,6 +49,7 @@ class SessionManager @Inject constructor(
 
     suspend fun setAndPersist(token: String) {
         apiClient.setBearerToken(token)
+        Logger.getLogger("SessionManager").info("Token: $token")
         context.dataStore.edit { it[KEY] = token }
     }
 

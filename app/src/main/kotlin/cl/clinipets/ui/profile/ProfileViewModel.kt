@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import cl.clinipets.openapi.apis.VeterinariosApi
 import cl.clinipets.openapi.models.ActualizarPerfilRequest
 import cl.clinipets.openapi.models.RegistrarVeterinarioRequest
-import cl.clinipets.openapi.models.VeterinarioPerfil
+import cl.clinipets.openapi.models.Veterinario
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +22,7 @@ class ProfileViewModel @Inject constructor(
 
     data class UiState(
         val isLoading: Boolean = false,
-        val perfil: VeterinarioPerfil? = null,
+        val perfil: Veterinario? = null,
         val error: String? = null
     )
 
@@ -37,7 +37,7 @@ class ProfileViewModel @Inject constructor(
 
     fun updateMyProfile(request: ActualizarPerfilRequest) = runPerfil { veterinariosApi.actualizarMiPerfil(request) }
 
-    private fun runPerfil(block: suspend () -> Response<VeterinarioPerfil>) {
+    private fun runPerfil(block: suspend () -> Response<Veterinario>) {
         _ui.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
             try {
