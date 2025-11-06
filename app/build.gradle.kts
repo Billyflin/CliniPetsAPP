@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.openapi.generator)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.secrets.gradle.plugin)
     kotlin("kapt")
 }
 
@@ -19,15 +20,10 @@ android {
     namespace = "cl.clinipets"
     compileSdk = 36
 
-    // Lee GOOGLE_SERVER_CLIENT_ID una sola vez y úsalo en ambos tipos de build
-    val googleServerClientId: String = providers.gradleProperty("GOOGLE_SERVER_CLIENT_ID").orNull
-        ?: System.getenv("GOOGLE_SERVER_CLIENT_ID")
-        ?: ""
-
-    // Lee BASE_URL_DEBUG (para debug) con fallback a la IP indicada por el usuario
-    val baseUrlDebug: String = providers.gradleProperty("BASE_URL_DEBUG").orNull
-        ?: System.getenv("BASE_URL_DEBUG")
-        ?: "https://clinipets.cl/"
+    // Valores leídos desde Secrets Plugin (gradleProperty), definidos en local.properties o secrets.defaults.properties
+    val googleServerClientId: String = providers.gradleProperty("GOOGLE_SERVER_CLIENT_ID").orNull ?: ""
+    val baseUrlDebug: String = providers.gradleProperty("BASE_URL_DEBUG").orNull ?: "https://clinipets.cl/"
+    val baseUrlRelease: String = providers.gradleProperty("BASE_URL_RELEASE").orNull ?: "https://api.clinipets.example/"
 
     defaultConfig {
         applicationId = "cl.clinipets"
@@ -37,12 +33,7 @@ android {
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         signingConfig = signingConfigs.getByName("debug")
-
-        // Inyecta la API Key de Google Maps desde local.properties o variable de entorno
-        val mapsApiKey = providers.gradleProperty("MAPS_API_KEY").orNull
-            ?: System.getenv("MAPS_API_KEY")
-            ?: ""
-        manifestPlaceholders += mapOf("MAPS_API_KEY" to mapsApiKey)
+        // MAPS_API_KEY se resuelve vía Secrets Plugin en el Manifest (${MAPS_API_KEY})
     }
 
     buildTypes {
@@ -56,7 +47,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "BASE_URL", "\"https://api.clinipets.example/\"")
+            buildConfigField("String", "BASE_URL", "\"$baseUrlRelease\"")
             buildConfigField("String", "GOOGLE_SERVER_CLIENT_ID", "\"$googleServerClientId\"")
         }
     }
@@ -78,6 +69,12 @@ android {
             java.srcDir(genSrc)
         }
     }
+}
+
+// Configuración de Secrets Gradle Plugin
+secrets {
+    // Usamos un archivo por defecto versionado para evitar fallas cuando local.properties no tiene la clave
+    defaultPropertiesFileName = "secrets.defaults.properties"
 }
 
 // Configuración de generación OpenAPI

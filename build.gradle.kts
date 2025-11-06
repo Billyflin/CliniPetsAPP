@@ -7,4 +7,5 @@ plugins {
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.openapi.generator) apply false
     alias(libs.plugins.hilt) apply false
+    alias(libs.plugins.secrets.gradle.plugin) apply false
 }

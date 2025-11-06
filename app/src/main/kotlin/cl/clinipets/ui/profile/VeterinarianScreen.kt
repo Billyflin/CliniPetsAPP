@@ -1,15 +1,21 @@
 package cl.clinipets.ui.profile
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -17,11 +23,13 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -37,13 +45,30 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.ActualizarPerfilRequest
 import cl.clinipets.openapi.models.RegistrarVeterinarioRequest
 import cl.clinipets.openapi.models.Veterinario
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
+import com.google.maps.android.compose.CameraPositionState
+import com.google.maps.android.compose.Circle
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -126,9 +151,6 @@ fun VeterinarianScreen(
             }
         )
     }
-
-    // Esta lógica sigue funcionando perfectamente.
-    // Si perfil es null (cargado por ProfileScreen), isUpdating será false.
     val isUpdating = uiState.perfil != null
 
     Scaffold(
@@ -201,31 +223,24 @@ fun VeterinarianScreen(
             }
 
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    OutlinedTextField(
-                        value = latitud,
-                        onValueChange = { latitud = it },
-                        label = { Text("Latitud (opcional)") },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                    )
-                    OutlinedTextField(
-                        value = longitud,
-                        onValueChange = { longitud = it },
-                        label = { Text("Longitud (opcional)") },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                    )
-                }
+                Text(
+                    text = "Ubicación y radio de cobertura",
+                    style = MaterialTheme.typography.titleMedium
+                )
             }
 
+            // Reemplazo de latitud/longitud + radio por mapa interactivo
             item {
-                OutlinedTextField(
-                    value = radio,
-                    onValueChange = { radio = it },
-                    label = { Text("Radio de cobertura (km)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                MapaCobertura(
+                    latStr = latitud,
+                    lonStr = longitud,
+                    radioStr = radio,
+                    scope = scope, // <-- AÑADIDO
+                    onChange = { newLat, newLon, newRadio ->
+                        latitud = newLat
+                        longitud = newLon
+                        radio = newRadio
+                    }
                 )
             }
 
@@ -240,57 +255,44 @@ fun VeterinarianScreen(
                         lastAction = if (isUpdating) "update" else "create"
 
                         if (isUpdating) {
-                            // --- INICIO CORRECCIÓN (Actualizar) ---
-                            // Asumimos que ActualizarPerfilRequest tiene su propio enum
                             val modosParaActualizar = selectedModes.mapNotNull { uiMode ->
-                                try {
-                                    // Mapear por nombre
-                                    ActualizarPerfilRequest.ModosAtencion.valueOf(uiMode.name)
-                                } catch (e: IllegalArgumentException) {
-                                    null // Ocurre si los enums no coinciden
-                                }
-                            }.toSet() // Convertir a Set
+                                try { ActualizarPerfilRequest.ModosAtencion.valueOf(uiMode.name) } catch (_: IllegalArgumentException) { null }
+                            }.toSet()
 
                             vm.updateMyProfile(
                                 ActualizarPerfilRequest(
-                                    nombreCompleto = nombre,
-                                    numeroLicencia = lic,
-                                    modosAtencion = modosParaActualizar, // CORREGIDO
+                                    // 'nombre' y 'licencia' no se envían si se está actualizando
+                                    // (ya que los campos están deshabilitados)
+                                    // Si SÍ quieres enviarlos, quita 'readOnly' y 'enabled' de los OutlinedTextField
+                                    nombreCompleto = null, // O `nombre` si permites editarlo
+                                    numeroLicencia = null, // O `lic` si permites editarlo
+                                    modosAtencion = modosParaActualizar,
                                     latitud = lat,
                                     longitud = lon,
                                     radioCobertura = rad
                                 )
                             )
-                            // --- FIN CORRECCIÓN ---
                         } else {
-                            // --- INICIO CORRECCIÓN (Registrar) ---
-                            // Mapeamos del enum de UI al enum del DTO
                             val modosParaRegistrar = selectedModes.mapNotNull { uiMode ->
-                                try {
-                                    // Mapear por nombre
-                                    RegistrarVeterinarioRequest.ModosAtencion.valueOf(uiMode.name)
-                                } catch (e: IllegalArgumentException) {
-                                    null // Ocurre si los enums no coinciden
-                                }
-                            }.toSet() // Convertir a Set
+                                try { RegistrarVeterinarioRequest.ModosAtencion.valueOf(uiMode.name) } catch (_: IllegalArgumentException) { null }
+                            }.toSet()
 
                             vm.submit(
                                 RegistrarVeterinarioRequest(
                                     nombreCompleto = nombre,
                                     numeroLicencia = lic,
-                                    modosAtencion = modosParaRegistrar, // CORREGIDO
+                                    modosAtencion = modosParaRegistrar,
                                     latitud = lat,
                                     longitud = lon,
                                     radioCobertura = rad
                                 )
                             )
-                            // --- FIN CORRECCIÓN ---
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !uiState.isLoading
                 ) {
-                    Text(if (isUpdating) "Actualizar" else "Registrar")
+                    Text(if (isUpdating) "Actualizar Cobertura" else "Registrar") // Texto actualizado
                 }
             }
         }
@@ -300,7 +302,6 @@ fun VeterinarianScreen(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun ModeSelector(
-    // Recibimos el Set del Enum de UI (Veterinario.ModosAtencion)
     selectedModes: Set<Veterinario.ModosAtencion>,
     onToggle: (Veterinario.ModosAtencion) -> Unit
 ) {
@@ -308,17 +309,229 @@ private fun ModeSelector(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Iteramos sobre el Enum de UI
         Veterinario.ModosAtencion.entries.forEach { mode ->
             val selected = selectedModes.contains(mode)
             FilterChip(
                 selected = selected,
-                onClick = { onToggle(mode) }, // Devolvemos el Enum de UI
-                label = { Text(mode.name) }, // O un `when(mode)` para traducir
+                onClick = { onToggle(mode) },
+                label = { Text(mode.name) },
                 leadingIcon = if (selected) {
                     { Icon(Icons.Filled.Check, contentDescription = null) }
                 } else null
             )
         }
     }
+}
+
+@Composable
+private fun MapaCobertura(
+    latStr: String,
+    lonStr: String,
+    radioStr: String,
+    scope: CoroutineScope, // <-- AÑADIDO
+    onChange: (latStr: String, lonStr: String, radioStr: String) -> Unit
+) {
+    val context = LocalContext.current
+
+    // Permisos de ubicación
+    var hasLocationPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    // Valor por defecto: Santiago de Chile
+    val defaultLatLng = LatLng(-33.45, -70.66)
+    val lat = latStr.toDoubleOrNull() ?: defaultLatLng.latitude
+    val lon = lonStr.toDoubleOrNull() ?: defaultLatLng.longitude
+    val radioKmInit = (radioStr.toDoubleOrNull() ?: 5.0).coerceIn(0.2, 5.0)
+
+    val markerState = remember(lat, lon) { MarkerState(LatLng(lat, lon)) }
+    val cameraPositionState: CameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(markerState.position, if (latStr.toDoubleOrNull() != null) 13f else 10f)
+    }
+
+    // --- LÓGICA DE PERMISOS MEJORADA ---
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { result ->
+            hasLocationPermission = result[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                    result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+            if (hasLocationPermission) {
+                // Al aceptar permisos, centra y anima
+                centerOnMyLocation(context) { latLng ->
+                    val r = radioStr.toDoubleOrNull() ?: radioKmInit
+                    onChange(
+                        String.format(Locale.US, "%.6f", latLng.latitude),
+                        String.format(Locale.US, "%.6f", latLng.longitude),
+                        String.format(Locale.US, "%.1f", r)
+                    )
+                    markerState.position = latLng
+                    scope.launch { cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(latLng, 15f)) }
+                }
+            }
+        }
+    )
+    // --- FIN LÓGICA PERMISOS ---
+
+    var radioKm by remember(radioKmInit) { mutableStateOf(radioKmInit) }
+
+    // Centrar automáticamente una sola vez si hay permisos
+    var didCenterOnce by remember { mutableStateOf(false) }
+    LaunchedEffect(hasLocationPermission) {
+        if (hasLocationPermission && !didCenterOnce) {
+            centerOnMyLocation(context) { latLng ->
+                markerState.position = latLng
+                onChange(
+                    String.format(Locale.US, "%.6f", latLng.latitude),
+                    String.format(Locale.US, "%.6f", latLng.longitude),
+                    String.format(Locale.US, "%.1f", radioKm)
+                )
+                scope.launch { cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(latLng, 15f)) }
+                didCenterOnce = true
+            }
+        }
+    }
+
+    val mapUiSettings = remember { MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = hasLocationPermission) }
+    val mapProperties = remember(hasLocationPermission) { MapProperties(isMyLocationEnabled = hasLocationPermission) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Barra de acciones
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = {
+                if (!hasLocationPermission) {
+                    permissionLauncher.launch(arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    ))
+                } else {
+                    centerOnMyLocation(context) { latLng ->
+                        markerState.position = latLng
+                        // Ajusta cámara para encuadrar el círculo con el radio actual
+                        fitCircleInView(cameraPositionState, latLng, radioKm, scope)
+                        onChange(
+                            String.format(Locale.US, "%.6f", latLng.latitude),
+                            String.format(Locale.US, "%.6f", latLng.longitude),
+                            String.format(Locale.US, "%.1f", radioKm)
+                        )
+                    }
+                }
+            }) { Text("Usar mi ubicación") }
+        }
+
+        GoogleMap(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(240.dp),
+            cameraPositionState = cameraPositionState,
+            uiSettings = mapUiSettings,
+            properties = mapProperties,
+            onMapClick = { latLng ->
+                markerState.position = latLng
+                onChange(
+                    String.format(Locale.US, "%.6f", latLng.latitude),
+                    String.format(Locale.US, "%.6f", latLng.longitude),
+                    String.format(Locale.US, "%.1f", radioKm)
+                )
+            }
+        ) {
+
+            Marker(
+                state = markerState,
+                draggable = false
+            )
+            Circle(
+                center = markerState.position,
+                radius = (radioKm * 1000.0), // Radio en metros
+                fillColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                strokeColor = MaterialTheme.colorScheme.primary,
+                strokeWidth = 2f
+            )
+        }
+
+        // --- SLIDER MEJORADO ---
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Radio: ${String.format(Locale.US, "%.1f", radioKm)} km", style = MaterialTheme.typography.bodyMedium)
+            Slider(
+                value = radioKm.toFloat(),
+                onValueChange = { v: Float ->
+                    radioKm = v.toDouble().coerceIn(0.2, 5.0)
+                },
+                onValueChangeFinished = {
+                    // Actualiza estado principal y encuadra círculo
+                    onChange(
+                        String.format(Locale.US, "%.6f", markerState.position.latitude),
+                        String.format(Locale.US, "%.6f", markerState.position.longitude),
+                        String.format(Locale.US, "%.1f", radioKm)
+                    )
+                    fitCircleInView(cameraPositionState, markerState.position, radioKm, scope)
+                },
+                valueRange = 0.2f..5f,
+                steps = 98
+            )
+        }
+        // --- FIN SLIDER ---
+
+        // Coordenadas de referencia (solo lectura)
+        Text(
+            "Lat: ${String.format(Locale.US, "%.6f", markerState.position.latitude)}  |  Lon: ${String.format(Locale.US, "%.6f", markerState.position.longitude)}",
+            style = MaterialTheme.typography.bodySmall
+        )
+        HorizontalDivider() // <-- CORREGIDO
+    }
+}
+
+// Helpers para encuadrar el círculo en el mapa
+private fun circleBounds(center: LatLng, radiusKm: Double): LatLngBounds {
+    val latRad = Math.toRadians(center.latitude)
+    val dLat = radiusKm / 111.0 // ~111 km por grado
+    val dLng = radiusKm / (111.0 * kotlin.math.max(0.0001, kotlin.math.cos(latRad)))
+    val sw = LatLng(center.latitude - dLat, center.longitude - dLng)
+    val ne = LatLng(center.latitude + dLat, center.longitude + dLng)
+    return LatLngBounds(sw, ne)
+}
+
+private fun fitCircleInView(
+    cameraPositionState: CameraPositionState,
+    center: LatLng,
+    radiusKm: Double,
+    scope: CoroutineScope,
+    paddingPx: Int = 48
+) {
+    val bounds = circleBounds(center, radiusKm)
+    scope.launch {
+        try {
+            cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(bounds, paddingPx))
+        } catch (_: Exception) {
+            // Ignorar si el mapa aún no tiene tamaño calculado; se ajustará con futuras interacciones
+        }
+    }
+}
+
+// --- LÓGICA DE UBICACIÓN MEJORADA ---
+@SuppressLint("MissingPermission") // La UI ya comprueba el permiso antes de llamar
+private fun centerOnMyLocation(
+    context: android.content.Context,
+    onLocated: (LatLng) -> Unit
+) {
+    val fused = LocationServices.getFusedLocationProviderClient(context)
+    fused.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+        .addOnSuccessListener { loc ->
+            if (loc != null) {
+                onLocated(LatLng(loc.latitude, loc.longitude))
+            } else {
+                // Fallback a última ubicación conocida
+                fused.lastLocation.addOnSuccessListener { last ->
+                    if (last != null) onLocated(LatLng(last.latitude, last.longitude))
+                }
+            }
+        }
+        .addOnFailureListener {
+            // Fallback en caso de fallo
+            fused.lastLocation.addOnSuccessListener { last ->
+                if (last != null) onLocated(LatLng(last.latitude, last.longitude))
+            }
+        }
 }
