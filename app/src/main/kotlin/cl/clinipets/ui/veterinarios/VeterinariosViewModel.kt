@@ -157,15 +157,20 @@ class VeterinariosViewModel @Inject constructor(
     private val _habilitadoEdits = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     // Ediciones locales de duración override por SKU (null para borrar)
     private val _duracionOverrideEdits = MutableStateFlow<Map<String, Int?>>(emptyMap())
+    // Ediciones locales de precio override por SKU (null para borrar)
+    private val _precioOverrideEdits = MutableStateFlow<Map<String, Int?>>(emptyMap())
 
     // Lista de items del catálogo con ediciones aplicadas
-    val itemsCatalogoEfectivos = combine(_miCatalogo, _habilitadoEdits, _duracionOverrideEdits) { cat, habilEdits, durEdits ->
+    val itemsCatalogoEfectivos = combine(_miCatalogo, _habilitadoEdits, _duracionOverrideEdits, _precioOverrideEdits) { cat, habilEdits, durEdits, precioEdits ->
         val base = cat?.items.orEmpty()
         base.map { item ->
             var out = item
             habilEdits[item.sku]?.let { out = out.copy(habilitado = it) }
             if (durEdits.containsKey(item.sku)) {
                 out = out.copy(duracionMinutosOverride = durEdits[item.sku])
+            }
+            if (precioEdits.containsKey(item.sku)) {
+                out = out.copy(precioOverride = precioEdits[item.sku])
             }
             out
         }
@@ -189,6 +194,17 @@ class VeterinariosViewModel @Inject constructor(
                 map.remove(sku)
             } else {
                 map[sku] = minutosOverride
+            }
+        }
+    }
+
+    fun setItemPrecioOverride(sku: String, precioOverride: Int?) {
+        val original = _miCatalogo.value?.items?.find { it.sku == sku }?.precioOverride
+        _precioOverrideEdits.value = _precioOverrideEdits.value.toMutableMap().also { map ->
+            if (original == precioOverride) {
+                map.remove(sku)
+            } else {
+                map[sku] = precioOverride
             }
         }
     }
@@ -302,14 +318,16 @@ class VeterinariosViewModel @Inject constructor(
         viewModelScope.launch {
             _cargando.value = true
             try {
-                // Construir items actuales del catálogo aplicando ediciones locales (habilitado y override)
+                // Construir items actuales del catálogo aplicando ediciones locales (habilitado, duración y precio)
                 val actualesBase = _miCatalogo.value?.items.orEmpty()
                 val habilEdits = _habilitadoEdits.value
                 val durEdits = _duracionOverrideEdits.value
+                val precioEdits = _precioOverrideEdits.value
                 val actuales = actualesBase.map { item ->
                     item.copy(
                         habilitado = habilEdits[item.sku] ?: item.habilitado,
-                        duracionMinutosOverride = if (durEdits.containsKey(item.sku)) durEdits[item.sku] else item.duracionMinutosOverride
+                        duracionMinutosOverride = if (durEdits.containsKey(item.sku)) durEdits[item.sku] else item.duracionMinutosOverride,
+                        precioOverride = if (precioEdits.containsKey(item.sku)) precioEdits[item.sku] else item.precioOverride
                     )
                 }
 
@@ -323,7 +341,6 @@ class VeterinariosViewModel @Inject constructor(
                         sku = sku,
                         habilitado = true,
                         duracionMinutosOverride = null,
-                        modosHabilitados = null,
                         precioOverride = null,
                     )
                 }
@@ -338,6 +355,7 @@ class VeterinariosViewModel @Inject constructor(
                     _seleccionParaAgregar.value = emptySet()
                     _habilitadoEdits.value = emptyMap()
                     _duracionOverrideEdits.value = emptyMap()
+                    _precioOverrideEdits.value = emptyMap()
                     onSuccess?.invoke()
                 } else {
                     _error.value = "Error guardando catálogo (${resp.code()})"
@@ -365,16 +383,10 @@ class VeterinariosViewModel @Inject constructor(
 
 // Mappers utilitarios
 private fun ItemCatalogoResponse.toRequestItem(): CatalogoItemRequest {
-    val modosReq: Set<CatalogoItemRequest.ModosHabilitados>? = if (this.modosHabilitados.isEmpty()) null else this.modosHabilitados.map { m ->
-        // convertir por nombre
-        CatalogoItemRequest.ModosHabilitados.valueOf(m.name)
-    }.toSet()
-
     return CatalogoItemRequest(
         sku = this.sku,
         habilitado = this.habilitado,
         duracionMinutosOverride = this.duracionMinutosOverride,
-        modosHabilitados = modosReq,
         precioOverride = this.precioOverride,
     )
 }

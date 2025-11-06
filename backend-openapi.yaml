@@ -762,15 +762,6 @@ components:
         precioOverride:
           type: integer
           format: int32
-        modosHabilitados:
-          type: array
-          items:
-            type: string
-            enum:
-              - DOMICILIO
-              - CLINICA
-              - URGENCIA
-          uniqueItems: true
       required:
         - habilitado
         - sku
@@ -817,19 +808,16 @@ components:
         duracionMinutosOverride:
           type: integer
           format: int32
-        modosHabilitados:
-          type: array
-          items:
-            type: string
-            enum:
-              - DOMICILIO
-              - CLINICA
-              - URGENCIA
-          uniqueItems: true
+        compatibleCon:
+          type: string
+          enum:
+            - PERRO
+            - GATO
+            - AMBOS
       required:
+        - compatibleCon
         - duracionMinutos
         - habilitado
-        - modosHabilitados
         - nombre
         - precio
         - sku

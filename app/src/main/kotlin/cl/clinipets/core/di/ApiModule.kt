@@ -1,5 +1,6 @@
 package cl.clinipets.core.di
 
+import android.util.Log
 import cl.clinipets.BuildConfig
 import cl.clinipets.openapi.apis.AutenticacinApi
 import cl.clinipets.openapi.apis.MascotasApi
@@ -19,7 +20,18 @@ object ApiModule {
     @Provides
     @Singleton
     fun provideApiClient(): ApiClient {
-        return ApiClient(baseUrl = BuildConfig.BASE_URL, authNames = arrayOf("bearerAuth"))
+        val apiClient = ApiClient(
+            baseUrl = BuildConfig.BASE_URL,
+            authNames = arrayOf("bearerAuth")
+        )
+
+        if (BuildConfig.DEBUG) {
+            apiClient.setLogger { message ->
+                Log.d("OkHttp", message)
+            }
+        }
+
+        return apiClient
     }
 
     @Provides

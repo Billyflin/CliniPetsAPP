@@ -2,6 +2,7 @@ package cl.clinipets.ui.veterinarios
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -63,47 +64,59 @@ private val clpFormatter: NumberFormat = NumberFormat.getCurrencyInstance(Locale
     maximumFractionDigits = 0
 }
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) // Añadido ExperimentalLayoutApi
 @Composable
 fun CatalogoItemRow(
     item: ItemCatalogoResponse,
     onToggleHabilitado: (Boolean) -> Unit,
-    onEditDuracion: () -> Unit, // Renombrado
-    onEditPrecio: () -> Unit // Nuevo
+    onEditDuracion: () -> Unit,
+    onEditPrecio: () -> Unit
 ) {
     ElevatedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween, // Esto gestiona el espacio
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Columna de texto SIN weight(1f) para eliminar espacio muerto
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(
+                    modifier = Modifier.weight(1f), // Devolver el weight para que el Switch no se comprima
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     Text(
-                        "${item.nombre} (${item.sku})",
+                        item.nombre,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
 
-                    // --- NUEVO: Lógica de Precio ---
-                    // Asumo que tu DTO tiene precioBase: Int y precioOverride: Int?
+                    // --- Lógica de Precio ---
                     val precioEfectivo = item.precioOverride ?: item.precio
                     val precioFormateado = remember(precioEfectivo) { clpFormatter.format(precioEfectivo) }
                     val precioOverrideText = if (item.precioOverride != null) " (personalizado)" else ""
                     Text(
                         "Precio: $precioFormateado$precioOverrideText",
                         style = MaterialTheme.typography.bodyMedium,
-                        // Resaltar si es un precio personalizado
                         color = if (item.precioOverride != null) MaterialTheme.colorScheme.primary else Color.Unspecified
                     )
 
-                    // --- Lógica de Duración (Actualizada para claridad) ---
+                    // --- Lógica de Duración ---
                     val duracionEfectiva = item.duracionMinutosOverride ?: item.duracionMinutos
                     val duracionOverrideText = if (item.duracionMinutosOverride != null) " (personalizado)" else ""
                     Text(
                         "Duración: $duracionEfectiva min$duracionOverrideText",
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (item.duracionMinutosOverride != null) MaterialTheme.colorScheme.primary else Color.Unspecified
+                    )
+
+                    // --- INICIO DE LA MEJORA ---
+                    // Asumiendo que `compatibleCon` y `modosHabilitados` están en tu DTO ItemCatalogoResponse
+                    // (tal como están en tu JSON de ejemplo)
+
+                    // 1. Mostrar Compatibilidad
+                    Text(
+                        "Compatible con: ${item.compatibleCon}", // AÑADIDO
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
                 Switch(
@@ -115,10 +128,10 @@ fun CatalogoItemRow(
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
             Row(
                 Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End, // Botones alineados al final
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedButton(onClick = onEditPrecio) { Text("Editar Precio") } // Nuevo
+                OutlinedButton(onClick = onEditPrecio) { Text("Editar Precio") }
                 Spacer(Modifier.width(8.dp))
                 OutlinedButton(onClick = onEditDuracion) { Text("Editar Duración") }
             }
@@ -137,7 +150,7 @@ fun ProcedimientoSelectableRow(
     ElevatedCard(Modifier.fillMaxWidth()) {
         Row(
             Modifier.padding(12.dp),
-            verticalAlignment = Alignment.Top // Alinear Checkbox arriba
+            verticalAlignment = Alignment.Top
         ) {
             Checkbox(
                 checked = selected, onCheckedChange = { if (enabled) onToggle() }, enabled = enabled
@@ -146,20 +159,20 @@ fun ProcedimientoSelectableRow(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(proc.nombre, fontWeight = FontWeight.SemiBold)
                     if (badge != null) {
-                        // Estilo para el badge
                         Text(
                             badge,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .padding(horizontal = 4.dp)
+                            modifier = Modifier.padding(horizontal = 4.dp)
                         )
                     }
                 }
                 Text("SKU: ${proc.sku}", style = MaterialTheme.typography.bodySmall)
+                // --- MEJORA: Formato consistente con el RowItem ---
                 Text(
                     "Compatible con: ${proc.compatibleCon}",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold // Añadido para consistencia
                 )
                 proc.descripcion?.let {
                     Text(it, style = MaterialTheme.typography.bodySmall)
@@ -187,8 +200,8 @@ fun MiCatalogoScreen(
     val showSheet = remember { mutableStateOf(false) }
 
     // Estados separados para cada diálogo
-    var editDuracionSku by remember { mutableStateOf<String?>(null) } // Renombrado
-    var editPrecioSku by remember { mutableStateOf<String?>(null) } // Nuevo
+    var editDuracionSku by remember { mutableStateOf<String?>(null) }
+    var editPrecioSku by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) { vm.cargarCatalogoYProcedimientos() }
 
@@ -211,7 +224,7 @@ fun MiCatalogoScreen(
                 Modifier
                     .fillMaxWidth()
                     .padding(12.dp),
-                horizontalArrangement = Arrangement.End, // Alinear botones al final
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedButton(onClick = { showSheet.value = true }, enabled = !cargando) {
@@ -287,8 +300,8 @@ fun MiCatalogoScreen(
                     onToggleHabilitado = { newVal: Boolean ->
                         vm.setItemHabilitado(item.sku, newVal)
                     },
-                    onEditDuracion = { editDuracionSku = item.sku }, // Renombrado
-                    onEditPrecio = { editPrecioSku = item.sku } // Nuevo
+                    onEditDuracion = { editDuracionSku = item.sku },
+                    onEditPrecio = { editPrecioSku = item.sku }
                 )
             }
         }
@@ -394,7 +407,6 @@ fun MiCatalogoScreen(
         if (itemParaEditarPrecio != null) {
             var input by remember(editPrecioSku) {
                 mutableStateOf(
-                    // Asumo que tu DTO tiene precioOverride: Int?
                     itemParaEditarPrecio.precioOverride?.toString() ?: ""
                 )
             }
@@ -403,16 +415,13 @@ fun MiCatalogoScreen(
                 title = { Text("Precio personalizado (${itemParaEditarPrecio.nombre})") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Asumo que tu DTO tiene precioBase: Int
-                        val precioBaseFormateado = remember { clpFormatter.format(itemParaEditarPrecio.precio) }
+                        val precioBaseFormateado = remember(itemParaEditarPrecio.precio) { clpFormatter.format(itemParaEditarPrecio.precio) }
                         Text("Define un precio (CLP). Déjalo vacío para usar el estándar ($precioBaseFormateado).")
                         OutlinedTextField(
                             value = input,
-                            onValueChange = { value ->
-                                if (value.all { it.isDigit() }) input = value
-                            },
+                            onValueChange = { value -> if (value.all { it.isDigit() }) input = value },
                             label = { Text("Precio (CLP)") },
-                            prefix = { Text("$ ") }, // Prefijo para CLP
+                            prefix = { Text("$ ") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
@@ -423,7 +432,7 @@ fun MiCatalogoScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        // Asumo que tienes esta función en tu ViewModel
+                        vm.setItemPrecioOverride(itemParaEditarPrecio.sku, input.toIntOrNull())
                         editPrecioSku = null
                     }) { Text("Guardar") }
                 },
@@ -431,6 +440,7 @@ fun MiCatalogoScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton(
                             onClick = {
+                                vm.setItemPrecioOverride(itemParaEditarPrecio.sku, null)
                                 editPrecioSku = null
                             },
                             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
