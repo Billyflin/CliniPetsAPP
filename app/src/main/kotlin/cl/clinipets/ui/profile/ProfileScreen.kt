@@ -2,11 +2,15 @@ package cl.clinipets.ui.profile
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AssistChip
@@ -14,6 +18,7 @@ import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,6 +46,7 @@ fun ProfileScreen(
     onBecomeVeterinarian: () -> Unit,
     onEditProfessional: () -> Unit,
     onLogout: () -> Unit,
+    onRefreshProfile: () -> Unit,
     vm  : ProfileViewModel = hiltViewModel()
 ) {
     val me = state.me
@@ -48,12 +54,14 @@ fun ProfileScreen(
     val displayName = state.displayName ?: me?.nombre
     val fotoUrl = me?.fotoUrl
     val canBecomeVet = roles.any { it.equals("CLIENTE", ignoreCase = true) } &&
-        roles.none { it.equals("VETERINARIO", ignoreCase = true) }
+            roles.none { it.equals("VETERINARIO", ignoreCase = true) }
 
     val ui by vm.ui.collectAsState()
+    // Esta pantalla es la responsable de cargar el perfil
     LaunchedEffect(Unit) { vm.loadMyProfile() }
 
     val perfil = ui.perfil
+    val isLoading = ui.isLoading
 
     Scaffold(
         topBar = {
@@ -65,8 +73,8 @@ fun ProfileScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onLogout) {
-                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Cerrar sesión")
+                    IconButton(onClick =    onRefreshProfile) {
+                        Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Actualizar")
                     }
                 }
             )
@@ -135,16 +143,32 @@ fun ProfileScreen(
                 }
             }
 
-            // Estado de solicitud a veterinario pendiente
-            if (perfil != null && !perfil.verificado) {
-                Text(
-                    text = "Solicitud de veterinario enviada. Pendiente de verificación.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
+            // Estado del perfil profesional (prellenado con mensajes en español)
+            when {
+                isLoading -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.size(8.dp))
+                        Text("Cargando perfil profesional…", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                perfil != null && !perfil.verificado -> {
+                    AssistChip(
+                        onClick = {},
+                        label = { Text("Solicitud enviada. Pendiente de verificación.") },
+                        colors = AssistChipDefaults.assistChipColors()
+                    )
+                }
+                perfil?.verificado == true -> {
+                    AssistChip(
+                        onClick = {},
+                        label = { Text("Veterinario verificado") },
+                        colors = AssistChipDefaults.assistChipColors()
+                    )
+                }
             }
 
-            // Editar datos profesionales: habilitado si el perfil de veterinario existe y está verificado
+            // Editar datos profesionales: solo si el perfil está verificado
             Button(
                 onClick = onEditProfessional,
                 enabled = perfil?.verificado == true,
@@ -164,7 +188,8 @@ fun ProfileScreen(
             if (canBecomeVet) {
                 Button(
                     onClick = onBecomeVeterinarian,
-                    enabled = perfil == null, // si ya hay perfil (pendiente/verificado), desactivar
+                    // No permitir registrar mientras estamos cargando el perfil desde el backend
+                    enabled = !isLoading && perfil == null,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Filled.MedicalServices, contentDescription = null)

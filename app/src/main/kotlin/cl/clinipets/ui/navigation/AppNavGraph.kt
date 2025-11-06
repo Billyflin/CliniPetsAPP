@@ -100,6 +100,7 @@ fun AppNavGraph(
                 state = uiState,
                 onBack = { navController.popBackStack() },
                 onBecomeVeterinarian = { navController.navigate(VeterinarianRoute) },
+                onRefreshProfile=     onRefreshProfile,
                 onEditProfessional = { navController.navigate(VeterinarianRoute) },
                 onLogout = onLogout
             )

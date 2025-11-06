@@ -164,6 +164,7 @@ dependencies {
 
     // Hilt
     implementation(libs.hilt)
+    implementation(libs.androidx.compose.foundation)
     kapt(libs.hilt.compiler)
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0") // TODO: Check for latest version
 

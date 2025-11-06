@@ -88,7 +88,7 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    private fun fetchProfile() {
+    fun fetchProfile() {
         hasRequestedProfile = true
         viewModelScope.launch {
             val result = runCatching { authApi.authMe() }

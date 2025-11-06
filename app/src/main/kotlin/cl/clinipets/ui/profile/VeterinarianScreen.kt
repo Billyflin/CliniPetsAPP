@@ -1,10 +1,14 @@
 package cl.clinipets.ui.profile
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,15 +33,19 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import cl.clinipets.openapi.models.ActualizarPerfilRequest
+import cl.clinipets.openapi.models.RegistrarVeterinarioRequest
 import cl.clinipets.openapi.models.Veterinario
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun VeterinarianScreen(
     suggestedName: String?,
@@ -47,6 +55,7 @@ fun VeterinarianScreen(
 ) {
     val uiState by vm.ui.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     // Campos de formulario (compartidos para crear/actualizar)
     var nombre by rememberSaveable { mutableStateOf(suggestedName.orEmpty()) }
@@ -54,7 +63,9 @@ fun VeterinarianScreen(
     var latitud by rememberSaveable { mutableStateOf("") }
     var longitud by rememberSaveable { mutableStateOf("") }
     var radio by rememberSaveable { mutableStateOf("") }
-    var selectedModes by remember { mutableStateOf(setOf<String>()) }
+
+    // UI State usa el Enum del modelo Veterinario
+    var selectedModes by remember { mutableStateOf(setOf<Veterinario.ModosAtencion>()) }
 
     // Estado local para saber si ya precargamos los campos desde el perfil
     var didPrefill by rememberSaveable { mutableStateOf(false) }
@@ -62,8 +73,27 @@ fun VeterinarianScreen(
     var showSuccessDialog by remember { mutableStateOf(false) }
     var lastAction by rememberSaveable { mutableStateOf("idle") } // "idle" | "create" | "update"
 
-    // Cargar perfil al entrar
-    LaunchedEffect(Unit) { vm.loadMyProfile() }
+    // Carga segura del perfil si aún no está disponible (prellenado al llegar)
+    LaunchedEffect(Unit) {
+        val s = vm.ui.value
+        if (!s.isLoading && s.perfil == null) {
+            vm.loadMyProfile()
+        }
+    }
+
+    // Mostrar errores en el Snackbar y limpiarlos luego
+    val error = uiState.error
+    LaunchedEffect(error) {
+        if (error != null) {
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = error,
+                    actionLabel = "Entendido"
+                )
+                vm.clearError()
+            }
+        }
+    }
 
     // Prefill cuando llegue el perfil por primera vez
     LaunchedEffect(uiState.perfil) {
@@ -74,7 +104,7 @@ fun VeterinarianScreen(
             latitud = p.latitud?.toString().orEmpty()
             longitud = p.longitud?.toString().orEmpty()
             radio = p.radioCobertura?.toString().orEmpty()
-            selectedModes = p.modosAtencion.map { it.name }.toSet()
+            selectedModes = p.modosAtencion.toSet()
             didPrefill = true
         }
         if (p != null && lastAction != "idle") {
@@ -97,6 +127,8 @@ fun VeterinarianScreen(
         )
     }
 
+    // Esta lógica sigue funcionando perfectamente.
+    // Si perfil es null (cargado por ProfileScreen), isUpdating será false.
     val isUpdating = uiState.perfil != null
 
     Scaffold(
@@ -112,99 +144,178 @@ fun VeterinarianScreen(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .padding(padding)
-                .padding(24.dp),
+                .fillMaxSize(),
+            contentPadding = PaddingValues(24.dp), // Padding interior
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Text(
-                text = if (isUpdating) "Actualiza tus datos profesionales." else "Completa tus datos para comenzar el proceso de verificación.",
-                style = MaterialTheme.typography.bodyLarge
-            )
-
-            OutlinedTextField(
-                value = nombre,
-                onValueChange = { nombre = it },
-                label = { Text("Nombre completo") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            OutlinedTextField(
-                value = licencia,
-                onValueChange = { licencia = it },
-                label = { Text("Número de licencia (opcional)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Text(
-                text = "Modos de atención",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            ModeSelector(
-                selectedModes = selectedModes,
-                onToggle = { modeName ->
-                    selectedModes = if (selectedModes.contains(modeName)) selectedModes - modeName else selectedModes + modeName
-                }
-            )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedTextField(
-                    value = latitud,
-                    onValueChange = { latitud = it },
-                    label = { Text("Latitud (opcional)") },
-                    modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+            item {
+                Text(
+                    text = if (isUpdating) "Actualiza tus datos profesionales." else "Completa tus datos para comenzar el proceso de verificación.",
+                    style = MaterialTheme.typography.bodyLarge
                 )
+            }
+
+            item {
                 OutlinedTextField(
-                    value = longitud,
-                    onValueChange = { longitud = it },
-                    label = { Text("Longitud (opcional)") },
-                    modifier = Modifier.weight(1f),
+                    value = nombre,
+                    onValueChange = { if (!isUpdating) nombre = it },
+                    label = { Text("Nombre completo") },
+                    modifier = Modifier.fillMaxWidth(),
+                    readOnly = isUpdating,
+                    enabled = !isUpdating
+                )
+            }
+
+            item {
+                OutlinedTextField(
+                    value = licencia,
+                    onValueChange = { if (!isUpdating) licencia = it },
+                    label = { Text("Número de licencia (opcional)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    readOnly = isUpdating,
+                    enabled = !isUpdating
+                )
+            }
+
+            item {
+                Text(
+                    text = "Modos de atención",
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+
+            item {
+                ModeSelector(
+                    selectedModes = selectedModes,
+                    onToggle = { mode -> // 'mode' es Veterinario.ModosAtencion
+                        selectedModes = if (selectedModes.contains(mode)) {
+                            selectedModes - mode
+                        } else {
+                            selectedModes + mode
+                        }
+                    }
+                )
+            }
+
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    OutlinedTextField(
+                        value = latitud,
+                        onValueChange = { latitud = it },
+                        label = { Text("Latitud (opcional)") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                    OutlinedTextField(
+                        value = longitud,
+                        onValueChange = { longitud = it },
+                        label = { Text("Longitud (opcional)") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                }
+            }
+
+            item {
+                OutlinedTextField(
+                    value = radio,
+                    onValueChange = { radio = it },
+                    label = { Text("Radio de cobertura (km)") },
+                    modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
             }
 
-            OutlinedTextField(
-                value = radio,
-                onValueChange = { radio = it },
-                label = { Text("Radio de cobertura (km)") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-            )
+            item {
+                Button(
+                    onClick = {
+                        val lat = latitud.toDoubleOrNull()
+                        val lon = longitud.toDoubleOrNull()
+                        val rad = radio.toDoubleOrNull()
+                        val lic = licencia.ifEmpty { null }
 
-            Button(
-                onClick = {
-                    if (isUpdating) {
+                        lastAction = if (isUpdating) "update" else "create"
 
-                    } else {
+                        if (isUpdating) {
+                            // --- INICIO CORRECCIÓN (Actualizar) ---
+                            // Asumimos que ActualizarPerfilRequest tiene su propio enum
+                            val modosParaActualizar = selectedModes.mapNotNull { uiMode ->
+                                try {
+                                    // Mapear por nombre
+                                    ActualizarPerfilRequest.ModosAtencion.valueOf(uiMode.name)
+                                } catch (e: IllegalArgumentException) {
+                                    null // Ocurre si los enums no coinciden
+                                }
+                            }.toSet() // Convertir a Set
 
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isLoading
-            ) {
-                Text(if (isUpdating) "Actualizar" else "Registrar")
+                            vm.updateMyProfile(
+                                ActualizarPerfilRequest(
+                                    nombreCompleto = nombre,
+                                    numeroLicencia = lic,
+                                    modosAtencion = modosParaActualizar, // CORREGIDO
+                                    latitud = lat,
+                                    longitud = lon,
+                                    radioCobertura = rad
+                                )
+                            )
+                            // --- FIN CORRECCIÓN ---
+                        } else {
+                            // --- INICIO CORRECCIÓN (Registrar) ---
+                            // Mapeamos del enum de UI al enum del DTO
+                            val modosParaRegistrar = selectedModes.mapNotNull { uiMode ->
+                                try {
+                                    // Mapear por nombre
+                                    RegistrarVeterinarioRequest.ModosAtencion.valueOf(uiMode.name)
+                                } catch (e: IllegalArgumentException) {
+                                    null // Ocurre si los enums no coinciden
+                                }
+                            }.toSet() // Convertir a Set
+
+                            vm.submit(
+                                RegistrarVeterinarioRequest(
+                                    nombreCompleto = nombre,
+                                    numeroLicencia = lic,
+                                    modosAtencion = modosParaRegistrar, // CORREGIDO
+                                    latitud = lat,
+                                    longitud = lon,
+                                    radioCobertura = rad
+                                )
+                            )
+                            // --- FIN CORRECCIÓN ---
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !uiState.isLoading
+                ) {
+                    Text(if (isUpdating) "Actualizar" else "Registrar")
+                }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun ModeSelector(
-    selectedModes: Set<String>,
-    onToggle: (String) -> Unit
+    // Recibimos el Set del Enum de UI (Veterinario.ModosAtencion)
+    selectedModes: Set<Veterinario.ModosAtencion>,
+    onToggle: (Veterinario.ModosAtencion) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Iteramos sobre el Enum de UI
         Veterinario.ModosAtencion.entries.forEach { mode ->
-            val name = mode.name
+            val selected = selectedModes.contains(mode)
             FilterChip(
-                selected = selectedModes.contains(name),
-                onClick = { onToggle(name) },
-                label = { Text(name) },
-                leadingIcon = if (selectedModes.contains(name)) {
+                selected = selected,
+                onClick = { onToggle(mode) }, // Devolvemos el Enum de UI
+                label = { Text(mode.name) }, // O un `when(mode)` para traducir
+                leadingIcon = if (selected) {
                     { Icon(Icons.Filled.Check, contentDescription = null) }
                 } else null
             )
