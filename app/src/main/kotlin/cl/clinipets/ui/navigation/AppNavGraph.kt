@@ -62,7 +62,6 @@ fun AppNavGraph(
                 { navController.navigate(MascotasRoute) },
                 { navController.navigate(DiscoverRoute) },
                 { navController.navigate(ProfileRoute) },
-                onLogout,
                 { navController.navigate(MiCatalogoRoute) },
                 { navController.navigate(MiDisponibilidadRoute) }
             )

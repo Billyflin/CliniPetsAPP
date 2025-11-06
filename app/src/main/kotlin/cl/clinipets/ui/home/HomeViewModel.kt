@@ -12,7 +12,8 @@ class HomeViewModel @Inject constructor(
 
     data class UiState(
         val loading: Boolean = false,
-        val error: String? = null
+        val error: String? = null,
+        val citas: List<String> = emptyList()
     )
 
     private val _ui = MutableStateFlow(UiState())

@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import cl.clinipets.openapi.apis.MascotasApi
 import cl.clinipets.openapi.models.ActualizarMascota
 import cl.clinipets.openapi.models.CrearMascota
+import cl.clinipets.openapi.models.ListarRazasRequest
 import cl.clinipets.openapi.models.Mascota
+import cl.clinipets.openapi.models.Raza
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,16 +24,17 @@ class MascotasViewModel @Inject constructor(
     private val _items = MutableStateFlow<List<Mascota>>(emptyList())
     val items = _items.asStateFlow()
 
-    // Estado de carga y error para la UI
     private val _cargando = MutableStateFlow(false)
     val cargando = _cargando.asStateFlow()
 
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
 
-    // Mascota seleccionada (detalle)
     private val _seleccionada = MutableStateFlow<Mascota?>(null)
     val seleccionada = _seleccionada.asStateFlow()
+
+    private val _razas = MutableStateFlow<List<Raza>>(emptyList())
+    val razas = _razas.asStateFlow()
 
     fun cargar() = viewModelScope.launch {
         ejecutarConCarga {
@@ -54,7 +57,6 @@ class MascotasViewModel @Inject constructor(
                 val body = r.body()
                 if (body != null) {
                     _seleccionada.value = body
-                    // Si ya teníamos lista, actualizamos/insertamos el detalle más fresco
                     val lista = _items.value.toMutableList()
                     val idx = lista.indexOfFirst { it.id == body.id }
                     if (idx >= 0) {
@@ -75,6 +77,7 @@ class MascotasViewModel @Inject constructor(
 
     fun limpiarSeleccion() {
         _seleccionada.value = null
+        _razas.value = emptyList()
     }
 
     fun crear(datos: CrearMascota) = viewModelScope.launch {
@@ -136,12 +139,27 @@ class MascotasViewModel @Inject constructor(
         }
     }
 
+    fun cargarRazas(especie: ListarRazasRequest.Especie) {
+        viewModelScope.launch {
+            try {
+                val r = api.buscarRazas(ListarRazasRequest(especie = especie))
+                if (r.isSuccessful) {
+                    _razas.value = r.body().orEmpty()
+                } else {
+                    _error.value = "Error ${r.code()}: no se pudieron cargar las razas"
+                }
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Error de red inesperado"
+            }
+        }
+    }
+
     fun limpiarError() { _error.value = null }
 
-    // Ejecuta un bloque mostrando/ocultando estado de carga y capturando excepciones
     private suspend fun ejecutarConCarga(bloque: suspend () -> Unit) {
         if (_cargando.value) return
         _cargando.value = true
+        _error.value = null
         try {
             withContext(Dispatchers.IO) { bloque() }
         } catch (e: Exception) {

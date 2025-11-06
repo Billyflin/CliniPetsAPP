@@ -102,14 +102,13 @@ class VeterinariosViewModel @Inject constructor(
         _bloquesEdit.value = _bloquesEdit.value.filterNot { it.dia == dia }
     }
 
+    // Valida formato HH:mm y que inicio < fin
     private fun validarBloques(bloques: List<BloqueHorarioDto>): String? {
         val hhmm = Regex("^([01]\\d|2[0-3]):[0-5]\\d$")
-        for ((i, b) in bloques.withIndex()) {
-            if (!hhmm.matches(b.inicio)) return "Bloque #${i + 1}: hora inicio inválida"
-            if (!hhmm.matches(b.fin)) return "Bloque #${i + 1}: hora fin inválida"
-            val ini = toMin(b.inicio)
-            val end = toMin(b.fin)
-            if (ini >= end) return "Bloque #${i + 1}: inicio debe ser menor que fin"
+        bloques.forEachIndexed { idx, b ->
+            if (!hhmm.matches(b.inicio)) return "Bloque #${idx + 1}: hora inicio inválida"
+            if (!hhmm.matches(b.fin)) return "Bloque #${idx + 1}: hora fin inválida"
+            if (toMin(b.inicio) >= toMin(b.fin)) return "Bloque #${idx + 1}: inicio debe ser menor que fin"
         }
         return null
     }
@@ -253,42 +252,6 @@ class VeterinariosViewModel @Inject constructor(
 
     fun limpiarSeleccion() { _seleccionParaAgregar.value = emptySet() }
 
-    fun cargarCatalogo() {
-        viewModelScope.launch {
-            _cargando.value = true
-            try {
-                val resp = api.miCatalogo()
-                if (resp.isSuccessful) {
-                    _miCatalogo.value = resp.body()
-                } else {
-                    _error.value = "Error obteniendo catálogo (${resp.code()})"
-                }
-            } catch (t: Throwable) {
-                _error.value = t.message
-            } finally {
-                _cargando.value = false
-            }
-        }
-    }
-
-    fun cargarProcedimientos() {
-        viewModelScope.launch {
-            _cargando.value = true
-            try {
-                val resp = api.listarProcedimientos()
-                if (resp.isSuccessful) {
-                    _procedimientos.value = resp.body().orEmpty()
-                } else {
-                    _error.value = "Error listando procedimientos (${resp.code()})"
-                }
-            } catch (t: Throwable) {
-                _error.value = t.message
-            } finally {
-                _cargando.value = false
-            }
-        }
-    }
-
     fun cargarCatalogoYProcedimientos() {
         // secuencial simple para evitar múltiples banderas de carga
         viewModelScope.launch {
@@ -377,7 +340,7 @@ class VeterinariosViewModel @Inject constructor(
     }
 
     fun addBloqueCustom(dia: BloqueHorarioDto.Dia, inicio: String, fin: String, habilitado: Boolean) {
-        _bloquesEdit.value = _bloquesEdit.value + BloqueHorarioDto(dia = dia, inicio = inicio, fin = fin, habilitado = habilitado)
+        _bloquesEdit.value += BloqueHorarioDto(dia = dia, inicio = inicio, fin = fin, habilitado = habilitado)
     }
 }
 

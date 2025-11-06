@@ -340,6 +340,31 @@ paths:
                 $ref: "#/components/schemas/ProblemDetail"
       security:
         - bearerAuth: []
+  /api/mascotas/razas:
+    post:
+      tags:
+        - Mascotas
+      summary: Buscar razas
+      description: "Devuelve una lista de razas, filtrada por los criterios del cuerpo\
+        \ JSON."
+      operationId: buscarRazas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListarRazasRequest"
+        required: true
+      responses:
+        "200":
+          description: Lista de razas obtenida exitosamente
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Raza"
+      security:
+        - bearerAuth: []
   /api/clinica/sugerencias/tratamiento:
     post:
       tags:
@@ -826,16 +851,55 @@ components:
       properties:
         nombre:
           type: string
-        raza:
+        razaId:
           type: string
+          format: uuid
         sexo:
           type: string
+          enum:
+            - MACHO
+            - HEMBRA
+            - INDETERMINADO
         fechaNacimiento:
           type: string
           format: date
+        esFechaAproximada:
+          type: boolean
         pesoKg:
           type: number
           format: double
+        pelaje:
+          type: string
+          enum:
+            - CORTO
+            - MEDIO
+            - LARGO
+            - RIZADO
+            - SIN_PELO
+        patron:
+          type: string
+          enum:
+            - SOLIDO
+            - BICOLOR
+            - TRICOLOR
+            - TABBY
+            - MANCHAS_MERLE
+            - ATIGRADO_BRINDLE
+        colores:
+          type: array
+          items:
+            type: string
+            enum:
+              - NEGRO
+              - BLANCO
+              - GRIS
+              - NARANJA_ROJIZO
+              - CREMA
+              - CAFE_CHOCOLATE
+              - AZUL
+              - DORADO
+              - FUEGO_TAN
+          uniqueItems: true
     ProblemDetail:
       type: object
       properties:
@@ -869,15 +933,53 @@ components:
             - PERRO
             - GATO
         raza:
-          type: string
+          $ref: "#/components/schemas/Raza"
         sexo:
           type: string
+          enum:
+            - MACHO
+            - HEMBRA
+            - INDETERMINADO
         fechaNacimiento:
           type: string
           format: date
+        esFechaAproximada:
+          type: boolean
         pesoKg:
           type: number
           format: double
+        pelaje:
+          type: string
+          enum:
+            - CORTO
+            - MEDIO
+            - LARGO
+            - RIZADO
+            - SIN_PELO
+        patron:
+          type: string
+          enum:
+            - SOLIDO
+            - BICOLOR
+            - TRICOLOR
+            - TABBY
+            - MANCHAS_MERLE
+            - ATIGRADO_BRINDLE
+        colores:
+          type: array
+          items:
+            type: string
+            enum:
+              - NEGRO
+              - BLANCO
+              - GRIS
+              - NARANJA_ROJIZO
+              - CREMA
+              - CAFE_CHOCOLATE
+              - AZUL
+              - DORADO
+              - FUEGO_TAN
+          uniqueItems: true
         creadoEn:
           type: string
           format: date-time
@@ -891,9 +993,27 @@ components:
           type: string
           format: uuid
       required:
+        - colores
         - creadoEn
+        - esFechaAproximada
         - especie
         - modificadoEn
+        - nombre
+    Raza:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nombre:
+          type: string
+        especie:
+          type: string
+          enum:
+            - PERRO
+            - GATO
+      required:
+        - especie
         - nombre
     RegistrarVeterinarioRequest:
       type: object
@@ -932,19 +1052,66 @@ components:
           enum:
             - PERRO
             - GATO
-        raza:
+        razaId:
           type: string
+          format: uuid
         sexo:
           type: string
+          enum:
+            - MACHO
+            - HEMBRA
+            - INDETERMINADO
         fechaNacimiento:
           type: string
           format: date
+        esFechaAproximada:
+          type: boolean
         pesoKg:
           type: number
           format: double
+        pelaje:
+          type: string
+          enum:
+            - CORTO
+            - MEDIO
+            - LARGO
+            - RIZADO
+            - SIN_PELO
+        patron:
+          type: string
+          enum:
+            - SOLIDO
+            - BICOLOR
+            - TRICOLOR
+            - TABBY
+            - MANCHAS_MERLE
+            - ATIGRADO_BRINDLE
+        colores:
+          type: array
+          items:
+            type: string
+            enum:
+              - NEGRO
+              - BLANCO
+              - GRIS
+              - NARANJA_ROJIZO
+              - CREMA
+              - CAFE_CHOCOLATE
+              - AZUL
+              - DORADO
+              - FUEGO_TAN
+          uniqueItems: true
       required:
         - especie
         - nombre
+    ListarRazasRequest:
+      type: object
+      properties:
+        especie:
+          type: string
+          enum:
+            - PERRO
+            - GATO
     RecomendacionesTratamientoRequest:
       type: object
       description: Solicitud de recomendaciones de tratamiento para un diagnóstico
