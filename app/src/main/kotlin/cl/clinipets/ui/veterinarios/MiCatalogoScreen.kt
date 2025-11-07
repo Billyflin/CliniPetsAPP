@@ -186,7 +186,7 @@ fun ProcedimientoSelectableRow(
 @Composable
 fun MiCatalogoScreen(
     onBack: () -> Unit,
-    vm: VeterinariosViewModel = hiltViewModel()
+    vm: MiCatalogoViewModel = hiltViewModel()
 ) {
     val cargando by vm.cargando.collectAsState()
     val error by vm.error.collectAsState()

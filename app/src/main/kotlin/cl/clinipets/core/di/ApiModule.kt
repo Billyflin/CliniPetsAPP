@@ -20,7 +20,7 @@ object ApiModule {
     @Provides
     @Singleton
     fun provideApiClient(): ApiClient {
-       val baseUrl =   if (BuildConfig.DEBUG)  BuildConfig.BASE_URL_DEBUG else BuildConfig.BASE_URL_RELEASE
+        val baseUrl =   if (BuildConfig.DEBUG)  BuildConfig.BASE_URL_DEBUG else BuildConfig.BASE_URL_RELEASE
         val apiClient = ApiClient(
             baseUrl = baseUrl,
             authNames = arrayOf("bearerAuth")

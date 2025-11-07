@@ -293,13 +293,13 @@ paths:
     put:
       tags:
         - Agenda
-      summary: Confirmar una reserva (Veterinario)
-      description: El veterinario acepta una reserva PENDIENTE y la cambia a CONFIRMADA.
-      operationId: confirmarReserva
+      summary: "[Flujo 1] Confirmar reserva de clínica (Veterinario)"
+      description: El veterinario aprueba una reserva PENDIENTE (del Flujo 1) y la
+        cambia a CONFIRMADA.
+      operationId: confirmarReservaClinica
       parameters:
         - name: reservaId
           in: path
-          description: ID de la Reserva a confirmar
           required: true
           schema:
             type: string
@@ -310,7 +310,7 @@ paths:
           content:
             '*/*':
               schema:
-                type: object
+                $ref: "#/components/schemas/ReservaDto"
       security:
         - bearerAuth: []
   /api/veterinarios:
@@ -599,19 +599,19 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
-  /api/agenda/reservar:
+  /api/agenda/solicitudes:
     post:
       tags:
         - Agenda
-      summary: Solicitar una reserva (Cliente)
-      description: Un cliente solicita un slot de horario. La reserva se crea en estado
-        PENDIENTE.
-      operationId: solicitarReserva
+      summary: "[Flujo 2] Cliente publica una solicitud de servicio (Licitación)"
+      description: "Crea una 'oferta pública' para servicios a domicilio o con logí\
+        stica, esperando ofertas de veterinarios."
+      operationId: crearSolicitudServicio
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CrearReservaRequest"
+              $ref: "#/components/schemas/CrearSolicitudRequest"
         required: true
       responses:
         "201":
@@ -620,6 +620,87 @@ paths:
             '*/*':
               schema:
                 type: object
+      security:
+        - bearerAuth: []
+  /api/agenda/solicitudes/{solicitudId}/ofertar:
+    post:
+      tags:
+        - Agenda
+      summary: "[Flujo 2] Veterinario hace una oferta (puja)"
+      description: Un veterinario envía una propuesta de precio y hora para una solicitud
+        abierta.
+      operationId: crearOferta
+      parameters:
+        - name: solicitudId
+          in: path
+          description: ID de la Solicitud a la que se oferta
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearOfertaRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /api/agenda/ofertas/{ofertaId}/aceptar:
+    post:
+      tags:
+        - Agenda
+      summary: "[Flujo 2] Cliente acepta una oferta"
+      description: El cliente acepta la puja de un veterinario. Esto cierra la solicitud
+        y crea la(s) Reserva(s) en estado CONFIRMADA.
+      operationId: aceptarOferta
+      parameters:
+        - name: ofertaId
+          in: path
+          description: ID de la Oferta (puja) que se está aceptando
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReservaDto"
+      security:
+        - bearerAuth: []
+  /api/agenda/clinica/reservar:
+    post:
+      tags:
+        - Agenda
+      summary: "[Flujo 1] Reservar un slot de clínica (Cliente)"
+      description: Un cliente reserva un slot de clínica. La reserva se crea en estado
+        PENDIENTE.
+      operationId: crearReservaClinica
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReservarSlotClinicaRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ReservaDto"
       security:
         - bearerAuth: []
   /api/veterinarios/procedimientos:
@@ -679,14 +760,31 @@ paths:
                 $ref: "#/components/schemas/MeResponse"
       security:
         - bearerAuth: []
-  /api/agenda/disponibilidad/{vetId}/proximos-dias:
+  /api/agenda/solicitudes/disponibles:
     get:
       tags:
         - Agenda
-      summary: Obtener slots de horario de los próximos 7 días
-      description: Calcula y devuelve los horarios (slots) disponibles para los próximos
-        7 días.
-      operationId: getProximosSlotsDisponibles
+      summary: "[Flujo 2] Veterinario ve solicitudes abiertas (Jobs)"
+      description: "Obtiene una lista de solicitudes de clientes que el veterinario\
+        \ logueado puede atender (basado en geografía, catálogo y logística)."
+      operationId: getSolicitudesDisponibles
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
+  /api/agenda/clinica/{vetId}/disponibilidad:
+    get:
+      tags:
+        - Agenda
+      summary: "[Flujo 1] Obtener slots de clínica"
+      description: "Calcula y devuelve los slots de horario exactos para un servicio\
+        \ en la clínica de un veterinario, en una fecha específica."
+      operationId: getSlotsDisponiblesClinica
       parameters:
         - name: vetId
           in: path
@@ -695,29 +793,26 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: fecha
+          in: query
+          description: Fecha de la consulta (YYYY-MM-DD)
+          required: true
+          schema:
+            type: string
+            format: date
         - name: servicioSku
           in: query
           description: SKU del procedimiento a realizar
           required: true
           schema:
             type: string
-        - name: modoAtencion
-          in: query
-          description: Modo de atención (CLINICA o DOMICILIO)
-          required: true
-          schema:
-            type: string
-            enum:
-              - DOMICILIO
-              - CLINICA
-              - URGENCIA
       responses:
         "200":
           description: OK
           content:
             '*/*':
               schema:
-                type: object
+                $ref: "#/components/schemas/SlotsDisponiblesResponse"
       security:
         - bearerAuth: []
 components:
@@ -758,6 +853,8 @@ components:
           format: double
         verificado:
           type: boolean
+        ofreceLogistica:
+          type: boolean
         creadoEn:
           type: string
           format: date-time
@@ -776,6 +873,7 @@ components:
         - modificadoEn
         - modosAtencion
         - nombreCompleto
+        - ofreceLogistica
         - verificado
     ActualizarPerfilRequest:
       type: object
@@ -1134,6 +1232,104 @@ components:
       required:
         - especie
         - nombre
+    InfoMascotaDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nombre:
+          type: string
+        especie:
+          type: string
+          enum:
+            - PERRO
+            - GATO
+      required:
+        - especie
+        - id
+        - nombre
+    InfoProcedimientoDto:
+      type: object
+      properties:
+        sku:
+          type: string
+        nombre:
+          type: string
+      required:
+        - nombre
+        - sku
+    InfoUsuarioDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nombreCompleto:
+          type: string
+      required:
+        - id
+        - nombreCompleto
+    ReservaDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fecha:
+          type: string
+          format: date
+        horaInicio:
+          type: string
+        horaFin:
+          type: string
+        estado:
+          type: string
+          enum:
+            - PENDIENTE
+            - CONFIRMADA
+            - CANCELADA_CLIENTE
+            - CANCELADA_VET
+            - COMPLETADA
+            - EN_CURSO
+            - NO_ASISTIO
+        tipo:
+          type: string
+          enum:
+            - CITA_SIMPLE
+            - RETIRO
+            - PROCEDIMIENTO_CLINICA
+            - ENTREGA
+        modoAtencion:
+          type: string
+          enum:
+            - DOMICILIO
+            - CLINICA
+            - URGENCIA
+        precio:
+          type: integer
+          format: int32
+        veterinario:
+          $ref: "#/components/schemas/InfoUsuarioDto"
+        cliente:
+          $ref: "#/components/schemas/InfoUsuarioDto"
+        mascota:
+          $ref: "#/components/schemas/InfoMascotaDto"
+        procedimiento:
+          $ref: "#/components/schemas/InfoProcedimientoDto"
+      required:
+        - cliente
+        - estado
+        - fecha
+        - horaFin
+        - horaInicio
+        - id
+        - mascota
+        - modoAtencion
+        - precio
+        - procedimiento
+        - tipo
+        - veterinario
     RegistrarVeterinarioRequest:
       type: object
       properties:
@@ -1379,12 +1575,9 @@ components:
         - expiresAt
         - token
         - usuario
-    CrearReservaRequest:
+    CrearSolicitudRequest:
       type: object
       properties:
-        veterinarioId:
-          type: string
-          format: uuid
         mascotaId:
           type: string
           format: uuid
@@ -1396,18 +1589,73 @@ components:
             - DOMICILIO
             - CLINICA
             - URGENCIA
+        preferenciaLogistica:
+          type: string
+          enum:
+            - YO_LLEVO
+            - RETIRO_Y_ENTREGA
+        fecha:
+          type: string
+          format: date
+        bloqueSolicitado:
+          type: string
+          enum:
+            - MANANA
+            - TARDE
+        latitud:
+          type: number
+          format: double
+        longitud:
+          type: number
+          format: double
+      required:
+        - bloqueSolicitado
+        - fecha
+        - latitud
+        - longitud
+        - mascotaId
+        - modoAtencion
+        - preferenciaLogistica
+        - procedimientoSku
+    CrearOfertaRequest:
+      type: object
+      properties:
+        precioServicio:
+          type: integer
+          format: int32
+        precioLogistica:
+          type: integer
+          format: int32
+        horaRetiroPropuesta:
+          type: string
+        horaCirugiaPropuesta:
+          type: string
+        horaEntregaEstimada:
+          type: string
+      required:
+        - horaCirugiaPropuesta
+        - precioLogistica
+        - precioServicio
+    ReservarSlotClinicaRequest:
+      type: object
+      properties:
+        veterinarioId:
+          type: string
+          format: uuid
+        mascotaId:
+          type: string
+          format: uuid
+        procedimientoSku:
+          type: string
         fecha:
           type: string
           format: date
         horaInicio:
           type: string
-        ubicacion:
-          $ref: "#/components/schemas/UbicacionDto"
       required:
         - fecha
         - horaInicio
         - mascotaId
-        - modoAtencion
         - procedimientoSku
         - veterinarioId
     Procedimiento:
@@ -1439,6 +1687,11 @@ components:
               - CLINICA
               - URGENCIA
           uniqueItems: true
+        flujo:
+          type: string
+          enum:
+            - SIMPLE
+            - LOGISTICA_COMPLETA
         duracionMinutos:
           type: integer
           format: int32
@@ -1458,6 +1711,7 @@ components:
         - compatibleCon
         - creadoEn
         - duracionMinutos
+        - flujo
         - modificadoEn
         - modosHabilitados
         - nombre
@@ -1490,6 +1744,19 @@ components:
           description: URL del avatar o foto del usuario
       required:
         - authenticated
+    SlotsDisponiblesResponse:
+      type: object
+      properties:
+        fecha:
+          type: string
+          format: date
+        slots:
+          type: array
+          items:
+            type: string
+      required:
+        - fecha
+        - slots
   securitySchemes:
     bearerAuth:
       type: http

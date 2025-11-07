@@ -47,16 +47,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.BloqueHorarioDto
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MiDisponibilidadScreen(
     onBack: () -> Unit,
-    vm: VeterinariosViewModel = hiltViewModel()
+    vm: MiDisponibilidadViewModel = hiltViewModel()
 ) {
-    val cargando by vm.cargando.collectAsState()
-    val error by vm.error.collectAsState()
-    val bloques by vm.bloquesEdit.collectAsState()
+    val uiState by vm.miDisponibilidadState.collectAsState()
+    val globalError by vm.error.collectAsState()
+    val bloques = uiState.bloquesEditables
+    val isBusy = uiState.isLoading || uiState.isSaving
+    val errorMessage = uiState.errorMessage ?: globalError
     val showAddForDay = remember { mutableStateOf<BloqueHorarioDto.Dia?>(null) }
 
     LaunchedEffect(Unit) { vm.cargarDisponibilidad() }
@@ -67,7 +71,7 @@ fun MiDisponibilidadScreen(
                 title = { Text("Mi disponibilidad") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás") } },
                 actions = {
-                    IconButton(onClick = { vm.cargarDisponibilidad() }, enabled = !cargando) {
+                    IconButton(onClick = { vm.cargarDisponibilidad() }, enabled = !uiState.isLoading) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refrescar")
                     }
                 }
@@ -82,26 +86,42 @@ fun MiDisponibilidadScreen(
                 horizontalArrangement = Arrangement.End, // Cambiado
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedButton(onClick = { vm.resetEdicionDisponibilidad() }) { Text("Restablecer cambios") }
+                OutlinedButton(
+                    onClick = { vm.resetEdicionDisponibilidad() },
+                    enabled = uiState.isDirty && !isBusy
+                ) { Text("Restablecer cambios") }
                 Spacer(Modifier.width(8.dp)) // Añadido spacer
-                Button(onClick = { vm.guardarDisponibilidad() }, enabled = !cargando) { Text("Guardar") }
+                Button(onClick = { vm.guardarDisponibilidad() }, enabled = uiState.isDirty && !isBusy) { Text("Guardar") }
             }
         }
     ) { padding ->
         Column(Modifier
             .padding(padding)
             .fillMaxSize()) {
-            if (error != null) {
-                AssistChip(onClick = { vm.limpiarError() }, label = { Text(error ?: "") })
+            if (errorMessage != null) {
+                AssistChip(onClick = { vm.limpiarError() }, label = { Text(errorMessage) })
             }
-            if (cargando && bloques.isEmpty()) {
+            if (uiState.isLoading && bloques.isEmpty()) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
             }
 
+            uiState.disponibilidad?.let { disponibilidad ->
+                val lastUpdated = remember(disponibilidad) {
+                    disponibilidad.modificadoEn.format(disponibilidadFormatter)
+                }
+                Text(
+                    "Última actualización: $lastUpdated",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                )
+            }
+
             // Agrupar por día y ordenar por inicio
-            val grupos = BloqueHorarioDto.Dia.entries.associateWith { dia ->
-                bloques.mapIndexed { idx, b -> idx to b }.filter { it.second.dia == dia }
-                    .sortedBy { it.second.inicio }
+            val grupos = remember(bloques) {
+                BloqueHorarioDto.Dia.entries.associateWith { dia ->
+                    bloques.mapIndexed { idx, b -> idx to b }.filter { it.second.dia == dia }
+                        .sortedBy { it.second.inicio }
+                }
             }
 
             LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -115,7 +135,7 @@ fun MiDisponibilidadScreen(
                             ) {
                                 Text(diaSpanish(dia), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    OutlinedButton(onClick = { showAddForDay.value = dia }) { Text("Agregar") }
+                                    OutlinedButton(onClick = { showAddForDay.value = dia }, enabled = !isBusy) { Text("Agregar") }
                                     // Cambiado a TextButton con color de error para acción destructiva
                                     TextButton(
                                         onClick = { vm.removeBloquesDia(dia) },
@@ -266,3 +286,6 @@ private fun BloqueRow(
         }
     }
 }
+
+private val disponibilidadFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("d MMM yyyy HH:mm", Locale("es", "CL"))
