@@ -55,8 +55,12 @@ tags:
     description: Asistencia clínica inteligente para veterinarios (IA/ML)
   - name: Autenticación
     description: Endpoints de autenticación y gestión de sesión
+  - name: Agenda
+    description: Gestión de disponibilidad y reservas
   - name: Veterinarios
     description: "Gestión de veterinarios: registro, perfil y verificación"
+  - name: Descubrimiento
+    description: Búsqueda geo-localizada de servicios
   - name: Mascotas
     description: Gestión de mascotas del usuario
 paths:
@@ -285,6 +289,30 @@ paths:
                 $ref: "#/components/schemas/ProblemDetail"
       security:
         - bearerAuth: []
+  /api/agenda/reservas/{reservaId}/confirmar:
+    put:
+      tags:
+        - Agenda
+      summary: Confirmar una reserva (Veterinario)
+      description: El veterinario acepta una reserva PENDIENTE y la cambia a CONFIRMADA.
+      operationId: confirmarReserva
+      parameters:
+        - name: reservaId
+          in: path
+          description: ID de la Reserva a confirmar
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
   /api/veterinarios:
     post:
       tags:
@@ -363,6 +391,31 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Raza"
+      security:
+        - bearerAuth: []
+  /api/descubrimiento/buscar:
+    post:
+      tags:
+        - Descubrimiento
+      summary: Buscar veterinarios por servicio y ubicación
+      description: "\n            Realiza una búsqueda filtrada de veterinarios.\n\
+        \            1. Filtra por compatibilidad de servicio y especie.\n       \
+        \     2. Filtra por modo de atención (Domicilio o Clínica).\n            3.\
+        \ Filtra geográficamente (radio de cobertura o cercanía).\n        "
+      operationId: buscarDescubrimiento
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiscoveryRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
       security:
         - bearerAuth: []
   /api/clinica/sugerencias/tratamiento:
@@ -546,6 +599,29 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
+  /api/agenda/reservar:
+    post:
+      tags:
+        - Agenda
+      summary: Solicitar una reserva (Cliente)
+      description: Un cliente solicita un slot de horario. La reserva se crea en estado
+        PENDIENTE.
+      operationId: solicitarReserva
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearReservaRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                type: object
+      security:
+        - bearerAuth: []
   /api/veterinarios/procedimientos:
     get:
       tags:
@@ -601,6 +677,47 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MeResponse"
+      security:
+        - bearerAuth: []
+  /api/agenda/disponibilidad/{vetId}/proximos-dias:
+    get:
+      tags:
+        - Agenda
+      summary: Obtener slots de horario de los próximos 7 días
+      description: Calcula y devuelve los horarios (slots) disponibles para los próximos
+        7 días.
+      operationId: getProximosSlotsDisponibles
+      parameters:
+        - name: vetId
+          in: path
+          description: ID del Veterinario
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: servicioSku
+          in: query
+          description: SKU del procedimiento a realizar
+          required: true
+          schema:
+            type: string
+        - name: modoAtencion
+          in: query
+          description: Modo de atención (CLINICA o DOMICILIO)
+          required: true
+          schema:
+            type: string
+            enum:
+              - DOMICILIO
+              - CLINICA
+              - URGENCIA
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
       security:
         - bearerAuth: []
 components:
@@ -834,11 +951,13 @@ components:
           type: integer
           format: int32
         compatibleCon:
-          type: string
-          enum:
-            - PERRO
-            - GATO
-            - AMBOS
+          type: array
+          items:
+            type: string
+            enum:
+              - PERRO
+              - GATO
+          uniqueItems: true
       required:
         - compatibleCon
         - duracionMinutos
@@ -1112,6 +1231,39 @@ components:
           enum:
             - PERRO
             - GATO
+    DiscoveryRequest:
+      type: object
+      properties:
+        mascotaId:
+          type: string
+          format: uuid
+        servicioSku:
+          type: string
+        modoAtencion:
+          type: string
+          enum:
+            - DOMICILIO
+            - CLINICA
+            - URGENCIA
+        ubicacionUsuario:
+          $ref: "#/components/schemas/UbicacionDto"
+      required:
+        - mascotaId
+        - modoAtencion
+        - servicioSku
+        - ubicacionUsuario
+    UbicacionDto:
+      type: object
+      properties:
+        latitud:
+          type: number
+          format: double
+        longitud:
+          type: number
+          format: double
+      required:
+        - latitud
+        - longitud
     RecomendacionesTratamientoRequest:
       type: object
       description: Solicitud de recomendaciones de tratamiento para un diagnóstico
@@ -1227,6 +1379,37 @@ components:
         - expiresAt
         - token
         - usuario
+    CrearReservaRequest:
+      type: object
+      properties:
+        veterinarioId:
+          type: string
+          format: uuid
+        mascotaId:
+          type: string
+          format: uuid
+        procedimientoSku:
+          type: string
+        modoAtencion:
+          type: string
+          enum:
+            - DOMICILIO
+            - CLINICA
+            - URGENCIA
+        fecha:
+          type: string
+          format: date
+        horaInicio:
+          type: string
+        ubicacion:
+          $ref: "#/components/schemas/UbicacionDto"
+      required:
+        - fecha
+        - horaInicio
+        - mascotaId
+        - modoAtencion
+        - procedimientoSku
+        - veterinarioId
     Procedimiento:
       type: object
       properties:
@@ -1240,11 +1423,22 @@ components:
           type: integer
           format: int32
         compatibleCon:
-          type: string
-          enum:
-            - PERRO
-            - GATO
-            - AMBOS
+          type: array
+          items:
+            type: string
+            enum:
+              - PERRO
+              - GATO
+          uniqueItems: true
+        modosHabilitados:
+          type: array
+          items:
+            type: string
+            enum:
+              - DOMICILIO
+              - CLINICA
+              - URGENCIA
+          uniqueItems: true
         duracionMinutos:
           type: integer
           format: int32
@@ -1265,6 +1459,7 @@ components:
         - creadoEn
         - duracionMinutos
         - modificadoEn
+        - modosHabilitados
         - nombre
         - precio
         - sku

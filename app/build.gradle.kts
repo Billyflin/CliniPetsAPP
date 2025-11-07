@@ -20,10 +20,6 @@ android {
     namespace = "cl.clinipets"
     compileSdk = 36
 
-    // Valores leídos desde Secrets Plugin (gradleProperty), definidos en local.properties o secrets.defaults.properties
-    val googleServerClientId: String = providers.gradleProperty("GOOGLE_SERVER_CLIENT_ID").orNull ?: ""
-    val baseUrlDebug: String = providers.gradleProperty("BASE_URL_DEBUG").orNull ?: "https://clinipets.cl/"
-    val baseUrlRelease: String = providers.gradleProperty("BASE_URL_RELEASE").orNull ?: "https://api.clinipets.example/"
 
     defaultConfig {
         applicationId = "cl.clinipets"
@@ -33,22 +29,15 @@ android {
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         signingConfig = signingConfigs.getByName("debug")
-        // MAPS_API_KEY se resuelve vía Secrets Plugin en el Manifest (${MAPS_API_KEY})
     }
 
     buildTypes {
-        debug {
-            buildConfigField("String", "BASE_URL", "\"$baseUrlDebug\"")
-            buildConfigField("String", "GOOGLE_SERVER_CLIENT_ID", "\"$googleServerClientId\"")
-        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "BASE_URL", "\"$baseUrlRelease\"")
-            buildConfigField("String", "GOOGLE_SERVER_CLIENT_ID", "\"$googleServerClientId\"")
         }
     }
 
@@ -71,9 +60,7 @@ android {
     }
 }
 
-// Configuración de Secrets Gradle Plugin
 secrets {
-    // Usamos un archivo por defecto versionado para evitar fallas cuando local.properties no tiene la clave
     defaultPropertiesFileName = "secrets.defaults.properties"
 }
 
@@ -162,6 +149,7 @@ dependencies {
     // Hilt
     implementation(libs.hilt)
     implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.runtime.saveable)
     kapt(libs.hilt.compiler)
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0") // TODO: Check for latest version
 

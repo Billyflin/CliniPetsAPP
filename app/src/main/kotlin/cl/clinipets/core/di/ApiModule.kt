@@ -20,8 +20,9 @@ object ApiModule {
     @Provides
     @Singleton
     fun provideApiClient(): ApiClient {
+       val baseUrl =   if (BuildConfig.DEBUG)  BuildConfig.BASE_URL_DEBUG else BuildConfig.BASE_URL_RELEASE
         val apiClient = ApiClient(
-            baseUrl = BuildConfig.BASE_URL,
+            baseUrl = baseUrl,
             authNames = arrayOf("bearerAuth")
         )
 
@@ -49,7 +50,12 @@ object ApiModule {
     fun provideVeterinariosApi(apiClient: ApiClient): VeterinariosApi =
         apiClient.createService(VeterinariosApi::class.java)
 
-    // opcional: proveer el CLIENT_ID si lo querés inyectar
+    @Provides
+    @Singleton
+    fun provideDescubrimientoApi(apiClient: ApiClient): cl.clinipets.openapi.apis.DescubrimientoApi =
+        apiClient.createService(cl.clinipets.openapi.apis.DescubrimientoApi::class.java)
+
+
     @Provides
     @Named("GoogleClientId")
     fun provideGoogleClientId(): String = BuildConfig.GOOGLE_SERVER_CLIENT_ID

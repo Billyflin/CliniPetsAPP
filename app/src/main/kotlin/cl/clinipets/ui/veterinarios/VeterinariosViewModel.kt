@@ -225,9 +225,8 @@ class VeterinariosViewModel @Inject constructor(
             .filter { proc ->
                 when (filtro) {
                     null -> true // todos
-                    Procedimiento.CompatibleCon.PERRO -> proc.compatibleCon == Procedimiento.CompatibleCon.PERRO || proc.compatibleCon == Procedimiento.CompatibleCon.AMBOS
-                    Procedimiento.CompatibleCon.GATO -> proc.compatibleCon == Procedimiento.CompatibleCon.GATO || proc.compatibleCon == Procedimiento.CompatibleCon.AMBOS
-                    Procedimiento.CompatibleCon.AMBOS -> proc.compatibleCon == Procedimiento.CompatibleCon.AMBOS
+                    Procedimiento.CompatibleCon.PERRO -> proc.compatibleCon.contains(Procedimiento.CompatibleCon.PERRO)
+                    Procedimiento.CompatibleCon.GATO -> proc.compatibleCon.contains(Procedimiento.CompatibleCon.GATO)
                 }
             }
             .filter { proc ->

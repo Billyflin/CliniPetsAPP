@@ -316,7 +316,6 @@ fun MiCatalogoScreen(
                         FilterChip(selected = (filtro == null), onClick = { vm.setFiltroCompatibleCon(null) }, label = { Text("Todos") })
                         FilterChip(selected = (filtro == Procedimiento.CompatibleCon.PERRO), onClick = { vm.setFiltroCompatibleCon(Procedimiento.CompatibleCon.PERRO) }, label = { Text("Perro") })
                         FilterChip(selected = (filtro == Procedimiento.CompatibleCon.GATO), onClick = { vm.setFiltroCompatibleCon(Procedimiento.CompatibleCon.GATO) }, label = { Text("Gato") })
-                        FilterChip(selected = (filtro == Procedimiento.CompatibleCon.AMBOS), onClick = { vm.setFiltroCompatibleCon(Procedimiento.CompatibleCon.AMBOS) }, label = { Text("Ambos") })
                     }
                     Spacer(Modifier.height(8.dp))
                     TextField(

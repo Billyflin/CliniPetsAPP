@@ -26,6 +26,7 @@ hilt = "2.57.2"
 coil = "2.7.0"
 foundation = "1.9.4"
 secretsGradle = "2.0.1"
+runtimeSaveable = "1.9.4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -65,6 +66,7 @@ hilt = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
+androidx-compose-runtime-saveable = { group = "androidx.compose.runtime", name = "runtime-saveable", version.ref = "runtimeSaveable" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

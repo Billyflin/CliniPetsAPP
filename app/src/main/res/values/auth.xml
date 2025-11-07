@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Client ID de tipo Web (serverClientId usado por Credential Manager + GIS) -->
-    <string name="google_web_client_id">516859256009-obqnjjbnn9k5e2phvbk35sspf1sdvqr7.apps.googleusercontent.com</string>
-    <!-- Server Client ID para Google Sign-In (debe coincidir con el configurado en el backend) -->
-    <string name="google_server_client_id">YOUR_GOOGLE_SERVER_CLIENT_ID</string>
-
-</resources>
