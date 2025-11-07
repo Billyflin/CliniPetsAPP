@@ -774,7 +774,9 @@ paths:
           content:
             '*/*':
               schema:
-                type: object
+                type: array
+                items:
+                  $ref: "#/components/schemas/SolicitudDisponibleDto"
       security:
         - bearerAuth: []
   /api/agenda/clinica/{vetId}/disponibilidad:
@@ -1744,6 +1746,66 @@ components:
           description: URL del avatar o foto del usuario
       required:
         - authenticated
+    SolicitudDisponibleDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fecha:
+          type: string
+          format: date
+        bloqueSolicitado:
+          type: string
+          enum:
+            - MANANA
+            - TARDE
+        modoAtencion:
+          type: string
+          enum:
+            - DOMICILIO
+            - CLINICA
+            - URGENCIA
+        preferenciaLogistica:
+          type: string
+          enum:
+            - YO_LLEVO
+            - RETIRO_Y_ENTREGA
+        estado:
+          type: string
+          enum:
+            - ABIERTA
+            - CERRADA
+            - CANCELADA
+        cliente:
+          $ref: "#/components/schemas/InfoUsuarioDto"
+        mascota:
+          $ref: "#/components/schemas/InfoMascotaDto"
+        procedimiento:
+          $ref: "#/components/schemas/InfoProcedimientoDto"
+        distanciaKm:
+          type: number
+          format: double
+        precioReferencia:
+          type: integer
+          format: int32
+        latitud:
+          type: number
+          format: double
+        longitud:
+          type: number
+          format: double
+      required:
+        - bloqueSolicitado
+        - cliente
+        - estado
+        - fecha
+        - id
+        - mascota
+        - modoAtencion
+        - precioReferencia
+        - preferenciaLogistica
+        - procedimiento
     SlotsDisponiblesResponse:
       type: object
       properties:

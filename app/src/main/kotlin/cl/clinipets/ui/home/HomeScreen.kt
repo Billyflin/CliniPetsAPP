@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Pets
@@ -48,7 +50,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.R
 
@@ -62,6 +63,9 @@ fun HomeScreen(
     onNavigateToProfile: () -> Unit,
     onNavigateToMiCatalogo: () -> Unit,
     onNavigateToMiDisponibilidad: () -> Unit,
+    onNavigateToSolicitudes: () -> Unit,
+    onNavigateToOfertas: () -> Unit,
+    onNavigateToReservas: () -> Unit,
     vm: HomeViewModel = hiltViewModel()
 ) {
     val uiState by vm.ui.collectAsState()
@@ -137,10 +141,35 @@ fun HomeScreen(
 
             // --- MEJORA: Grid de Acciones (2 acciones) ---
             item {
-                ActionGrid(
-                    onNavigateToMascotas = onNavigateToMascotas,
-                    onNavigateToDiscover = onNavigateToDiscover
-                )
+                val clientActions = mutableListOf<ActionItem>().apply {
+                    add(
+                        ActionItem(
+                            icon = Icons.Default.Pets,
+                            title = "Mis Mascotas",
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            onClick = onNavigateToMascotas
+                        )
+                    )
+                    add(
+                        ActionItem(
+                            icon = Icons.Default.MedicalServices,
+                            title = "Veterinarios",
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            onClick = onNavigateToDiscover
+                        )
+                    )
+                    if (!isVeterinarian) {
+                        add(
+                            ActionItem(
+                                icon = Icons.Default.Assignment,
+                                title = "Solicitar servicio",
+                                color = MaterialTheme.colorScheme.tertiaryContainer,
+                                onClick = onNavigateToSolicitudes
+                            )
+                        )
+                    }
+                }
+                ActionGrid(actions = clientActions)
             }
 
             // Herramientas profesionales si es veterinario
@@ -157,7 +186,9 @@ fun HomeScreen(
                 item {
                     VetToolsCompact(
                         onNavigateToMiCatalogo = onNavigateToMiCatalogo,
-                        onNavigateToMiDisponibilidad = onNavigateToMiDisponibilidad
+                        onNavigateToMiDisponibilidad = onNavigateToMiDisponibilidad,
+                        onNavigateToOfertas = onNavigateToOfertas,
+                        onNavigateToReservas = onNavigateToReservas
                     )
                 }
             }
@@ -231,35 +262,23 @@ private fun HeroCard() {
 
 // --- MEJORA: Grid de Acciones Simplificado ---
 @Composable
-private fun ActionGrid(
-    onNavigateToMascotas: () -> Unit,
-    onNavigateToDiscover: () -> Unit
-) {
-    val actions = listOf(
-        ActionItem(
-            icon = Icons.Default.Pets,
-            title = "Mis Mascotas",
-            color = MaterialTheme.colorScheme.primaryContainer,
-            onClick = onNavigateToMascotas
-        ),
-        ActionItem(
-            icon = Icons.Default.MedicalServices,
-            title = "Veterinarios",
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            onClick = onNavigateToDiscover
-        )
-    )
-
-    // Layout de Fila única y balanceada
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        actions.forEach { action ->
-            ActionCard(
-                item = action,
-                modifier = Modifier.weight(1f)
-            )
+private fun ActionGrid(actions: List<ActionItem>) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        actions.chunked(2).forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                rowItems.forEach { action ->
+                    ActionCard(
+                        item = action,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (rowItems.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
         }
     }
 }
@@ -325,79 +344,37 @@ private fun ActionCard(
 @Composable
 private fun VetToolsCompact(
     onNavigateToMiCatalogo: () -> Unit,
-    onNavigateToMiDisponibilidad: () -> Unit
+    onNavigateToMiDisponibilidad: () -> Unit,
+    onNavigateToOfertas: () -> Unit,
+    onNavigateToReservas: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        VetToolCard(
+    val actions = listOf(
+        ActionItem(
             icon = Icons.Default.Store,
-            title = "Mi Catálogo",
-            onClick = onNavigateToMiCatalogo,
-            modifier = Modifier.weight(1f)
-        )
-
-        VetToolCard(
+            title = "Mi catálogo",
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            onClick = onNavigateToMiCatalogo
+        ),
+        ActionItem(
             icon = Icons.Default.AccessTime,
             title = "Disponibilidad",
-            onClick = onNavigateToMiDisponibilidad,
-            modifier = Modifier.weight(1f)
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            onClick = onNavigateToMiDisponibilidad
+        ),
+        ActionItem(
+            icon = Icons.Default.Assignment,
+            title = "Solicitudes",
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+            onClick = onNavigateToOfertas
+        ),
+        ActionItem(
+            icon = Icons.Default.Person,
+            title = "Reservas",
+            color = MaterialTheme.colorScheme.primaryContainer,
+            onClick = onNavigateToReservas
         )
-    }
-}
-
-// --- MEJORA: VetToolCard Simplificada (sin emoji) ---
-@Composable
-private fun VetToolCard(
-    icon: ImageVector,
-    title: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.height(90.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp)
-        ) {
-            Column(
-                modifier = Modifier.align(Alignment.BottomStart),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
-                )
-            }
-        }
-    }
+    )
+    ActionGrid(actions = actions)
 }
 
 // --- MEJORA: Sección de Citas (ahora sí se usa) ---

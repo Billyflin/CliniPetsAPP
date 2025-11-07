@@ -89,18 +89,8 @@ class DiscoverViewModel @Inject constructor(
                     )
                 )
 
-                val response = descubrimientoApi.buscarDescubrimiento(request)
+                descubrimientoApi.buscarDescubrimiento(request)
 
-                if (response.isSuccessful) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            searchResults = response.body() as List<DiscoveryRequest>
-                        )
-                    }
-                } else {
-                    _uiState.update { it.copy(isLoading = false, error = "Error ${response.code()}: ${response.message()}") }
-                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error de red") }
             }

@@ -7,6 +7,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import cl.clinipets.ui.agenda.OfertasScreen
+import cl.clinipets.ui.agenda.ReservasScreen
+import cl.clinipets.ui.agenda.SolicitudesScreen
 import cl.clinipets.ui.auth.LoginScreen
 import cl.clinipets.ui.auth.LoginViewModel
 import cl.clinipets.ui.discover.DiscoverScreen
@@ -29,6 +32,9 @@ import java.util.UUID
 @Serializable object VeterinarianRoute
 @Serializable object MiCatalogoRoute
 @Serializable object MiDisponibilidadRoute
+@Serializable object SolicitudesRoute
+@Serializable object OfertasRoute
+@Serializable object ReservasRoute
 
 @Serializable
 data class MascotaDetailRoute(val id: String)
@@ -63,7 +69,10 @@ fun AppNavGraph(
                 { navController.navigate(DiscoverRoute) },
                 { navController.navigate(ProfileRoute) },
                 { navController.navigate(MiCatalogoRoute) },
-                { navController.navigate(MiDisponibilidadRoute) }
+                { navController.navigate(MiDisponibilidadRoute) },
+                { navController.navigate(SolicitudesRoute) },
+                { navController.navigate(OfertasRoute) },
+                { navController.navigate(ReservasRoute) }
             )
         }
         composable<MascotasRoute> {
@@ -122,6 +131,15 @@ fun AppNavGraph(
         }
         composable<MiDisponibilidadRoute> {
             MiDisponibilidadScreen(onBack = { navController.popBackStack() })
+        }
+        composable<SolicitudesRoute> {
+            SolicitudesScreen(onBack = { navController.popBackStack() })
+        }
+        composable<OfertasRoute> {
+            OfertasScreen(onBack = { navController.popBackStack() })
+        }
+        composable<ReservasRoute> {
+            ReservasScreen(onBack = { navController.popBackStack() })
         }
     }
 }

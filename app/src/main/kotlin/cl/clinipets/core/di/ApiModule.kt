@@ -2,6 +2,7 @@ package cl.clinipets.core.di
 
 import android.util.Log
 import cl.clinipets.BuildConfig
+import cl.clinipets.openapi.apis.AgendaApi
 import cl.clinipets.openapi.apis.AutenticacinApi
 import cl.clinipets.openapi.apis.MascotasApi
 import cl.clinipets.openapi.apis.VeterinariosApi
@@ -54,6 +55,11 @@ object ApiModule {
     @Singleton
     fun provideDescubrimientoApi(apiClient: ApiClient): cl.clinipets.openapi.apis.DescubrimientoApi =
         apiClient.createService(cl.clinipets.openapi.apis.DescubrimientoApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideAgendaApi(apiClient: ApiClient): AgendaApi =
+        apiClient.createService(AgendaApi::class.java)
 
 
     @Provides
