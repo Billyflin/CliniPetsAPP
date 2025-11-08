@@ -893,6 +893,8 @@ components:
               - CLINICA
               - URGENCIA
           uniqueItems: true
+        ofreceLogistica:
+          type: boolean
         latitud:
           type: number
           format: double
@@ -1258,7 +1260,16 @@ components:
           type: string
         nombre:
           type: string
+        compatibleCon:
+          type: array
+          items:
+            type: string
+            enum:
+              - PERRO
+              - GATO
+          uniqueItems: true
       required:
+        - compatibleCon
         - nombre
         - sku
     InfoUsuarioDto:
@@ -1348,6 +1359,8 @@ components:
               - CLINICA
               - URGENCIA
           uniqueItems: true
+        ofreceLogistica:
+          type: boolean
         latitud:
           type: number
           format: double

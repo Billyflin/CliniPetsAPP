@@ -10,9 +10,11 @@ import cl.clinipets.openapi.models.ItemCatalogoResponse
 import cl.clinipets.openapi.models.Procedimiento
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -36,6 +38,12 @@ class MiCatalogoViewModel @Inject constructor(
     private val _habilitadoEdits = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     private val _duracionOverrideEdits = MutableStateFlow<Map<String, Int?>>(emptyMap())
     private val _precioOverrideEdits = MutableStateFlow<Map<String, Int?>>(emptyMap())
+    private val _success = MutableStateFlow<String?>(null)
+
+    val success: StateFlow<String?> = _success.asStateFlow()
+    val habilitadoEdits = _habilitadoEdits.asStateFlow()
+    val duracionOverrideEdits = _duracionOverrideEdits.asStateFlow()
+    val precioOverrideEdits = _precioOverrideEdits.asStateFlow()
 
     val itemsCatalogoEfectivos = combine(
         _miCatalogo,
@@ -66,6 +74,17 @@ class MiCatalogoViewModel @Inject constructor(
     private val _seleccionParaAgregar = MutableStateFlow<Set<String>>(emptySet())
     val seleccionParaAgregar: StateFlow<Set<String>> = _seleccionParaAgregar.asStateFlow()
 
+    // --- CORRECCIÓN 1: Convertir isDirty a un StateFlow reactivo ---
+    val isDirty = combine(
+        _seleccionParaAgregar,
+        _habilitadoEdits,
+        _duracionOverrideEdits,
+        _precioOverrideEdits
+    ) { sel, hab, dur, pre ->
+        sel.isNotEmpty() || hab.isNotEmpty() || dur.isNotEmpty() || pre.isNotEmpty()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    // ---------------------------------------------------------------
+
     val procedimientosFiltrados = combine(_procedimientos, _filtroCompatible, _busqueda) { lista, filtro, q ->
         val query = q.trim().lowercase()
         lista.asSequence()
@@ -78,18 +97,16 @@ class MiCatalogoViewModel @Inject constructor(
             }
             .filter { proc ->
                 if (query.isEmpty()) true else (
-                    proc.nombre.lowercase().contains(query) ||
-                        proc.sku.lowercase().contains(query) ||
-                        (proc.descripcion ?: "").lowercase().contains(query)
-                    )
+                        proc.nombre.lowercase().contains(query) ||
+                                proc.sku.lowercase().contains(query) ||
+                                (proc.descripcion ?: "").lowercase().contains(query)
+                        )
             }
             .sortedBy { it.nombre }
             .toList()
     }
 
-    fun limpiarError() {
-        _error.value = null
-    }
+    fun limpiarError() { _error.value = null; _success.value = null }
 
     fun setFiltroCompatibleCon(value: Procedimiento.CompatibleCon?) { _filtroCompatible.value = value }
     fun setBusqueda(value: String) { _busqueda.value = value }
@@ -129,6 +146,8 @@ class MiCatalogoViewModel @Inject constructor(
     fun guardarCatalogo(onSuccess: (() -> Unit)? = null) {
         viewModelScope.launch {
             _cargando.value = true
+            _success.value = null
+            _error.value = null // <-- CORRECCIÓN 2: Limpiar error al iniciar guardado
             try {
                 val actualesBase = _miCatalogo.value?.items.orEmpty()
                 val habilEdits = _habilitadoEdits.value
@@ -166,6 +185,7 @@ class MiCatalogoViewModel @Inject constructor(
                     _habilitadoEdits.value = emptyMap()
                     _duracionOverrideEdits.value = emptyMap()
                     _precioOverrideEdits.value = emptyMap()
+                    _success.value = "Catálogo guardado"
                     onSuccess?.invoke()
                 } else {
                     _error.value = "Error guardando catálogo (${resp.code()})"

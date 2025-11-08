@@ -47,8 +47,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.BloqueHorarioDto
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -287,5 +285,5 @@ private fun BloqueRow(
     }
 }
 
-private val disponibilidadFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("d MMM yyyy HH:mm", Locale("es", "CL"))
+private val disponibilidadFormatter: java.time.format.DateTimeFormatter =
+    java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy HH:mm", java.util.Locale.forLanguageTag("es-CL"))

@@ -7,12 +7,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import cl.clinipets.ui.agenda.OfertasScreen
-import cl.clinipets.ui.agenda.ReservasScreen
-import cl.clinipets.ui.agenda.SolicitudesScreen
 import cl.clinipets.ui.auth.LoginScreen
 import cl.clinipets.ui.auth.LoginViewModel
-import cl.clinipets.ui.discover.DiscoverScreen
 import cl.clinipets.ui.home.HomeScreen
 import cl.clinipets.ui.mascotas.MascotaDetailScreen
 import cl.clinipets.ui.mascotas.MascotaFormScreen
@@ -28,20 +24,16 @@ import java.util.UUID
 @Serializable object HomeRoute
 @Serializable object MascotasRoute
 @Serializable object ProfileRoute
-@Serializable object DiscoverRoute
 @Serializable object VeterinarianRoute
 @Serializable object MiCatalogoRoute
 @Serializable object MiDisponibilidadRoute
-@Serializable object SolicitudesRoute
-@Serializable object OfertasRoute
-@Serializable object ReservasRoute
+@Serializable object AgendaRoute // Nueva ruta unificada de agenda (reemplaza Solicitudes/Reservas/etc.)
 
 @Serializable
 data class MascotaDetailRoute(val id: String)
 
 @Serializable
 data class MascotaFormRoute(val id: String? = null)
-
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalStdlibApi::class)
 @Composable
@@ -53,47 +45,31 @@ fun AppNavGraph(
     onLogout: () -> Unit,
     onRefreshProfile: () -> Unit
 ) {
-
-    NavHost(
-        navController = navController,
-        startDestination = LoginRoute
-    ) {
-        composable<LoginRoute> {
-            LoginScreen(busy = busy, error = uiState.error, onLoginClick = onLoginClick)
-        }
+    NavHost(navController = navController, startDestination = LoginRoute) {
+        composable<LoginRoute> { LoginScreen(busy = busy, error = uiState.error, onLoginClick = onLoginClick) }
         composable<HomeRoute> {
             HomeScreen(
-                uiState.displayName,
-                uiState.roles,
-                { navController.navigate(MascotasRoute) },
-                { navController.navigate(DiscoverRoute) },
-                { navController.navigate(ProfileRoute) },
-                { navController.navigate(MiCatalogoRoute) },
-                { navController.navigate(MiDisponibilidadRoute) },
-                { navController.navigate(SolicitudesRoute) },
-                { navController.navigate(OfertasRoute) },
-                { navController.navigate(ReservasRoute) }
+                displayName = uiState.displayName,
+                roles = uiState.roles,
+                onNavigateToMascotas = { navController.navigate(MascotasRoute) },
+                onNavigateToProfile = { navController.navigate(ProfileRoute) },
+                onNavigateToMiCatalogo = { navController.navigate(MiCatalogoRoute) },
+                onNavigateToMiDisponibilidad = { navController.navigate(MiDisponibilidadRoute) },
+                onNavigateToAgenda = { navController.navigate(AgendaRoute) }
             )
         }
         composable<MascotasRoute> {
             MascotasScreen(
                 displayName = uiState.displayName,
-                onNavigateToMascotaDetail = { id: UUID ->
-                    navController.navigate(MascotaDetailRoute(id.toString()))
-                },
+                onNavigateToMascotaDetail = { id: UUID -> navController.navigate(MascotaDetailRoute(id.toString())) },
                 onBack = { navController.popBackStack() },
-                onNavigateToMascotaForm = {
-                    navController.navigate(MascotaFormRoute())
-                }
+                onNavigateToMascotaForm = { navController.navigate(MascotaFormRoute()) }
             )
         }
         composable<MascotaFormRoute> { backStackEntry ->
             val args = backStackEntry.toRoute<MascotaFormRoute>()
             val mascotaId = args.id?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-            MascotaFormScreen(
-                mascotaId = mascotaId,
-                onBack = { navController.popBackStack() }
-            )
+            MascotaFormScreen(mascotaId = mascotaId, onBack = { navController.popBackStack() })
         }
         composable<MascotaDetailRoute> { backStackEntry ->
             val args = backStackEntry.toRoute<MascotaDetailRoute>()
@@ -108,7 +84,7 @@ fun AppNavGraph(
                 state = uiState,
                 onBack = { navController.popBackStack() },
                 onBecomeVeterinarian = { navController.navigate(VeterinarianRoute) },
-                onRefreshProfile=     onRefreshProfile,
+                onRefreshProfile = onRefreshProfile,
                 onEditProfessional = { navController.navigate(VeterinarianRoute) },
                 onLogout = onLogout
             )
@@ -123,23 +99,15 @@ fun AppNavGraph(
                 }
             )
         }
-        composable<DiscoverRoute> {
-            DiscoverScreen(onBack = { navController.popBackStack() })
-        }
-        composable<MiCatalogoRoute> {
-            MiCatalogoScreen(onBack = { navController.popBackStack() })
-        }
-        composable<MiDisponibilidadRoute> {
-            MiDisponibilidadScreen(onBack = { navController.popBackStack() })
-        }
-        composable<SolicitudesRoute> {
-            SolicitudesScreen(onBack = { navController.popBackStack() })
-        }
-        composable<OfertasRoute> {
-            OfertasScreen(onBack = { navController.popBackStack() })
-        }
-        composable<ReservasRoute> {
-            ReservasScreen(onBack = { navController.popBackStack() })
+        composable<MiCatalogoRoute> { MiCatalogoScreen(onBack = { navController.popBackStack() }) }
+        composable<MiDisponibilidadRoute> { MiDisponibilidadScreen(onBack = { navController.popBackStack() }) }
+        composable<AgendaRoute> {
+            cl.clinipets.ui.agenda.AgendaHomeScreen(
+                isVet = uiState.roles.contains("VETERINARIO"),
+                onBack = { navController.popBackStack() },
+                onNavigateToMiDisponibilidad = { navController.navigate(MiDisponibilidadRoute) },
+                onNavigateToMiCatalogo = { navController.navigate(MiCatalogoRoute) }
+            )
         }
     }
 }

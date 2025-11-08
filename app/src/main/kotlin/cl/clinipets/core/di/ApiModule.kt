@@ -21,7 +21,9 @@ object ApiModule {
     @Provides
     @Singleton
     fun provideApiClient(): ApiClient {
-        val baseUrl =   if (BuildConfig.DEBUG)  BuildConfig.BASE_URL_DEBUG else BuildConfig.BASE_URL_RELEASE
+        // Resolución segura de baseUrl: intenta varios campos y env vars.
+        val baseUrl = resolveBaseUrl()
+
         val apiClient = ApiClient(
             baseUrl = baseUrl,
             authNames = arrayOf("bearerAuth")
@@ -66,4 +68,19 @@ object ApiModule {
     @Named("GoogleClientId")
     fun provideGoogleClientId(): String = BuildConfig.GOOGLE_SERVER_CLIENT_ID
 
+    fun resolveBaseUrl(): String {
+        fun read(field: String): String? = runCatching {
+            BuildConfig::class.java.getField(field).get(null) as? String
+        }.getOrNull()?.takeIf { it.isNotBlank() }
+        val candidates = listOf(
+            read("BASE_URL_RELEASE"),
+            read("BASE_URL_DEBUG"),
+            read("BASE_URL"),
+            System.getenv("CLINIPETS_BASE_URL"),
+            System.getProperty("clinipets.baseUrl")
+        )
+        val chosen = candidates.firstOrNull { !it.isNullOrBlank() } ?: "http://10.0.2.2:8080"
+        // Asegura barra final para evitar problemas de concatenación en el cliente autogenerado
+        return if (chosen.endsWith('/')) chosen else "$chosen/"
+    }
 }

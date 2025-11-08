@@ -34,6 +34,13 @@ class ReservasViewModel @Inject constructor(
         _ui.update { it.copy(successMessage = null, error = null) }
     }
 
+    // Nuevo método de refresco (placeholder si no hay endpoint dedicado)
+    fun refreshIfNeeded(force: Boolean = false) {
+        if (!force && _ui.value.ultimaReserva != null) return
+        // Si hubiera endpoint listar reservas, llamar aquí. Por ahora solo limpia estado.
+        _ui.update { it.copy(successMessage = null, error = null) }
+    }
+
     fun aceptarOferta(ofertaId: UUID, onSuccess: (() -> Unit)? = null) {
         viewModelScope.launch {
             _ui.update { it.copy(isWorking = true, error = null, successMessage = null) }

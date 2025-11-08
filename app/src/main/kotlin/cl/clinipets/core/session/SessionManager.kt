@@ -19,7 +19,7 @@ private val Context.dataStore by preferencesDataStore(name = "session_prefs")
 
 @Singleton
 class SessionManager @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val apiClient: ApiClient
 ) {
     private val KEY = stringPreferencesKey("access_token")

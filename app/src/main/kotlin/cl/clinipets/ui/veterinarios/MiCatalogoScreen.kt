@@ -19,7 +19,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -35,6 +34,9 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,10 +60,35 @@ import cl.clinipets.openapi.models.ItemCatalogoResponse
 import cl.clinipets.openapi.models.Procedimiento
 import java.text.NumberFormat
 import java.util.Locale
+import java.util.logging.Logger
 
 // Helper para formatear moneda CLP ($10.000)
-private val clpFormatter: NumberFormat = NumberFormat.getCurrencyInstance(Locale("es", "CL")).apply {
+private val clpFormatter: NumberFormat = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-CL")).apply {
     maximumFractionDigits = 0
+}
+
+// Helpers para formatear compatibilidad como texto amigable
+private fun formatCompatItem(set: Set<ItemCatalogoResponse.CompatibleCon>): String {
+    val perro = set.contains(ItemCatalogoResponse.CompatibleCon.PERRO)
+    val gato = set.contains(ItemCatalogoResponse.CompatibleCon.GATO)
+    Logger.getLogger("CatalogoItemRow").info("formatCompatItem: perro=$perro, gato=$gato y el set=$set")
+    return when {
+        perro && gato -> "Perros y Gatos"
+        perro -> "Perros"
+        gato -> "Gatos"
+        else -> "—"
+    }
+}
+
+private fun formatCompatProc(set: Set<Procedimiento.CompatibleCon>): String {
+    val perro = set.contains(Procedimiento.CompatibleCon.PERRO)
+    val gato = set.contains(Procedimiento.CompatibleCon.GATO)
+    return when {
+        perro && gato -> "Perros y Gatos"
+        perro -> "Perros"
+        gato -> "Gatos"
+        else -> "—"
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) // Añadido ExperimentalLayoutApi
@@ -108,13 +135,9 @@ fun CatalogoItemRow(
                         color = if (item.duracionMinutosOverride != null) MaterialTheme.colorScheme.primary else Color.Unspecified
                     )
 
-                    // --- INICIO DE LA MEJORA ---
-                    // Asumiendo que `compatibleCon` y `modosHabilitados` están en tu DTO ItemCatalogoResponse
-                    // (tal como están en tu JSON de ejemplo)
-
-                    // 1. Mostrar Compatibilidad
+                    // 1. Mostrar Compatibilidad (formateado)
                     Text(
-                        "Compatible con: ${item.compatibleCon}", // AÑADIDO
+                        "Compatible con: ${formatCompatItem(item.compatibleCon)}",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -168,11 +191,11 @@ fun ProcedimientoSelectableRow(
                     }
                 }
                 Text("SKU: ${proc.sku}", style = MaterialTheme.typography.bodySmall)
-                // --- MEJORA: Formato consistente con el RowItem ---
+                // --- Compatibilidad formateada ---
                 Text(
-                    "Compatible con: ${proc.compatibleCon}",
+                    "Compatible con: ${formatCompatProc(proc.compatibleCon)}",
                     style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold // Añadido para consistencia
+                    fontWeight = FontWeight.SemiBold
                 )
                 proc.descripcion?.let {
                     Text(it, style = MaterialTheme.typography.bodySmall)
@@ -190,12 +213,14 @@ fun MiCatalogoScreen(
 ) {
     val cargando by vm.cargando.collectAsState()
     val error by vm.error.collectAsState()
+    val success by vm.success.collectAsState() // <-- CORRECCIÓN 3: Recolectar success
     val catalogo by vm.miCatalogo.collectAsState()
     val seleccion by vm.seleccionParaAgregar.collectAsState()
     val filtro by vm.filtroCompatible.collectAsState()
     val procsFiltrados by vm.procedimientosFiltrados.collectAsState(initial = emptyList())
     val procedimientosAll by vm.procedimientos.collectAsState(initial = emptyList())
     val itemsEfectivos by vm.itemsCatalogoEfectivos.collectAsState(initial = emptyList())
+    val isDirty by vm.isDirty.collectAsState() // <-- CORRECCIÓN 1: Recolectar isDirty
 
     val showSheet = remember { mutableStateOf(false) }
 
@@ -203,7 +228,29 @@ fun MiCatalogoScreen(
     var editDuracionSku by remember { mutableStateOf<String?>(null) }
     var editPrecioSku by remember { mutableStateOf<String?>(null) }
 
+    // --- CORRECCIÓN 3: Preparar Snackbar ---
+    val snackbarHostState = remember { SnackbarHostState() }
+
     LaunchedEffect(Unit) { vm.cargarCatalogoYProcedimientos() }
+
+    // --- CORRECCIÓN 3: Efecto para mostrar Snackbar de error ---
+    LaunchedEffect(error) {
+        if (error != null) {
+            snackbarHostState.showSnackbar(
+                message = error!!,
+                duration = SnackbarDuration.Long
+            )
+            vm.limpiarError() // Limpiar después de mostrar
+        }
+    }
+
+    // --- CORRECCIÓN 3: Efecto para mostrar Snackbar de éxito ---
+    LaunchedEffect(success) {
+        if (success != null) {
+            snackbarHostState.showSnackbar(message = success!!)
+            vm.limpiarError() // La función también limpia 'success'
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -219,7 +266,10 @@ fun MiCatalogoScreen(
                     }
                 }
             )
-        }, bottomBar = {
+        },
+        // --- CORRECCIÓN 3: Añadir SnackbarHost ---
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        bottomBar = {
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -233,7 +283,11 @@ fun MiCatalogoScreen(
                     Text("Agregar servicios")
                 }
                 Spacer(Modifier.width(8.dp))
-                Button(onClick = { vm.guardarCatalogo() }, enabled = !cargando) {
+                Button(
+                    onClick = { vm.guardarCatalogo() },
+                    // --- CORRECCIÓN 1: Usar isDirty para habilitar el botón ---
+                    enabled = !cargando && isDirty
+                ) {
                     Text("Guardar cambios")
                 }
             }
@@ -246,11 +300,8 @@ fun MiCatalogoScreen(
             contentPadding = PaddingValues(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            if (error != null) {
-                item {
-                    AssistChip(onClick = { vm.limpiarError() }, label = { Text(error ?: "") })
-                }
-            }
+            // --- CORRECCIÓN 3: Quitar el AssistChip de error ---
+            // if (error != null) { ... }
 
             if (cargando && catalogo == null) {
                 item {
@@ -401,7 +452,7 @@ fun MiCatalogoScreen(
             )
         }
 
-        // --- NUEVO: Diálogo para editar PRECIO ---
+        // --- Diálogo para editar PRECIO ---
         val itemParaEditarPrecio = itemsEfectivos.find { it.sku == editPrecioSku }
         if (itemParaEditarPrecio != null) {
             var input by remember(editPrecioSku) {
