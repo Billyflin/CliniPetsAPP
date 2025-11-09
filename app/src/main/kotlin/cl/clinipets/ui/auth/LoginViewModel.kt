@@ -135,4 +135,11 @@ class LoginViewModel @Inject constructor(
         hasRequestedProfile = false
         fetchProfile()
     }
+
+    // --- Utilidades mínimas para la UI ---
+    fun setError(message: String?) {
+        _ui.update { it.copy(error = message) }
+    }
+
+    fun clearError() = setError(null)
 }

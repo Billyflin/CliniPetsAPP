@@ -3,6 +3,7 @@ package cl.clinipets.ui.auth
 import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 
@@ -19,8 +20,11 @@ suspend fun requestGoogleIdToken(context: Context, serverClientId: String): Stri
 
     val credential = try {
         credentialManager.getCredential(context, request).credential
+    } catch (e: NoCredentialException) {
+        // Sin credenciales disponibles (usuario canceló o no hay cuentas válidas)
+        return null
     } catch (e: Exception) {
-        e.printStackTrace()
+        // Cualquier otro error: no imprimir stacktrace para mantener la UI limpia
         return null
     }
 

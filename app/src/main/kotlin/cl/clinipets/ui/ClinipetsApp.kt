@@ -61,18 +61,24 @@ fun ClinipetsApp(vm: LoginViewModel = hiltViewModel()) {
                     uiState = state,
                     busy = busy,
                     onLoginClick = {
-                        scope.launch {
-                            try {
-                                requestingGoogle = true
-                                val token = requestGoogleIdToken(
-                                    context = context,
-                                    serverClientId = BuildConfig.GOOGLE_SERVER_CLIENT_ID
-                                )
-                                if (!token.isNullOrBlank()) {
-                                    vm.loginWithGoogleIdToken(token)
+                        if (!busy) {
+                            vm.clearError() // UI mínima: limpiamos errores anteriores
+                            scope.launch {
+                                try {
+                                    requestingGoogle = true
+                                    val token = requestGoogleIdToken(
+                                        context = context,
+                                        serverClientId = BuildConfig.GOOGLE_SERVER_CLIENT_ID
+                                    )
+                                    if (!token.isNullOrBlank()) {
+                                        vm.loginWithGoogleIdToken(token)
+                                    } else {
+                                        // Mantener silencioso para no saturar la UI mínima.
+                                        vm.setError("No se obtuvieron credenciales")
+                                    }
+                                } finally {
+                                    requestingGoogle = false
                                 }
-                            } finally {
-                                requestingGoogle = false
                             }
                         }
                     },

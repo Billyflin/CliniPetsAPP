@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import cl.clinipets.core.di.ApiModule.resolveBaseUrl
 
 
 @Composable
@@ -26,6 +27,8 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+
+            Text(resolveBaseUrl())
             if (error != null) {
                 Text(
                     text = error,
