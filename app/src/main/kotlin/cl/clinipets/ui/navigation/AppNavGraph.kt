@@ -7,6 +7,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import cl.clinipets.ui.agenda.MarketPlaceScreen
 import cl.clinipets.ui.auth.LoginScreen
 import cl.clinipets.ui.auth.LoginViewModel
 import cl.clinipets.ui.home.HomeScreen
@@ -27,7 +28,9 @@ import java.util.UUID
 @Serializable object VeterinarianRoute
 @Serializable object MiCatalogoRoute
 @Serializable object MiDisponibilidadRoute
-@Serializable object AgendaRoute // Nueva ruta unificada de agenda (reemplaza Solicitudes/Reservas/etc.)
+
+@Serializable
+object MarketPlaceViewModelScreen
 
 @Serializable
 data class MascotaDetailRoute(val id: String)
@@ -55,7 +58,7 @@ fun AppNavGraph(
                 onNavigateToProfile = { navController.navigate(ProfileRoute) },
                 onNavigateToMiCatalogo = { navController.navigate(MiCatalogoRoute) },
                 onNavigateToMiDisponibilidad = { navController.navigate(MiDisponibilidadRoute) },
-                onNavigateToAgenda = { navController.navigate(AgendaRoute) }
+                onNavigateToAgenda = { navController.navigate(MarketPlaceViewModelScreen) }
             )
         }
         composable<MascotasRoute> {
@@ -101,12 +104,11 @@ fun AppNavGraph(
         }
         composable<MiCatalogoRoute> { MiCatalogoScreen(onBack = { navController.popBackStack() }) }
         composable<MiDisponibilidadRoute> { MiDisponibilidadScreen(onBack = { navController.popBackStack() }) }
-        composable<AgendaRoute> {
-            cl.clinipets.ui.agenda.AgendaHomeScreen(
-                isVet = uiState.roles.contains("VETERINARIO"),
-                onBack = { navController.popBackStack() },
-                onNavigateToMiDisponibilidad = { navController.navigate(MiDisponibilidadRoute) },
-                onNavigateToMiCatalogo = { navController.navigate(MiCatalogoRoute) }
+        composable<MarketPlaceViewModelScreen> {
+            MarketPlaceScreen(
+                isVet = uiState.roles.contains("VETERINARIO"), onBack = {
+                    navController.popBackStack()
+                }
             )
         }
     }

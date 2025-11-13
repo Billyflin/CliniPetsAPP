@@ -51,18 +51,20 @@ servers:
 security:
   - bearerAuth: []
 tags:
+  - name: Agenda Clínica
+    description: "Flujo 1: Slots y reservas en clínica"
   - name: Herramientas Clínicas
     description: Asistencia clínica inteligente para veterinarios (IA/ML)
   - name: Autenticación
     description: Endpoints de autenticación y gestión de sesión
-  - name: Agenda
-    description: Gestión de disponibilidad y reservas
   - name: Veterinarios
     description: "Gestión de veterinarios: registro, perfil y verificación"
   - name: Descubrimiento
     description: Búsqueda geo-localizada de servicios
   - name: Mascotas
     description: Gestión de mascotas del usuario
+  - name: Agenda Mercado
+    description: "Flujo Mercado: Solicitudes y ofertas"
 paths:
   /api/veterinarios/{id}/verificar:
     put:
@@ -292,10 +294,9 @@ paths:
   /api/agenda/reservas/{reservaId}/confirmar:
     put:
       tags:
-        - Agenda
-      summary: "[Flujo 1] Confirmar reserva de clínica (Veterinario)"
-      description: El veterinario aprueba una reserva PENDIENTE (del Flujo 1) y la
-        cambia a CONFIRMADA.
+        - Agenda Clínica
+      summary: "[Clínica] Confirmar reserva"
+      description: El veterinario confirma una reserva PENDIENTE y pasa a CONFIRMADA.
       operationId: confirmarReservaClinica
       parameters:
         - name: reservaId
@@ -602,10 +603,9 @@ paths:
   /api/agenda/solicitudes:
     post:
       tags:
-        - Agenda
-      summary: "[Flujo 2] Cliente publica una solicitud de servicio (Licitación)"
-      description: "Crea una 'oferta pública' para servicios a domicilio o con logí\
-        stica, esperando ofertas de veterinarios."
+        - Agenda Mercado
+      summary: "[Mercado] Publicar solicitud"
+      description: Crea una solicitud ABIERTA para que veterinarios oferten.
       operationId: crearSolicitudServicio
       requestBody:
         content:
@@ -619,21 +619,20 @@ paths:
           content:
             '*/*':
               schema:
-                type: object
+                $ref: "#/components/schemas/SolicitudServicio"
       security:
         - bearerAuth: []
   /api/agenda/solicitudes/{solicitudId}/ofertar:
     post:
       tags:
-        - Agenda
-      summary: "[Flujo 2] Veterinario hace una oferta (puja)"
-      description: Un veterinario envía una propuesta de precio y hora para una solicitud
-        abierta.
+        - Agenda Mercado
+      summary: "[Mercado] Crear oferta"
+      description: El veterinario realiza una oferta para una solicitud abierta.
       operationId: crearOferta
       parameters:
         - name: solicitudId
           in: path
-          description: ID de la Solicitud a la que se oferta
+          description: ID de la Solicitud
           required: true
           schema:
             type: string
@@ -650,21 +649,20 @@ paths:
           content:
             '*/*':
               schema:
-                type: object
+                $ref: "#/components/schemas/OfertaVeterinario"
       security:
         - bearerAuth: []
   /api/agenda/ofertas/{ofertaId}/aceptar:
     post:
       tags:
-        - Agenda
-      summary: "[Flujo 2] Cliente acepta una oferta"
-      description: El cliente acepta la puja de un veterinario. Esto cierra la solicitud
-        y crea la(s) Reserva(s) en estado CONFIRMADA.
+        - Agenda Mercado
+      summary: "[Mercado] Aceptar oferta"
+      description: El cliente acepta una oferta; la solicitud se cierra y se crean
+        reservas.
       operationId: aceptarOferta
       parameters:
         - name: ofertaId
           in: path
-          description: ID de la Oferta (puja) que se está aceptando
           required: true
           schema:
             type: string
@@ -677,16 +675,15 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/ReservaDto"
+                  $ref: "#/components/schemas/Reserva"
       security:
         - bearerAuth: []
   /api/agenda/clinica/reservar:
     post:
       tags:
-        - Agenda
-      summary: "[Flujo 1] Reservar un slot de clínica (Cliente)"
-      description: Un cliente reserva un slot de clínica. La reserva se crea en estado
-        PENDIENTE.
+        - Agenda Clínica
+      summary: "[Clínica] Reservar slot"
+      description: El cliente reserva un slot de clínica; queda en estado PENDIENTE.
       operationId: crearReservaClinica
       requestBody:
         content:
@@ -760,13 +757,31 @@ paths:
                 $ref: "#/components/schemas/MeResponse"
       security:
         - bearerAuth: []
+  /api/agenda/solicitudes/mias:
+    get:
+      tags:
+        - Agenda Mercado
+      summary: "[Mercado] Mis solicitudes (todas)"
+      description: Lista TODAS las solicitudes del cliente autenticado.
+      operationId: getMisSolicitudes
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SolicitudServicio"
+      security:
+        - bearerAuth: []
   /api/agenda/solicitudes/disponibles:
     get:
       tags:
-        - Agenda
-      summary: "[Flujo 2] Veterinario ve solicitudes abiertas (Jobs)"
-      description: "Obtiene una lista de solicitudes de clientes que el veterinario\
-        \ logueado puede atender (basado en geografía, catálogo y logística)."
+        - Agenda Mercado
+      summary: "[Mercado] Ver solicitudes disponibles"
+      description: Lista las solicitudes abiertas que califican para el veterinario
+        autenticado.
       operationId: getSolicitudesDisponibles
       responses:
         "200":
@@ -779,13 +794,85 @@ paths:
                   $ref: "#/components/schemas/SolicitudDisponibleDto"
       security:
         - bearerAuth: []
+  /api/agenda/reservas/mias:
+    get:
+      tags:
+        - Agenda Clínica
+      summary: "[Clínica] Mis reservas como cliente"
+      description: Lista todas mis reservas (cualquier estado)
+      operationId: misReservasCliente
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReservaDto"
+      security:
+        - bearerAuth: []
+  /api/agenda/ofertas/mias:
+    get:
+      tags:
+        - Agenda Mercado
+      summary: "[Mercado] Mis ofertas"
+      description: Lista TODAS las ofertas hechas por el veterinario autenticado.
+      operationId: getMisOfertas
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfertaVeterinario"
+      security:
+        - bearerAuth: []
+  /api/agenda/mercado/reservas/vet/mias:
+    get:
+      tags:
+        - Agenda Mercado
+      summary: "[Mercado] Mis reservas como veterinario"
+      description: Lista todas las reservas creadas por ofertas aceptadas
+      operationId: misReservasVet
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reserva"
+      security:
+        - bearerAuth: []
+  /api/agenda/mercado/reservas/mias:
+    get:
+      tags:
+        - Agenda Mercado
+      summary: "[Mercado] Mis reservas como cliente"
+      description: Lista todas mis reservas (cualquier estado)
+      operationId: misReservasCliente_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reserva"
+      security:
+        - bearerAuth: []
   /api/agenda/clinica/{vetId}/disponibilidad:
     get:
       tags:
-        - Agenda
-      summary: "[Flujo 1] Obtener slots de clínica"
-      description: "Calcula y devuelve los slots de horario exactos para un servicio\
-        \ en la clínica de un veterinario, en una fecha específica."
+        - Agenda Clínica
+      summary: "[Clínica] Obtener slots de clínica"
+      description: Devuelve los slots disponibles para el procedimiento indicado en
+        la fecha dada.
       operationId: getSlotsDisponiblesClinica
       parameters:
         - name: vetId
@@ -797,14 +884,14 @@ paths:
             format: uuid
         - name: fecha
           in: query
-          description: Fecha de la consulta (YYYY-MM-DD)
+          description: Fecha (YYYY-MM-DD)
           required: true
           schema:
             type: string
             format: date
         - name: servicioSku
           in: query
-          description: SKU del procedimiento a realizar
+          description: SKU del procedimiento
           required: true
           schema:
             type: string
@@ -815,6 +902,24 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/SlotsDisponiblesResponse"
+      security:
+        - bearerAuth: []
+  /api/agenda/clinica/reservas/mias:
+    get:
+      tags:
+        - Agenda Clínica
+      summary: "[Clínica] Mis reservas como veterinario"
+      description: Lista todas las reservas donde soy el veterinario
+      operationId: misReservasVet_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReservaDto"
       security:
         - bearerAuth: []
 components:
@@ -835,15 +940,6 @@ components:
             - ONLINE
             - OCUPADO
             - OFFLINE
-        modosAtencion:
-          type: array
-          items:
-            type: string
-            enum:
-              - DOMICILIO
-              - CLINICA
-              - URGENCIA
-          uniqueItems: true
         latitud:
           type: number
           format: double
@@ -873,7 +969,6 @@ components:
         - creadoEn
         - estado
         - modificadoEn
-        - modosAtencion
         - nombreCompleto
         - ofreceLogistica
         - verificado
@@ -1080,7 +1175,6 @@ components:
           enum:
             - MACHO
             - HEMBRA
-            - INDETERMINADO
         fechaNacimiento:
           type: string
           format: date
@@ -1160,7 +1254,6 @@ components:
           enum:
             - MACHO
             - HEMBRA
-            - INDETERMINADO
         fechaNacimiento:
           type: string
           format: date
@@ -1390,7 +1483,6 @@ components:
           enum:
             - MACHO
             - HEMBRA
-            - INDETERMINADO
         fechaNacimiento:
           type: string
           format: date
@@ -1632,6 +1724,63 @@ components:
         - modoAtencion
         - preferenciaLogistica
         - procedimientoSku
+    SolicitudServicio:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        modoAtencion:
+          type: string
+          enum:
+            - DOMICILIO
+            - CLINICA
+            - URGENCIA
+        preferenciaLogistica:
+          type: string
+          enum:
+            - YO_LLEVO
+            - RETIRO_Y_ENTREGA
+        fecha:
+          type: string
+          format: date
+        bloqueSolicitado:
+          type: string
+          enum:
+            - MANANA
+            - TARDE
+        latitud:
+          type: number
+          format: double
+        longitud:
+          type: number
+          format: double
+        estado:
+          type: string
+          enum:
+            - ABIERTA
+            - CERRADA
+            - CANCELADA
+        creadoEn:
+          type: string
+          format: date-time
+        modificadoEn:
+          type: string
+          format: date-time
+        creadoPor:
+          type: string
+          format: uuid
+        modificadoPor:
+          type: string
+          format: uuid
+      required:
+        - bloqueSolicitado
+        - creadoEn
+        - estado
+        - fecha
+        - modificadoEn
+        - modoAtencion
+        - preferenciaLogistica
     CrearOfertaRequest:
       type: object
       properties:
@@ -1651,6 +1800,121 @@ components:
         - horaCirugiaPropuesta
         - precioLogistica
         - precioServicio
+    OfertaVeterinario:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        precioServicio:
+          type: integer
+          format: int32
+        precioLogistica:
+          type: integer
+          format: int32
+        precioTotal:
+          type: integer
+          format: int32
+        horaRetiroPropuesta:
+          type: string
+        horaCirugiaPropuesta:
+          type: string
+        horaEntregaEstimada:
+          type: string
+        estado:
+          type: string
+          enum:
+            - PENDIENTE
+            - ACEPTADA
+            - RECHAZADA
+            - CANCELADA_VET
+        creadoEn:
+          type: string
+          format: date-time
+        modificadoEn:
+          type: string
+          format: date-time
+        creadoPor:
+          type: string
+          format: uuid
+        modificadoPor:
+          type: string
+          format: uuid
+      required:
+        - creadoEn
+        - estado
+        - horaCirugiaPropuesta
+        - modificadoEn
+        - precioLogistica
+        - precioServicio
+        - precioTotal
+    Reserva:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tipo:
+          type: string
+          enum:
+            - CITA_SIMPLE
+            - RETIRO
+            - PROCEDIMIENTO_CLINICA
+            - ENTREGA
+        fecha:
+          type: string
+          format: date
+        horaInicio:
+          type: string
+        horaFin:
+          type: string
+        precioCobrado:
+          type: integer
+          format: int32
+        modoAtencion:
+          type: string
+          enum:
+            - DOMICILIO
+            - CLINICA
+            - URGENCIA
+        latitud:
+          type: number
+          format: double
+        longitud:
+          type: number
+          format: double
+        estado:
+          type: string
+          enum:
+            - PENDIENTE
+            - CONFIRMADA
+            - CANCELADA_CLIENTE
+            - CANCELADA_VET
+            - COMPLETADA
+            - EN_CURSO
+            - NO_ASISTIO
+        creadoEn:
+          type: string
+          format: date-time
+        modificadoEn:
+          type: string
+          format: date-time
+        creadoPor:
+          type: string
+          format: uuid
+        modificadoPor:
+          type: string
+          format: uuid
+      required:
+        - creadoEn
+        - estado
+        - fecha
+        - horaFin
+        - horaInicio
+        - modificadoEn
+        - modoAtencion
+        - precioCobrado
+        - tipo
     ReservarSlotClinicaRequest:
       type: object
       properties:
