@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import cl.clinipets.openapi.apis.VeterinariosApi
 import cl.clinipets.openapi.models.ActualizarCatalogoRequest
 import cl.clinipets.openapi.models.CatalogoItemRequest
-import cl.clinipets.openapi.models.CatalogoVeterinarioResponse
+import cl.clinipets.openapi.models.CatalogoVeterinario
 import cl.clinipets.openapi.models.ItemCatalogoResponse
 import cl.clinipets.openapi.models.Procedimiento
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,8 +29,8 @@ class MiCatalogoViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    private val _miCatalogo = MutableStateFlow<CatalogoVeterinarioResponse?>(null)
-    val miCatalogo: StateFlow<CatalogoVeterinarioResponse?> = _miCatalogo.asStateFlow()
+    private val _miCatalogo = MutableStateFlow<CatalogoVeterinario?>(null)
+    val miCatalogo: StateFlow<CatalogoVeterinario?> = _miCatalogo.asStateFlow()
 
     private val _procedimientos = MutableStateFlow<List<Procedimiento>>(emptyList())
     val procedimientos: StateFlow<List<Procedimiento>> = _procedimientos.asStateFlow()

@@ -50,8 +50,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import cl.clinipets.openapi.models.ActualizarPerfilRequest
-import cl.clinipets.openapi.models.RegistrarVeterinarioRequest
 import cl.clinipets.openapi.models.Veterinario
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -93,7 +91,7 @@ fun VeterinarianScreen(
     var radio by rememberSaveable { mutableStateOf("") }
 
     // UI State usa el Enum del modelo Veterinario
-    var selectedModes by remember { mutableStateOf(setOf<ActualizarPerfilRequest.ModosAtencion>()) }
+    var selectedModes by remember { mutableStateOf(setOf<Veterinario.ModosAtencion>()) }
 
     // Estado local para saber si ya precargamos los campos desde el perfil
     var didPrefill by rememberSaveable { mutableStateOf(false) }
@@ -255,35 +253,45 @@ fun VeterinarianScreen(
 
                         if (isUpdating) {
                             val modosParaActualizar = selectedModes.mapNotNull { uiMode ->
-                                try { ActualizarPerfilRequest.ModosAtencion.valueOf(uiMode.name) } catch (_: IllegalArgumentException) { null }
+                                try {
+                                    Veterinario.ModosAtencion.valueOf(uiMode.name)
+                                } catch (_: IllegalArgumentException) {
+                                    null
+                                }
                             }.toSet()
 
                             vm.updateMyProfile(
-                                ActualizarPerfilRequest(
-                                    // 'nombre' y 'licencia' no se envían si se está actualizando
-                                    // (ya que los campos están deshabilitados)
-                                    // Si SÍ quieres enviarlos, quita 'readOnly' y 'enabled' de los OutlinedTextField
-                                    nombreCompleto = null, // O `nombre` si permites editarlo
-                                    numeroLicencia = null, // O `lic` si permites editarlo
+                                Veterinario(
+                                    nombreCompleto = nombre,
+                                    numeroLicencia = lic,
                                     modosAtencion = modosParaActualizar,
                                     latitud = lat,
                                     longitud = lon,
-                                    radioCobertura = rad
+                                    radioCobertura = rad,
+                                    estado = Veterinario.Estado.ONLINE,
+                                    ofreceLogistica = false,
                                 )
                             )
                         } else {
                             val modosParaRegistrar = selectedModes.mapNotNull { uiMode ->
-                                try { RegistrarVeterinarioRequest.ModosAtencion.valueOf(uiMode.name) } catch (_: IllegalArgumentException) { null }
+                                try {
+                                    Veterinario.ModosAtencion.valueOf(uiMode.name)
+                                } catch (_: IllegalArgumentException) {
+                                    null
+                                }
+
                             }.toSet()
 
                             vm.submit(
-                                RegistrarVeterinarioRequest(
+                                Veterinario(
                                     nombreCompleto = nombre,
                                     numeroLicencia = lic,
                                     modosAtencion = modosParaRegistrar,
                                     latitud = lat,
                                     longitud = lon,
-                                    radioCobertura = rad
+                                    radioCobertura = rad,
+                                    estado = Veterinario.Estado.ONLINE
+
                                 )
                             )
                         }
@@ -297,6 +305,7 @@ fun VeterinarianScreen(
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable

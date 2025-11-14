@@ -55,8 +55,6 @@ tags:
     description: Asistencia clínica inteligente para veterinarios (IA/ML)
   - name: Autenticación
     description: Endpoints de autenticación y gestión de sesión
-  - name: Veterinarios
-    description: "Gestión de veterinarios: registro, perfil y verificación"
   - name: Descubrimiento
     description: Búsqueda geo-localizada de servicios
   - name: Mascotas
@@ -66,7 +64,6 @@ paths:
     put:
       tags:
         - Veterinarios
-      summary: Verificar cuenta de veterinario (ADMIN)
       operationId: verificar
       parameters:
         - name: id
@@ -86,7 +83,6 @@ paths:
     get:
       tags:
         - Veterinarios
-      summary: Obtener mi perfil de veterinario
       operationId: miPerfil
       responses:
         "200":
@@ -98,7 +94,6 @@ paths:
     put:
       tags:
         - Veterinarios
-      summary: Actualizar mi perfil de veterinario
       operationId: actualizarMiPerfil
       requestBody:
         content:
@@ -117,7 +112,6 @@ paths:
     get:
       tags:
         - Veterinarios
-      summary: Consultar mi catálogo de procedimientos
       operationId: miCatalogo
       responses:
         "200":
@@ -129,7 +123,6 @@ paths:
     put:
       tags:
         - Veterinarios
-      summary: Reemplazar mi catálogo de procedimientos (entidad completa)
       operationId: actualizarMiCatalogo
       requestBody:
         content:
@@ -688,7 +681,6 @@ paths:
     get:
       tags:
         - Veterinarios
-      summary: Listar procedimientos disponibles para catálogo
       operationId: listarProcedimientos
       responses:
         "200":
@@ -836,16 +828,20 @@ components:
   schemas:
     Veterinario:
       type: object
+      description: Entidad que representa al profesional veterinario dentro de la
+        plataforma.
       properties:
         id:
           type: string
           format: uuid
+          readOnly: true
         nombreCompleto:
           type: string
         numeroLicencia:
           type: string
         estado:
           type: string
+          description: Estado operativo del veterinario en la plataforma.
           enum:
             - ONLINE
             - OCUPADO
@@ -854,6 +850,7 @@ components:
           type: array
           items:
             type: string
+            description: Modalidades de atención que puede ofrecer el veterinario.
             enum:
               - DOMICILIO
               - CLINICA
@@ -870,93 +867,139 @@ components:
           format: double
         verificado:
           type: boolean
+          readOnly: true
         ofreceLogistica:
           type: boolean
+          description: Indica si ofrece logística (retiro/entrega de la mascota)
+          example: false
         creadoEn:
           type: string
           format: date-time
+          description: Fecha de creación del registro
+          example: 2025-11-14T12:34:56Z
+          readOnly: true
         modificadoEn:
           type: string
           format: date-time
+          description: Fecha de última modificación del registro
+          example: 2025-11-14T12:34:56Z
+          readOnly: true
         creadoPor:
           type: string
           format: uuid
+          description: Identificador del usuario que creó el registro
+          readOnly: true
         modificadoPor:
           type: string
           format: uuid
+          description: Identificador del usuario que modificó el registro
+          readOnly: true
       required:
         - creadoEn
         - estado
         - modificadoEn
         - modosAtencion
         - nombreCompleto
-        - ofreceLogistica
-        - verificado
     CatalogoVeterinario:
       type: object
+      description: Catálogo de procedimientos que cada veterinario ofrece a los clientes.
       properties:
         items:
           type: array
+          description: Listado de procedimientos configurados por el veterinario.
           items:
             $ref: "#/components/schemas/ItemCatalogo"
           uniqueItems: true
         creadoEn:
           type: string
           format: date-time
+          description: Fecha de creación del registro
+          example: 2025-11-14T12:34:56Z
+          readOnly: true
         modificadoEn:
           type: string
           format: date-time
+          description: Fecha de última modificación del registro
+          example: 2025-11-14T12:34:56Z
+          readOnly: true
         creadoPor:
           type: string
           format: uuid
+          description: Identificador del usuario que creó el registro
+          readOnly: true
         modificadoPor:
           type: string
           format: uuid
+          description: Identificador del usuario que modificó el registro
+          readOnly: true
       required:
         - creadoEn
-        - items
         - modificadoEn
     ItemCatalogo:
       type: object
+      description: Configuración individual de un procedimiento dentro del catálogo
+        del veterinario.
       properties:
         id:
           $ref: "#/components/schemas/ItemCatalogoId"
+          description: Identificador compuesto del ítem.
         procedimiento:
           $ref: "#/components/schemas/Procedimiento"
+          description: Procedimiento base publicado en el catálogo.
         habilitado:
           type: boolean
+          description: Indica si el procedimiento está visible para los clientes.
         precioOverride:
           type: integer
           format: int32
+          description: Precio personalizado en CLP para este veterinario (opcional).
+          example: 15000
         duracionMinutosOverride:
           type: integer
           format: int32
+          description: Duración personalizada en minutos para este veterinario (opcional).
+          example: 45
       required:
         - habilitado
         - id
         - procedimiento
     ItemCatalogoId:
       type: object
+      description: Identificador compuesto que relaciona el catálogo con el procedimiento
+        disponible.
       properties:
         catalogoId:
           type: string
           format: uuid
+          description: ID del catálogo al que pertenece el procedimiento.
+          readOnly: true
         procedimientoSku:
           type: string
+          description: SKU del procedimiento que se expone en el catálogo.
+          example: VAC-PARVO-001
     Procedimiento:
       type: object
+      description: Procedimiento veterinario estándar ofrecido por la plataforma.
       properties:
         sku:
           type: string
+          description: SKU único del procedimiento.
+          example: VAC-PARVO-001
         nombre:
           type: string
+          description: Nombre comercial del procedimiento.
+          example: Vacuna Parvovirus Puppy
         descripcion:
           type: string
+          description: Descripción resumida del procedimiento.
         precio:
           type: integer
           format: int32
+          description: Precio de referencia en CLP.
+          example: 25000
         compatibleCon:
           type: array
+          description: Especies compatibles para el procedimiento.
           items:
             type: string
             enum:
@@ -965,8 +1008,10 @@ components:
           uniqueItems: true
         modosHabilitados:
           type: array
+          description: Modos de atención soportados por el procedimiento.
           items:
             type: string
+            description: Modalidades de atención que puede ofrecer el veterinario.
             enum:
               - DOMICILIO
               - CLINICA
@@ -974,24 +1019,37 @@ components:
           uniqueItems: true
         flujo:
           type: string
+          description: Tipo de flujo logístico requerido para realizarlo.
           enum:
             - SIMPLE
             - LOGISTICA_COMPLETA
         duracionMinutos:
           type: integer
           format: int32
+          description: Duración estimada del procedimiento en minutos.
+          example: 30
         creadoEn:
           type: string
           format: date-time
+          description: Fecha de creación del registro
+          example: 2025-11-14T12:34:56Z
+          readOnly: true
         modificadoEn:
           type: string
           format: date-time
+          description: Fecha de última modificación del registro
+          example: 2025-11-14T12:34:56Z
+          readOnly: true
         creadoPor:
           type: string
           format: uuid
+          description: Identificador del usuario que creó el registro
+          readOnly: true
         modificadoPor:
           type: string
           format: uuid
+          description: Identificador del usuario que modificó el registro
+          readOnly: true
       required:
         - compatibleCon
         - creadoEn
@@ -1137,15 +1195,25 @@ components:
         creadoEn:
           type: string
           format: date-time
+          description: Fecha de creación del registro
+          example: 2025-11-14T12:34:56Z
+          readOnly: true
         modificadoEn:
           type: string
           format: date-time
+          description: Fecha de última modificación del registro
+          example: 2025-11-14T12:34:56Z
+          readOnly: true
         creadoPor:
           type: string
           format: uuid
+          description: Identificador del usuario que creó el registro
+          readOnly: true
         modificadoPor:
           type: string
           format: uuid
+          description: Identificador del usuario que modificó el registro
+          readOnly: true
       required:
         - colores
         - creadoEn
@@ -1304,6 +1372,7 @@ components:
           type: string
         modoAtencion:
           type: string
+          description: Modalidades de atención que puede ofrecer el veterinario.
           enum:
             - DOMICILIO
             - CLINICA
@@ -1468,6 +1537,7 @@ components:
           type: string
         modoAtencion:
           type: string
+          description: Modalidades de atención que puede ofrecer el veterinario.
           enum:
             - DOMICILIO
             - CLINICA
