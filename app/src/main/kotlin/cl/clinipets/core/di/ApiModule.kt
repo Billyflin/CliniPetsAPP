@@ -2,9 +2,10 @@ package cl.clinipets.core.di
 
 import android.util.Log
 import cl.clinipets.BuildConfig
-import cl.clinipets.openapi.apis.AgendaApi
+import cl.clinipets.openapi.apis.AgendaControllerApi
 import cl.clinipets.openapi.apis.AutenticacinApi
 import cl.clinipets.openapi.apis.DescubrimientoApi
+import cl.clinipets.openapi.apis.HorariosVeterinarioControllerApi
 import cl.clinipets.openapi.apis.MascotasApi
 import cl.clinipets.openapi.apis.VeterinariosApi
 import cl.clinipets.openapi.infrastructure.ApiClient
@@ -60,8 +61,14 @@ object ApiModule {
 
     @Provides
     @Singleton
-    fun provideAgendaApi(apiClient: ApiClient): AgendaApi =
-        apiClient.createService(AgendaApi::class.java)
+    fun provideAgendaApi(apiClient: ApiClient): AgendaControllerApi =
+        apiClient.createService(AgendaControllerApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideHorarioVeterinario(apiClient: ApiClient): HorariosVeterinarioControllerApi =
+        apiClient.createService(HorariosVeterinarioControllerApi::class.java)
+
 
 
     @Provides

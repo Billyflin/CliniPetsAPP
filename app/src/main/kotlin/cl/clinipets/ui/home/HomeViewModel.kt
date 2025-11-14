@@ -2,7 +2,6 @@ package cl.clinipets.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cl.clinipets.openapi.apis.AgendaApi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -14,7 +13,6 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val agendaApi: AgendaApi // Reservado para futuro endpoint de "próximas reservas"
 ) : ViewModel() {
     data class UiState(
         val loading: Boolean = false,

@@ -2,6 +2,7 @@ package cl.clinipets.ui.profile
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -69,6 +70,8 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.math.cos
+import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -90,7 +93,7 @@ fun VeterinarianScreen(
     var radio by rememberSaveable { mutableStateOf("") }
 
     // UI State usa el Enum del modelo Veterinario
-    var selectedModes by remember { mutableStateOf(setOf<Veterinario.ModosAtencion>()) }
+    var selectedModes by remember { mutableStateOf(setOf<ActualizarPerfilRequest.ModosAtencion>()) }
 
     // Estado local para saber si ya precargamos los campos desde el perfil
     var didPrefill by rememberSaveable { mutableStateOf(false) }
@@ -129,7 +132,6 @@ fun VeterinarianScreen(
             latitud = p.latitud?.toString().orEmpty()
             longitud = p.longitud?.toString().orEmpty()
             radio = p.radioCobertura?.toString().orEmpty()
-            selectedModes = p.modosAtencion.toSet()
             didPrefill = true
         }
         if (p != null && lastAction != "idle") {
@@ -212,12 +214,9 @@ fun VeterinarianScreen(
             item {
                 ModeSelector(
                     selectedModes = selectedModes,
-                    onToggle = { mode -> // 'mode' es Veterinario.ModosAtencion
-                        selectedModes = if (selectedModes.contains(mode)) {
-                            selectedModes - mode
-                        } else {
-                            selectedModes + mode
-                        }
+                    onToggle = {
+                        selectedModes = if (selectedModes.contains(it)) selectedModes - it else selectedModes + it
+
                     }
                 )
             }
@@ -487,7 +486,7 @@ private fun MapaCobertura(
 private fun circleBounds(center: LatLng, radiusKm: Double): LatLngBounds {
     val latRad = Math.toRadians(center.latitude)
     val dLat = radiusKm / 111.0 // ~111 km por grado
-    val dLng = radiusKm / (111.0 * kotlin.math.max(0.0001, kotlin.math.cos(latRad)))
+    val dLng = radiusKm / (111.0 * max(0.0001, cos(latRad)))
     val sw = LatLng(center.latitude - dLat, center.longitude - dLng)
     val ne = LatLng(center.latitude + dLat, center.longitude + dLng)
     return LatLngBounds(sw, ne)
@@ -505,15 +504,14 @@ private fun fitCircleInView(
         try {
             cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(bounds, paddingPx))
         } catch (_: Exception) {
-            // Ignorar si el mapa aún no tiene tamaño calculado; se ajustará con futuras interacciones
+
         }
     }
 }
 
-// --- LÓGICA DE UBICACIÓN MEJORADA ---
-@SuppressLint("MissingPermission") // La UI ya comprueba el permiso antes de llamar
+@SuppressLint("MissingPermission")
 private fun centerOnMyLocation(
-    context: android.content.Context,
+    context: Context,
     onLocated: (LatLng) -> Unit
 ) {
     val fused = LocationServices.getFusedLocationProviderClient(context)

@@ -7,7 +7,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import cl.clinipets.ui.agenda.MarketPlaceScreen
 import cl.clinipets.ui.auth.LoginScreen
 import cl.clinipets.ui.auth.LoginViewModel
 import cl.clinipets.ui.home.HomeScreen
@@ -105,11 +104,7 @@ fun AppNavGraph(
         composable<MiCatalogoRoute> { MiCatalogoScreen(onBack = { navController.popBackStack() }) }
         composable<MiDisponibilidadRoute> { MiDisponibilidadScreen(onBack = { navController.popBackStack() }) }
         composable<MarketPlaceViewModelScreen> {
-            MarketPlaceScreen(
-                isVet = uiState.roles.contains("VETERINARIO"), onBack = {
-                    navController.popBackStack()
-                }
-            )
+
         }
     }
 }
