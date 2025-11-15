@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.openapi.apis.VeterinariosApi
 import cl.clinipets.openapi.models.CatalogoVeterinario
+import cl.clinipets.openapi.models.CatalogoVeterinarioDTO
 import cl.clinipets.openapi.models.ItemCatalogo
+import cl.clinipets.openapi.models.ItemCatalogoDTO
 import cl.clinipets.openapi.models.ItemCatalogoId
 import cl.clinipets.openapi.models.Procedimiento
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -189,21 +191,25 @@ class MiCatalogoViewModel @Inject constructor(
                     }
                 }
 
-                val nuevosItemsSet = (actuales + nuevosItems).toSet()
+                val mergedItems: List<ItemCatalogo> = (actuales + nuevosItems)
 
-                // Construir payload como CatalogoVeterinario con items actualizados
-                val payload = if (catalogoActual != null) {
-                    catalogoActual.copy(items = nuevosItemsSet)
-                } else {
-                    // Si no hay catálogo aún, usar tiempos actuales; el backend debería rellenar.
-                    CatalogoVeterinario(
-                        creadoEn = java.time.OffsetDateTime.now(),
-                        modificadoEn = java.time.OffsetDateTime.now(),
-                        items = nuevosItemsSet,
-                        creadoPor = null,
-                        modificadoPor = null
+                // Mapear a DTOs generados
+                val dtoItems: List<ItemCatalogoDTO> = mergedItems.map { ic ->
+                    val p = ic.procedimiento
+                    ItemCatalogoDTO(
+                        procedimientoSku = p.sku,
+                        nombreProcedimiento = p.nombre,
+                        habilitado = ic.habilitado,
+                        precioOverride = ic.precioOverride,
+                        duracionMinutosOverride = ic.duracionMinutosOverride
                     )
                 }
+
+                // Construir payload DTO completo
+                val payload = CatalogoVeterinarioDTO(
+                    items = dtoItems,
+                    id = catalogoIdExistente
+                )
 
                 val resp = api.actualizarMiCatalogo(payload)
                 if (resp.isSuccessful) {

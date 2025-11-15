@@ -128,7 +128,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CatalogoVeterinario"
+              $ref: "#/components/schemas/CatalogoVeterinarioDTO"
         required: true
       responses:
         "200":
@@ -249,6 +249,44 @@ paths:
                 $ref: "#/components/schemas/ProblemDetail"
       security:
         - bearerAuth: []
+  /api/agenda/reservas/{reservaId}/confirmar-veterinario:
+    put:
+      tags:
+        - agenda-controller
+      operationId: confirmarComoVeterinario
+      parameters:
+        - name: reservaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Reserva"
+  /api/agenda/reservas/{reservaId}/confirmar-clinica:
+    put:
+      tags:
+        - agenda-controller
+      operationId: confirmarComoClinica
+      parameters:
+        - name: reservaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Reserva"
   /api/veterinarios:
     post:
       tags:
@@ -597,39 +635,17 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
-  /api/agenda/domicilio/reservas:
+  /api/agenda/reservas:
     post:
       tags:
         - agenda-controller
-      operationId: reservarDomicilio
-      parameters:
-        - name: procedimientoId
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: precio
-          in: query
-          required: true
-          schema:
-            type: number
-        - name: fecha
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
-        - name: horaInicio
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: horaFin
-          in: query
-          required: true
-          schema:
-            type: string
+      operationId: crearReserva
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReservaCreateDTO"
+        required: true
       responses:
         "200":
           description: OK
@@ -637,46 +653,26 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/Reserva"
-  /api/agenda/clinica/reservas:
+  /api/agenda/mis-reservas:
     post:
       tags:
         - agenda-controller
-      operationId: reservarEnClinica
-      parameters:
-        - name: procedimientoId
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: precio
-          in: query
-          required: true
-          schema:
-            type: number
-        - name: fecha
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
-        - name: horaInicio
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: horaFin
-          in: query
-          required: true
-          schema:
-            type: string
+      operationId: misReservas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MisReservasQuery"
+        required: true
       responses:
         "200":
           description: OK
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Reserva"
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reserva"
   /api/veterinarios/procedimientos:
     get:
       tags:
@@ -754,27 +750,6 @@ paths:
                 $ref: "#/components/schemas/MeResponse"
       security:
         - bearerAuth: []
-  /api/agenda/reservas:
-    get:
-      tags:
-        - agenda-controller
-      operationId: listarReservasDelVeterinarioEnFecha
-      parameters:
-        - name: fecha
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Reserva"
   /api/horarios/{horarioId}:
     delete:
       tags:
@@ -805,11 +780,30 @@ paths:
       responses:
         "200":
           description: OK
-  /api/agenda/reservas/{reservaId}:
+  /api/agenda/reservas/{reservaId}/cancelar-veterinario:
     delete:
       tags:
         - agenda-controller
-      operationId: cancelarReserva
+      operationId: cancelarComoVeterinario
+      parameters:
+        - name: reservaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Reserva"
+  /api/agenda/reservas/{reservaId}/cancelar-clinica:
+    delete:
+      tags:
+        - agenda-controller
+      operationId: cancelarComoClinica
       parameters:
         - name: reservaId
           in: path
@@ -939,6 +933,46 @@ components:
         - estado
         - modosAtencion
         - nombreCompleto
+    CatalogoVeterinarioDTO:
+      type: object
+      description: DTO de salida del catálogo del veterinario
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID del catálogo (igual al veterinario)
+        items:
+          type: array
+          description: Items del catálogo
+          items:
+            $ref: "#/components/schemas/ItemCatalogoDTO"
+      required:
+        - items
+    ItemCatalogoDTO:
+      type: object
+      description: DTO de un ítem del catálogo
+      properties:
+        procedimientoSku:
+          type: string
+          description: SKU del procedimiento
+        nombreProcedimiento:
+          type: string
+          description: Nombre del procedimiento
+        habilitado:
+          type: boolean
+          description: Visible para clientes
+        precioOverride:
+          type: integer
+          format: int32
+          description: Precio override si existe
+        duracionMinutosOverride:
+          type: integer
+          format: int32
+          description: Duración override si existe
+      required:
+        - habilitado
+        - nombreProcedimiento
+        - procedimientoSku
     CatalogoVeterinario:
       type: object
       description: Catálogo de procedimientos que cada veterinario ofrece a los clientes.
@@ -1276,6 +1310,71 @@ components:
       required:
         - especie
         - nombre
+    Reserva:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        clienteId:
+          type: string
+          format: uuid
+        veterinarioId:
+          type: string
+          format: uuid
+        clinicaId:
+          type: string
+          format: uuid
+        procedimientoSku:
+          type: string
+        procedimientoId:
+          type: string
+          format: uuid
+        precio:
+          type: number
+        duracionMinutosSnapshot:
+          type: integer
+          format: int32
+        fecha:
+          type: string
+          format: date
+        horaInicio:
+          type: string
+        horaFin:
+          type: string
+        modoAtencion:
+          type: string
+          description: Modalidades de atención que puede ofrecer el veterinario.
+          enum:
+            - DOMICILIO
+            - CLINICA
+            - URGENCIA
+        direccionTexto:
+          type: string
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        referencias:
+          type: string
+        estado:
+          type: string
+          enum:
+            - PENDIENTE
+            - CONFIRMADA
+            - CANCELADA
+      required:
+        - clienteId
+        - duracionMinutosSnapshot
+        - estado
+        - fecha
+        - horaFin
+        - horaInicio
+        - modoAtencion
+        - precio
+        - procedimientoSku
     CrearMascota:
       type: object
       properties:
@@ -1550,29 +1649,10 @@ components:
         - expiresAt
         - token
         - usuario
-    Reserva:
+    ReservaCreateDTO:
       type: object
       properties:
-        id:
-          type: string
-          format: uuid
-        veterinarioId:
-          type: string
-          format: uuid
-        clinicaId:
-          type: string
-          format: uuid
-        procedimientoId:
-          type: string
-          format: uuid
-        precio:
-          type: number
-        fecha:
-          type: string
-          format: date
-        horaInicio:
-          type: string
-        horaFin:
+        procedimientoSku:
           type: string
         modoAtencion:
           type: string
@@ -1581,20 +1661,65 @@ components:
             - DOMICILIO
             - CLINICA
             - URGENCIA
-        estado:
+        fecha:
           type: string
-          enum:
-            - PENDIENTE
-            - CONFIRMADA
-            - CANCELADA
+          format: date
+        horaInicio:
+          type: string
+        horaFin:
+          type: string
+        precio:
+          type: number
+        veterinarioId:
+          type: string
+          format: uuid
+        direccionTexto:
+          type: string
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        referencias:
+          type: string
       required:
-        - estado
         - fecha
         - horaFin
         - horaInicio
         - modoAtencion
         - precio
-        - procedimientoId
+        - procedimientoSku
+    MisReservasQuery:
+      type: object
+      properties:
+        como:
+          type: array
+          items:
+            type: string
+            enum:
+              - CLIENTE
+              - VETERINARIO
+        fecha:
+          type: string
+          format: date
+        estados:
+          type: array
+          items:
+            type: string
+            enum:
+              - PENDIENTE
+              - CONFIRMADA
+              - CANCELADA
+        modos:
+          type: array
+          items:
+            type: string
+            description: Modalidades de atención que puede ofrecer el veterinario.
+            enum:
+              - DOMICILIO
+              - CLINICA
+              - URGENCIA
     Intervalo:
       type: object
       properties:
