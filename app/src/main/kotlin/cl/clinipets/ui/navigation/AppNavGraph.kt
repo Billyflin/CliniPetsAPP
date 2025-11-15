@@ -7,8 +7,11 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import cl.clinipets.openapi.models.DiscoveryRequest
+import cl.clinipets.ui.agenda.ReservaFormScreen
 import cl.clinipets.ui.auth.LoginScreen
 import cl.clinipets.ui.auth.LoginViewModel
+import cl.clinipets.ui.discovery.DiscoveryScreen
 import cl.clinipets.ui.home.HomeScreen
 import cl.clinipets.ui.mascotas.MascotaDetailScreen
 import cl.clinipets.ui.mascotas.MascotaFormScreen
@@ -27,15 +30,24 @@ import java.util.UUID
 @Serializable object VeterinarianRoute
 @Serializable object MiCatalogoRoute
 @Serializable object MiDisponibilidadRoute
-
-@Serializable
-object MarketPlaceViewModelScreen
+@Serializable object DiscoveryRoute
 
 @Serializable
 data class MascotaDetailRoute(val id: String)
 
 @Serializable
 data class MascotaFormRoute(val id: String? = null)
+
+@Serializable
+data class ReservaFormRoute(
+    val mascotaId: String,
+    val procedimientoSku: String,
+    val modo: String,
+    val lat: Double? = null,
+    val lng: Double? = null,
+    val veterinarioId: String? = null,
+    val precioSugerido: Int? = null
+)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalStdlibApi::class)
 @Composable
@@ -57,7 +69,7 @@ fun AppNavGraph(
                 onNavigateToProfile = { navController.navigate(ProfileRoute) },
                 onNavigateToMiCatalogo = { navController.navigate(MiCatalogoRoute) },
                 onNavigateToMiDisponibilidad = { navController.navigate(MiDisponibilidadRoute) },
-                onNavigateToAgenda = { navController.navigate(MarketPlaceViewModelScreen) }
+                onNavigateToAgenda = { navController.navigate(DiscoveryRoute) }
             )
         }
         composable<MascotasRoute> {
@@ -103,8 +115,37 @@ fun AppNavGraph(
         }
         composable<MiCatalogoRoute> { MiCatalogoScreen(onBack = { navController.popBackStack() }) }
         composable<MiDisponibilidadRoute> { MiDisponibilidadScreen(onBack = { navController.popBackStack() }) }
-        composable<MarketPlaceViewModelScreen> {
-
+        composable<DiscoveryRoute> {
+            DiscoveryScreen(
+                onBack = { navController.popBackStack() },
+                onContinuarReserva = { mascotaId: UUID, sku: String, modo: DiscoveryRequest.ModoAtencion, lat: Double?, lng: Double?, veterinarioId: UUID?, precioSugerido: Int? ->
+                    navController.navigate(
+                        ReservaFormRoute(
+                            mascotaId = mascotaId.toString(),
+                            procedimientoSku = sku,
+                            modo = modo.name,
+                            lat = lat,
+                            lng = lng,
+                            veterinarioId = veterinarioId?.toString(),
+                            precioSugerido = precioSugerido
+                        )
+                    )
+                }
+            )
+        }
+        composable<ReservaFormRoute> { backStackEntry ->
+            val args = backStackEntry.toRoute<ReservaFormRoute>()
+            ReservaFormScreen(
+                mascotaId = UUID.fromString(args.mascotaId),
+                procedimientoSku = args.procedimientoSku,
+                modo = DiscoveryRequest.ModoAtencion.valueOf(args.modo),
+                lat = args.lat,
+                lng = args.lng,
+                veterinarioId = args.veterinarioId?.let(UUID::fromString),
+                precioSugerido = args.precioSugerido,
+                onBack = { navController.popBackStack() },
+                onReservada = { navController.popBackStack(DiscoveryRoute, inclusive = false) }
+            )
         }
     }
 }
