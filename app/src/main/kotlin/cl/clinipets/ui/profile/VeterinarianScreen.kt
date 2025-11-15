@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.Veterinario
+import cl.clinipets.openapi.models.VeterinarioDto
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -254,28 +255,28 @@ fun VeterinarianScreen(
                         if (isUpdating) {
                             val modosParaActualizar = selectedModes.mapNotNull { uiMode ->
                                 try {
-                                    Veterinario.ModosAtencion.valueOf(uiMode.name)
+                                    VeterinarioDto.ModosAtencion.valueOf(uiMode.name)
                                 } catch (_: IllegalArgumentException) {
                                     null
                                 }
                             }.toSet()
 
                             vm.updateMyProfile(
-                                Veterinario(
+                                VeterinarioDto(
                                     nombreCompleto = nombre,
                                     numeroLicencia = lic,
                                     modosAtencion = modosParaActualizar,
                                     latitud = lat,
                                     longitud = lon,
                                     radioCobertura = rad,
-                                    estado = Veterinario.Estado.ONLINE,
+                                    estado = VeterinarioDto.Estado.ONLINE,
                                     ofreceLogistica = false,
                                 )
                             )
                         } else {
                             val modosParaRegistrar = selectedModes.mapNotNull { uiMode ->
                                 try {
-                                    Veterinario.ModosAtencion.valueOf(uiMode.name)
+                                    VeterinarioDto.ModosAtencion.valueOf(uiMode.name)
                                 } catch (_: IllegalArgumentException) {
                                     null
                                 }
@@ -283,15 +284,15 @@ fun VeterinarianScreen(
                             }.toSet()
 
                             vm.submit(
-                                Veterinario(
+                                VeterinarioDto(
                                     nombreCompleto = nombre,
                                     numeroLicencia = lic,
                                     modosAtencion = modosParaRegistrar,
                                     latitud = lat,
                                     longitud = lon,
                                     radioCobertura = rad,
-                                    estado = Veterinario.Estado.ONLINE
-
+                                    estado = VeterinarioDto.Estado.ONLINE,
+                                    ofreceLogistica = false,
                                 )
                             )
                         }

@@ -99,7 +99,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Veterinario"
+              $ref: "#/components/schemas/VeterinarioDto"
         required: true
       responses:
         "200":
@@ -259,7 +259,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Veterinario"
+              $ref: "#/components/schemas/VeterinarioDto"
         required: true
       responses:
         "200":
@@ -898,6 +898,45 @@ components:
         - creadoEn
         - estado
         - modificadoEn
+        - modosAtencion
+        - nombreCompleto
+    VeterinarioDto:
+      type: object
+      properties:
+        nombreCompleto:
+          type: string
+        numeroLicencia:
+          type: string
+        estado:
+          type: string
+          description: Estado operativo del veterinario en la plataforma.
+          enum:
+            - ONLINE
+            - OCUPADO
+            - OFFLINE
+        modosAtencion:
+          type: array
+          items:
+            type: string
+            description: Modalidades de atención que puede ofrecer el veterinario.
+            enum:
+              - DOMICILIO
+              - CLINICA
+              - URGENCIA
+          uniqueItems: true
+        latitud:
+          type: number
+          format: double
+        longitud:
+          type: number
+          format: double
+        radioCobertura:
+          type: number
+          format: double
+        ofreceLogistica:
+          type: boolean
+      required:
+        - estado
         - modosAtencion
         - nombreCompleto
     CatalogoVeterinario:

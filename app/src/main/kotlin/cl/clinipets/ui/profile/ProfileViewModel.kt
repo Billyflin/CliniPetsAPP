@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.openapi.apis.VeterinariosApi
 import cl.clinipets.openapi.models.Veterinario
+import cl.clinipets.openapi.models.VeterinarioDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,7 +44,7 @@ class ProfileViewModel @Inject constructor(
      * Envía el registro. Esto SÍ debe devolver un cuerpo,
      * por lo que allowNullBodyOnSuccess es false (por defecto).
      */
-    fun submit(request: Veterinario) = runPerfil {
+    fun submit(request: VeterinarioDto) = runPerfil {
         veterinariosApi.registrar(request)
     }
 
@@ -51,7 +52,7 @@ class ProfileViewModel @Inject constructor(
      * Actualiza el perfil. Esto SÍ debe devolver un cuerpo,
      * por lo que allowNullBodyOnSuccess es false (por defecto).
      */
-    fun updateMyProfile(request: Veterinario) = runPerfil {
+    fun updateMyProfile(request: VeterinarioDto) = runPerfil {
         veterinariosApi.actualizarMiPerfil(request)
     }
 

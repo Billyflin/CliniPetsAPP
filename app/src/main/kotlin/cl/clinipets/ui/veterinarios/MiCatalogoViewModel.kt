@@ -3,10 +3,9 @@ package cl.clinipets.ui.veterinarios
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.openapi.apis.VeterinariosApi
-import cl.clinipets.openapi.models.ActualizarCatalogoRequest
-import cl.clinipets.openapi.models.CatalogoItemRequest
 import cl.clinipets.openapi.models.CatalogoVeterinario
-import cl.clinipets.openapi.models.ItemCatalogoResponse
+import cl.clinipets.openapi.models.ItemCatalogo
+import cl.clinipets.openapi.models.ItemCatalogoId
 import cl.clinipets.openapi.models.Procedimiento
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,12 +53,12 @@ class MiCatalogoViewModel @Inject constructor(
         val base = cat?.items.orEmpty()
         base.map { item ->
             var out = item
-            habilEdits[item.sku]?.let { out = out.copy(habilitado = it) }
-            if (durEdits.containsKey(item.sku)) {
-                out = out.copy(duracionMinutosOverride = durEdits[item.sku])
+            habilEdits[item.procedimiento.sku]?.let { out = out.copy(habilitado = it) }
+            if (durEdits.containsKey(item.procedimiento.sku)) {
+                out = out.copy(duracionMinutosOverride = durEdits[item.procedimiento.sku])
             }
-            if (precioEdits.containsKey(item.sku)) {
-                out = out.copy(precioOverride = precioEdits[item.sku])
+            if (precioEdits.containsKey(item.procedimiento.sku)) {
+                out = out.copy(precioOverride = precioEdits[item.procedimiento.sku])
             }
             out
         }
@@ -149,34 +148,62 @@ class MiCatalogoViewModel @Inject constructor(
             _success.value = null
             _error.value = null // <-- CORRECCIÓN 2: Limpiar error al iniciar guardado
             try {
-                val actualesBase = _miCatalogo.value?.items.orEmpty()
+                val catalogoActual = _miCatalogo.value
+                val actualesBase = catalogoActual?.items.orEmpty().toList()
                 val habilEdits = _habilitadoEdits.value
                 val durEdits = _duracionOverrideEdits.value
                 val precioEdits = _precioOverrideEdits.value
+
+                // Aplicar overrides a los existentes
                 val actuales = actualesBase.map { item ->
+                    val sku = item.procedimiento.sku
                     item.copy(
-                        habilitado = habilEdits[item.sku] ?: item.habilitado,
-                        duracionMinutosOverride = if (durEdits.containsKey(item.sku)) durEdits[item.sku] else item.duracionMinutosOverride,
-                        precioOverride = if (precioEdits.containsKey(item.sku)) precioEdits[item.sku] else item.precioOverride
+                        habilitado = habilEdits[sku] ?: item.habilitado,
+                        duracionMinutosOverride = if (durEdits.containsKey(sku)) durEdits[sku] else item.duracionMinutosOverride,
+                        precioOverride = if (precioEdits.containsKey(sku)) precioEdits[sku] else item.precioOverride
                     )
                 }
 
-                val itemsExistentesRequests = actuales.map { it.toRequestItem() }
-
-                val actualesMap = actuales.associateBy { it.sku }
+                val actualesMap = actuales.associateBy { it.procedimiento.sku }
                 val nuevosSkus = _seleccionParaAgregar.value.filter { it !in actualesMap }
-                val nuevosItems = nuevosSkus.map { sku ->
-                    CatalogoItemRequest(
-                        sku = sku,
-                        habilitado = true,
-                        duracionMinutosOverride = null,
-                        precioOverride = null,
-                    )
+
+                // Determinar catalogoId (si existe en algún item actual)
+                val catalogoIdExistente = actuales.firstOrNull()?.id?.catalogoId
+
+                // Construir nuevos items a partir de Procedimiento
+                val procedimientosPorSku = _procedimientos.value.associateBy { it.sku }
+                val nuevosItems: List<ItemCatalogo> = nuevosSkus.mapNotNull { sku ->
+                    val p = procedimientosPorSku[sku]
+                    if (p == null) {
+                        // SKU inválido; lo omitimos y ponemos error
+                        _error.value = "Procedimiento no encontrado para SKU $sku"
+                        null
+                    } else {
+                        ItemCatalogo(
+                            id = ItemCatalogoId(catalogoId = catalogoIdExistente, procedimientoSku = p.sku),
+                            procedimiento = p,
+                            habilitado = true,
+                            precioOverride = null,
+                            duracionMinutosOverride = null
+                        )
+                    }
                 }
 
-                val payload = ActualizarCatalogoRequest(
-                    items = (itemsExistentesRequests + nuevosItems)
-                )
+                val nuevosItemsSet = (actuales + nuevosItems).toSet()
+
+                // Construir payload como CatalogoVeterinario con items actualizados
+                val payload = if (catalogoActual != null) {
+                    catalogoActual.copy(items = nuevosItemsSet)
+                } else {
+                    // Si no hay catálogo aún, usar tiempos actuales; el backend debería rellenar.
+                    CatalogoVeterinario(
+                        creadoEn = java.time.OffsetDateTime.now(),
+                        modificadoEn = java.time.OffsetDateTime.now(),
+                        items = nuevosItemsSet,
+                        creadoPor = null,
+                        modificadoPor = null
+                    )
+                }
 
                 val resp = api.actualizarMiCatalogo(payload)
                 if (resp.isSuccessful) {
@@ -199,7 +226,7 @@ class MiCatalogoViewModel @Inject constructor(
     }
 
     fun setItemHabilitado(sku: String, habilitado: Boolean) {
-        val original = _miCatalogo.value?.items?.find { it.sku == sku }?.habilitado
+        val original = _miCatalogo.value?.items?.find { it.procedimiento.sku == sku }?.habilitado
         _habilitadoEdits.value = _habilitadoEdits.value.toMutableMap().also { map ->
             if (original != null && original == habilitado) {
                 map.remove(sku)
@@ -210,7 +237,7 @@ class MiCatalogoViewModel @Inject constructor(
     }
 
     fun setItemDuracionOverride(sku: String, minutosOverride: Int?) {
-        val original = _miCatalogo.value?.items?.find { it.sku == sku }?.duracionMinutosOverride
+        val original = _miCatalogo.value?.items?.find { it.procedimiento.sku == sku }?.duracionMinutosOverride
         _duracionOverrideEdits.value = _duracionOverrideEdits.value.toMutableMap().also { map ->
             if (original == minutosOverride) {
                 map.remove(sku)
@@ -221,7 +248,7 @@ class MiCatalogoViewModel @Inject constructor(
     }
 
     fun setItemPrecioOverride(sku: String, precioOverride: Int?) {
-        val original = _miCatalogo.value?.items?.find { it.sku == sku }?.precioOverride
+        val original = _miCatalogo.value?.items?.find { it.procedimiento.sku == sku }?.precioOverride
         _precioOverrideEdits.value = _precioOverrideEdits.value.toMutableMap().also { map ->
             if (original == precioOverride) {
                 map.remove(sku)
@@ -230,13 +257,4 @@ class MiCatalogoViewModel @Inject constructor(
             }
         }
     }
-}
-
-private fun ItemCatalogoResponse.toRequestItem(): CatalogoItemRequest {
-    return CatalogoItemRequest(
-        sku = this.sku,
-        habilitado = this.habilitado,
-        duracionMinutosOverride = this.duracionMinutosOverride,
-        precioOverride = this.precioOverride,
-    )
 }

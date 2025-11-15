@@ -56,7 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import cl.clinipets.openapi.models.ItemCatalogoResponse
+import cl.clinipets.openapi.models.ItemCatalogo
 import cl.clinipets.openapi.models.Procedimiento
 import java.text.NumberFormat
 import java.util.Locale
@@ -68,21 +68,10 @@ private val clpFormatter: NumberFormat = NumberFormat.getCurrencyInstance(Locale
 }
 
 // Helpers para formatear compatibilidad como texto amigable
-private fun formatCompatItem(set: Set<ItemCatalogoResponse.CompatibleCon>): String {
-    val perro = set.contains(ItemCatalogoResponse.CompatibleCon.PERRO)
-    val gato = set.contains(ItemCatalogoResponse.CompatibleCon.GATO)
-    Logger.getLogger("CatalogoItemRow").info("formatCompatItem: perro=$perro, gato=$gato y el set=$set")
-    return when {
-        perro && gato -> "Perros y Gatos"
-        perro -> "Perros"
-        gato -> "Gatos"
-        else -> "—"
-    }
-}
-
-private fun formatCompatProc(set: Set<Procedimiento.CompatibleCon>): String {
+private fun formatCompatItem(set: Set<Procedimiento.CompatibleCon>): String {
     val perro = set.contains(Procedimiento.CompatibleCon.PERRO)
     val gato = set.contains(Procedimiento.CompatibleCon.GATO)
+    Logger.getLogger("CatalogoItemRow").info("formatCompatItem: perro=$perro, gato=$gato y el set=$set")
     return when {
         perro && gato -> "Perros y Gatos"
         perro -> "Perros"
@@ -94,7 +83,7 @@ private fun formatCompatProc(set: Set<Procedimiento.CompatibleCon>): String {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) // Añadido ExperimentalLayoutApi
 @Composable
 fun CatalogoItemRow(
-    item: ItemCatalogoResponse,
+    item: ItemCatalogo,
     onToggleHabilitado: (Boolean) -> Unit,
     onEditDuracion: () -> Unit,
     onEditPrecio: () -> Unit
@@ -111,13 +100,13 @@ fun CatalogoItemRow(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        item.nombre,
+                        item.procedimiento.nombre,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
 
                     // --- Lógica de Precio ---
-                    val precioEfectivo = item.precioOverride ?: item.precio
+                    val precioEfectivo = item.precioOverride ?: item.procedimiento.precio
                     val precioFormateado = remember(precioEfectivo) { clpFormatter.format(precioEfectivo) }
                     val precioOverrideText = if (item.precioOverride != null) " (personalizado)" else ""
                     Text(
@@ -127,7 +116,7 @@ fun CatalogoItemRow(
                     )
 
                     // --- Lógica de Duración ---
-                    val duracionEfectiva = item.duracionMinutosOverride ?: item.duracionMinutos
+                    val duracionEfectiva = item.duracionMinutosOverride ?: item.procedimiento.duracionMinutos
                     val duracionOverrideText = if (item.duracionMinutosOverride != null) " (personalizado)" else ""
                     Text(
                         "Duración: $duracionEfectiva min$duracionOverrideText",
@@ -137,7 +126,7 @@ fun CatalogoItemRow(
 
                     // 1. Mostrar Compatibilidad (formateado)
                     Text(
-                        "Compatible con: ${formatCompatItem(item.compatibleCon)}",
+                        "Compatible con: ${formatCompatItem(item.procedimiento.compatibleCon)}",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -193,7 +182,7 @@ fun ProcedimientoSelectableRow(
                 Text("SKU: ${proc.sku}", style = MaterialTheme.typography.bodySmall)
                 // --- Compatibilidad formateada ---
                 Text(
-                    "Compatible con: ${formatCompatProc(proc.compatibleCon)}",
+                    "Compatible con: ${formatCompatItem(proc.compatibleCon)}",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -344,15 +333,15 @@ fun MiCatalogoScreen(
             // Lista principal de items
             items(
                 items = itemsEfectivos,
-                key = { it.sku } // Key para mejor performance
-            ) { item: ItemCatalogoResponse ->
+                key = { it.procedimiento.sku } // Key para mejor performance
+            ) { item: ItemCatalogo ->
                 CatalogoItemRow(
                     item = item,
                     onToggleHabilitado = { newVal: Boolean ->
-                        vm.setItemHabilitado(item.sku, newVal)
+                        vm.setItemHabilitado(item.procedimiento.sku, newVal)
                     },
-                    onEditDuracion = { editDuracionSku = item.sku },
-                    onEditPrecio = { editPrecioSku = item.sku }
+                    onEditDuracion = { editDuracionSku = item.procedimiento.sku },
+                    onEditPrecio = { editPrecioSku = item.procedimiento.sku }
                 )
             }
         }
@@ -376,7 +365,7 @@ fun MiCatalogoScreen(
                         label = { Text("Buscar por nombre o SKU") }
                     )
                     Spacer(Modifier.height(8.dp))
-                    val existentesSkus = remember(catalogo) { catalogo?.items?.map { it.sku }?.toSet() ?: emptySet() }
+                    val existentesSkus = remember(catalogo) { catalogo?.items?.map { it.procedimiento.sku }?.toSet() ?: emptySet() }
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -406,7 +395,7 @@ fun MiCatalogoScreen(
         }
 
         // --- Diálogo para editar DURACIÓN ---
-        val itemParaEditarDuracion = itemsEfectivos.find { it.sku == editDuracionSku }
+        val itemParaEditarDuracion = itemsEfectivos.find { it.procedimiento.sku == editDuracionSku }
         if (itemParaEditarDuracion != null) {
             var input by remember(editDuracionSku) {
                 mutableStateOf(
@@ -415,10 +404,10 @@ fun MiCatalogoScreen(
             }
             AlertDialog(
                 onDismissRequest = { editDuracionSku = null },
-                title = { Text("Duración personalizada (${itemParaEditarDuracion.nombre})") },
+                title = { Text("Duración personalizada (${itemParaEditarDuracion.procedimiento.nombre})") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Define un tiempo en minutos. Déjalo vacío para usar el estándar (${itemParaEditarDuracion.duracionMinutos} min).")
+                        Text("Define un tiempo en minutos. Déjalo vacío para usar el estándar (${itemParaEditarDuracion.procedimiento.duracionMinutos} min).")
                         OutlinedTextField(
                             value = input,
                             onValueChange = { value ->
@@ -428,12 +417,12 @@ fun MiCatalogoScreen(
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
-                        Text("Vista previa: ${input.toIntOrNull() ?: itemParaEditarDuracion.duracionMinutos} min efectivos")
+                        Text("Vista previa: ${input.toIntOrNull() ?: itemParaEditarDuracion.procedimiento.duracionMinutos} min efectivos")
                     }
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        vm.setItemDuracionOverride(itemParaEditarDuracion.sku, input.toIntOrNull())
+                        vm.setItemDuracionOverride(itemParaEditarDuracion.procedimiento.sku, input.toIntOrNull())
                         editDuracionSku = null
                     }) { Text("Guardar") }
                 },
@@ -441,7 +430,7 @@ fun MiCatalogoScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton(
                             onClick = {
-                                vm.setItemDuracionOverride(itemParaEditarDuracion.sku, null)
+                                vm.setItemDuracionOverride(itemParaEditarDuracion.procedimiento.sku, null)
                                 editDuracionSku = null
                             },
                             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
@@ -453,7 +442,7 @@ fun MiCatalogoScreen(
         }
 
         // --- Diálogo para editar PRECIO ---
-        val itemParaEditarPrecio = itemsEfectivos.find { it.sku == editPrecioSku }
+        val itemParaEditarPrecio = itemsEfectivos.find { it.procedimiento.sku == editPrecioSku }
         if (itemParaEditarPrecio != null) {
             var input by remember(editPrecioSku) {
                 mutableStateOf(
@@ -462,10 +451,10 @@ fun MiCatalogoScreen(
             }
             AlertDialog(
                 onDismissRequest = { editPrecioSku = null },
-                title = { Text("Precio personalizado (${itemParaEditarPrecio.nombre})") },
+                title = { Text("Precio personalizado (${itemParaEditarPrecio.procedimiento.nombre})") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val precioBaseFormateado = remember(itemParaEditarPrecio.precio) { clpFormatter.format(itemParaEditarPrecio.precio) }
+                        val precioBaseFormateado = remember(itemParaEditarPrecio.procedimiento.precio) { clpFormatter.format(itemParaEditarPrecio.procedimiento.precio) }
                         Text("Define un precio (CLP). Déjalo vacío para usar el estándar ($precioBaseFormateado).")
                         OutlinedTextField(
                             value = input,
@@ -475,14 +464,14 @@ fun MiCatalogoScreen(
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
-                        val precioEfectivo = input.toIntOrNull() ?: itemParaEditarPrecio.precio
+                        val precioEfectivo = input.toIntOrNull() ?: itemParaEditarPrecio.procedimiento.precio
                         val precioFormateado = remember(precioEfectivo) { clpFormatter.format(precioEfectivo) }
                         Text("Vista previa: $precioFormateado efectivos")
                     }
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        vm.setItemPrecioOverride(itemParaEditarPrecio.sku, input.toIntOrNull())
+                        vm.setItemPrecioOverride(itemParaEditarPrecio.procedimiento.sku, input.toIntOrNull())
                         editPrecioSku = null
                     }) { Text("Guardar") }
                 },
@@ -490,7 +479,7 @@ fun MiCatalogoScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton(
                             onClick = {
-                                vm.setItemPrecioOverride(itemParaEditarPrecio.sku, null)
+                                vm.setItemPrecioOverride(itemParaEditarPrecio.procedimiento.sku, null)
                                 editPrecioSku = null
                             },
                             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
