@@ -5,8 +5,7 @@ import cl.clinipets.BuildConfig
 import cl.clinipets.openapi.apis.AgendaControllerApi
 import cl.clinipets.openapi.apis.AutenticacinApi
 import cl.clinipets.openapi.apis.DescubrimientoApi
-import cl.clinipets.openapi.apis.HorariosClinicaControllerApi
-import cl.clinipets.openapi.apis.HorariosVeterinarioControllerApi
+import cl.clinipets.openapi.apis.HorariosControllerApi
 import cl.clinipets.openapi.apis.MascotasApi
 import cl.clinipets.openapi.apis.VeterinariosApi
 import cl.clinipets.openapi.infrastructure.ApiClient
@@ -67,13 +66,8 @@ object ApiModule {
 
     @Provides
     @Singleton
-    fun provideHorarioVeterinario(apiClient: ApiClient): HorariosVeterinarioControllerApi =
-        apiClient.createService(HorariosVeterinarioControllerApi::class.java)
-
-    @Provides
-    @Singleton
-    fun provideHorariosClinica(apiClient: ApiClient): HorariosClinicaControllerApi =
-        apiClient.createService(HorariosClinicaControllerApi::class.java)
+    fun provideHorarios(apiClient: ApiClient): HorariosControllerApi =
+        apiClient.createService(HorariosControllerApi::class.java)
 
     @Provides
     @Named("GoogleClientId")

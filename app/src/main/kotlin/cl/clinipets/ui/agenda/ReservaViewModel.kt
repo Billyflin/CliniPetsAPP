@@ -3,8 +3,7 @@ package cl.clinipets.ui.agenda
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.openapi.apis.AgendaControllerApi
-import cl.clinipets.openapi.apis.HorariosClinicaControllerApi
-import cl.clinipets.openapi.apis.HorariosVeterinarioControllerApi
+import cl.clinipets.openapi.apis.HorariosControllerApi
 import cl.clinipets.openapi.models.DiscoveryRequest
 import cl.clinipets.openapi.models.Intervalo
 import cl.clinipets.openapi.models.ReservaCreateDTO
@@ -19,8 +18,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ReservaViewModel @Inject constructor(
     private val agendaApi: AgendaControllerApi,
-    private val horariosVetApi: HorariosVeterinarioControllerApi,
-    private val horariosClinicaApi: HorariosClinicaControllerApi,
+    private val horariosApi: HorariosControllerApi
 ) : ViewModel() {
     data class Ui(
         val isSubmitting: Boolean = false,
@@ -81,11 +79,9 @@ class ReservaViewModel @Inject constructor(
         viewModelScope.launch {
             _ui.value = s.copy(isLoadingSlots = true, error = null)
             try {
-                val resp = when (s.modo) {
-                    DiscoveryRequest.ModoAtencion.CLINICA -> horariosClinicaApi.slotsPorProcedimiento(
-                        fecha, s.procedimientoSku
-                    )
-
+                val (tipo, ownerId) = when (s.modo) {
+                    DiscoveryRequest.ModoAtencion.CLINICA ->
+                        HorariosControllerApi.TipoSlots.CLINICA to null
                     DiscoveryRequest.ModoAtencion.DOMICILIO, DiscoveryRequest.ModoAtencion.URGENCIA -> {
                         val vetId = s.veterinarioId
                         if (vetId == null) {
@@ -95,9 +91,11 @@ class ReservaViewModel @Inject constructor(
                             )
                             return@launch
                         }
-                        horariosVetApi.disponibilidadEnFecha(fecha, vetId)
+                        HorariosControllerApi.TipoSlots.VETERINARIO to vetId
                     }
                 }
+
+                val resp = horariosApi.slots(tipo, fecha, s.procedimientoSku, ownerId)
                 if (resp.isSuccessful) {
                     val slots = resp.body().orEmpty()
                     _ui.value = _ui.value.copy(isLoadingSlots = false, slots = slots)

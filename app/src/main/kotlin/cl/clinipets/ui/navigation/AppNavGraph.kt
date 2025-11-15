@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import cl.clinipets.openapi.models.DiscoveryRequest
+import cl.clinipets.ui.agenda.AgendaGestionScreen
 import cl.clinipets.ui.agenda.ReservaConfirmScreen
 import cl.clinipets.ui.agenda.ReservaFormScreen
 import cl.clinipets.ui.auth.LoginScreen
@@ -32,6 +33,7 @@ import java.util.UUID
 @Serializable object MiCatalogoRoute
 @Serializable object MiDisponibilidadRoute
 @Serializable object DiscoveryRoute
+@Serializable object AgendaGestionRoute
 
 @Serializable
 data class MascotaDetailRoute(val id: String)
@@ -80,10 +82,11 @@ fun AppNavGraph(
                 displayName = uiState.displayName,
                 roles = uiState.roles,
                 onNavigateToMascotas = { navController.navigate(MascotasRoute) },
-                onNavigateToProfile = { navController.navigate(ProfileRoute) },
+                onNavigateToProfile = { navController.popBackStack(); navController.navigate(ProfileRoute) },
                 onNavigateToMiCatalogo = { navController.navigate(MiCatalogoRoute) },
                 onNavigateToMiDisponibilidad = { navController.navigate(MiDisponibilidadRoute) },
-                onNavigateToAgenda = { navController.navigate(DiscoveryRoute) }
+                onNavigateToAgenda = { navController.navigate(DiscoveryRoute) },
+                onNavigateToAgendaGestion = { navController.navigate(AgendaGestionRoute) }
             )
         }
         composable<MascotasRoute> {
@@ -192,5 +195,6 @@ fun AppNavGraph(
                 onDone = { navController.popBackStack(DiscoveryRoute, inclusive = false) }
             )
         }
+        composable<AgendaGestionRoute> { AgendaGestionScreen(onBack = { navController.popBackStack() }) }
     }
 }

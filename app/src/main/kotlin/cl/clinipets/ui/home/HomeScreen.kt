@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.EventNote
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Pets
@@ -69,6 +70,7 @@ fun HomeScreen(
     onNavigateToMiCatalogo: () -> Unit,
     onNavigateToMiDisponibilidad: () -> Unit,
     onNavigateToAgenda: () -> Unit,
+    onNavigateToAgendaGestion: () -> Unit,
     vm: HomeViewModel = hiltViewModel()
 ) {
     val uiState by vm.ui.collectAsState()
@@ -107,7 +109,7 @@ fun HomeScreen(
         ) {
             item { HomeHeader(displayName = displayName, baseUrl = baseUrl) }
             item { Spacer(Modifier.height(12.dp)) }
-            item { QuickActions(isVeterinarian = isVeterinarian, onNavigateToMascotas, onNavigateToAgenda, onNavigateToMiCatalogo, onNavigateToMiDisponibilidad) }
+            item { QuickActions(isVeterinarian = isVeterinarian, onNavigateToMascotas, onNavigateToAgenda, onNavigateToMiCatalogo, onNavigateToMiDisponibilidad, onNavigateToAgendaGestion) }
             item { Spacer(Modifier.height(24.dp)) }
             item { SectionTitle(title = "Próximas citas") }
             item {
@@ -215,12 +217,14 @@ private fun QuickActions(
     onMascotas: () -> Unit,
     onAgenda: () -> Unit,
     onCatalogo: () -> Unit,
-    onDisponibilidad: () -> Unit
+    onDisponibilidad: () -> Unit,
+    onGestionAgendas: () -> Unit
 ) {
     val scroll = rememberScrollState()
     val common = listOf(
         ActionItem(Icons.Default.Pets, "Mascotas", MaterialTheme.colorScheme.primaryContainer, onMascotas),
-        ActionItem(Icons.AutoMirrored.Filled.Assignment, "Agenda", MaterialTheme.colorScheme.tertiaryContainer, onAgenda)
+        ActionItem(Icons.AutoMirrored.Filled.Assignment, "Agenda", MaterialTheme.colorScheme.tertiaryContainer, onAgenda),
+        ActionItem(Icons.AutoMirrored.Filled.EventNote, "Gestionar agendas", MaterialTheme.colorScheme.secondaryContainer, onGestionAgendas)
     )
     val vetExtra = if (isVeterinarian) listOf(
         ActionItem(Icons.Default.Store, "Catálogo", MaterialTheme.colorScheme.secondaryContainer, onCatalogo),

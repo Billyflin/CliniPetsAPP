@@ -2,7 +2,7 @@ package cl.clinipets.ui.veterinarios
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cl.clinipets.openapi.apis.HorariosVeterinarioControllerApi
+import cl.clinipets.openapi.apis.HorariosControllerApi
 import cl.clinipets.openapi.models.ExcepcionHorario
 import cl.clinipets.openapi.models.HorarioAtencion
 import cl.clinipets.openapi.models.Intervalo
@@ -25,7 +25,7 @@ data class MiDisponibilidadUiState(
 
 @HiltViewModel
 class MiDisponibilidadViewModel @Inject constructor(
-    private val api: HorariosVeterinarioControllerApi
+    private val api: HorariosControllerApi
 ) : ViewModel() {
 
     companion object {
@@ -36,14 +36,14 @@ class MiDisponibilidadViewModel @Inject constructor(
     val uiState: StateFlow<MiDisponibilidadUiState> = _uiState.asStateFlow()
 
     /**
-     * Carga horarios, excepciones y opcionalmente disponibilidad para una fecha.
+     * Carga horarios, excepciones y opcionalmente disponibilidad para una fecha (como veterinario).
      */
     fun cargarTodo(fecha: LocalDate? = null) {
         viewModelScope.launch {
             _uiState.update { it.copy(cargando = true, error = null) }
             try {
-                // Horarios
-                val resHorarios = api.listarHorarios()
+                // Horarios (vet)
+                val resHorarios = api.listarHorariosVet()
                 val horarios = if (resHorarios.isSuccessful) {
                     resHorarios.body().orEmpty()
                 } else {
@@ -53,8 +53,8 @@ class MiDisponibilidadViewModel @Inject constructor(
                     emptyList()
                 }
 
-                // Excepciones
-                val resExcepciones = api.listarExcepciones()
+                // Excepciones (vet)
+                val resExcepciones = api.listarExcepcionesVet()
                 val excepciones = if (resExcepciones.isSuccessful) {
                     resExcepciones.body().orEmpty()
                 } else {
@@ -64,9 +64,9 @@ class MiDisponibilidadViewModel @Inject constructor(
                     emptyList()
                 }
 
-                // Disponibilidad del día (opcional)
+                // Disponibilidad del día (opcional) usando tipo VETERINARIO
                 val disponibilidad = if (fecha != null) {
-                    val resDisp = api.disponibilidadEnFecha(fecha)
+                    val resDisp = api.disponibilidad(HorariosControllerApi.TipoDisponibilidad.VETERINARIO, fecha)
                     if (resDisp.isSuccessful) {
                         resDisp.body().orEmpty()
                     } else {
@@ -95,14 +95,12 @@ class MiDisponibilidadViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Crear un nuevo horario y refrescar la lista.
-     */
+    /** Crear un nuevo horario (vet) y refrescar la lista. */
     fun crearHorario(horario: HorarioAtencion, fechaParaDisponibilidad: LocalDate? = null) {
         viewModelScope.launch {
             _uiState.update { it.copy(cargando = true, error = null) }
             try {
-                val res = api.crearHorario(horario)
+                val res = api.crearHorarioVet(horario)
                 if (!res.isSuccessful) {
                     _uiState.update {
                         it.copy(error = "Error al crear horario: ${res.code()}")
@@ -119,14 +117,12 @@ class MiDisponibilidadViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Eliminar horario y refrescar.
-     */
+    /** Eliminar horario (vet) y refrescar. */
     fun eliminarHorario(horarioId: java.util.UUID, fechaParaDisponibilidad: LocalDate? = null) {
         viewModelScope.launch {
             _uiState.update { it.copy(cargando = true, error = null) }
             try {
-                val res = api.eliminarHorario(horarioId)
+                val res = api.eliminarHorarioVet(horarioId)
                 if (!res.isSuccessful) {
                     _uiState.update {
                         it.copy(error = "Error al eliminar horario: ${res.code()}")
@@ -142,14 +138,12 @@ class MiDisponibilidadViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Crear excepción y refrescar.
-     */
+    /** Crear excepción (vet) y refrescar. */
     fun crearExcepcion(excepcion: ExcepcionHorario, fechaParaDisponibilidad: LocalDate? = null) {
         viewModelScope.launch {
             _uiState.update { it.copy(cargando = true, error = null) }
             try {
-                val res = api.crearExcepcion(excepcion)
+                val res = api.crearExcepcionVet(excepcion)
                 if (!res.isSuccessful) {
                     _uiState.update {
                         it.copy(error = "Error al crear excepción: ${res.code()}")
@@ -165,14 +159,12 @@ class MiDisponibilidadViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Eliminar excepción y refrescar.
-     */
+    /** Eliminar excepción (vet) y refrescar. */
     fun eliminarExcepcion(excepcionId: java.util.UUID, fechaParaDisponibilidad: LocalDate? = null) {
         viewModelScope.launch {
             _uiState.update { it.copy(cargando = true, error = null) }
             try {
-                val res = api.eliminarExcepcion(excepcionId)
+                val res = api.eliminarExcepcionVet(excepcionId)
                 if (!res.isSuccessful) {
                     _uiState.update {
                         it.copy(error = "Error al eliminar excepción: ${res.code()}")
@@ -188,14 +180,12 @@ class MiDisponibilidadViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Solo recargar disponibilidad para otra fecha, sin tocar horarios/excepciones.
-     */
+    /** Solo recargar disponibilidad para otra fecha (vet), sin tocar horarios/excepciones. */
     fun cargarDisponibilidadParaFecha(fecha: LocalDate) {
         viewModelScope.launch {
             _uiState.update { it.copy(cargando = true, error = null) }
             try {
-                val res = api.disponibilidadEnFecha(fecha)
+                val res = api.disponibilidad(HorariosControllerApi.TipoDisponibilidad.VETERINARIO, fecha)
                 if (res.isSuccessful) {
                     val disp = res.body().orEmpty()
                     _uiState.update { it.copy(disponibilidad = disp) }

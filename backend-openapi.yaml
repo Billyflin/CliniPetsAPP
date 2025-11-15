@@ -249,44 +249,6 @@ paths:
                 $ref: "#/components/schemas/ProblemDetail"
       security:
         - bearerAuth: []
-  /api/agenda/reservas/{reservaId}/confirmar-veterinario:
-    put:
-      tags:
-        - agenda-controller
-      operationId: confirmarComoVeterinario
-      parameters:
-        - name: reservaId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/Reserva"
-  /api/agenda/reservas/{reservaId}/confirmar-clinica:
-    put:
-      tags:
-        - agenda-controller
-      operationId: confirmarComoClinica
-      parameters:
-        - name: reservaId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/Reserva"
   /api/veterinarios:
     post:
       tags:
@@ -370,8 +332,8 @@ paths:
   /api/horarios:
     get:
       tags:
-        - horarios-veterinario-controller
-      operationId: listarHorarios
+        - horarios-controller
+      operationId: listarHorariosVet
       responses:
         "200":
           description: OK
@@ -383,8 +345,8 @@ paths:
                   $ref: "#/components/schemas/HorarioAtencion"
     post:
       tags:
-        - horarios-veterinario-controller
-      operationId: crearHorario
+        - horarios-controller
+      operationId: crearHorarioVet
       requestBody:
         content:
           application/json:
@@ -401,8 +363,8 @@ paths:
   /api/horarios/excepciones:
     get:
       tags:
-        - horarios-veterinario-controller
-      operationId: listarExcepciones
+        - horarios-controller
+      operationId: listarExcepcionesVet
       responses:
         "200":
           description: OK
@@ -414,8 +376,70 @@ paths:
                   $ref: "#/components/schemas/ExcepcionHorario"
     post:
       tags:
-        - horarios-veterinario-controller
-      operationId: crearExcepcion
+        - horarios-controller
+      operationId: crearExcepcionVet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExcepcionHorario"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ExcepcionHorario"
+  /api/horarios/clinica:
+    get:
+      tags:
+        - horarios-controller
+      operationId: listarHorariosClinica
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HorarioAtencion"
+    post:
+      tags:
+        - horarios-controller
+      operationId: crearHorarioClinica
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HorarioAtencion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/HorarioAtencion"
+  /api/horarios/clinica/excepciones:
+    get:
+      tags:
+        - horarios-controller
+      operationId: listarExcepcionesClinica
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExcepcionHorario"
+    post:
+      tags:
+        - horarios-controller
+      operationId: crearExcepcionClinica
       requestBody:
         content:
           application/json:
@@ -555,68 +579,6 @@ paths:
                   type: string
       security:
         - bearerAuth: []
-  /api/clinica/horarios:
-    get:
-      tags:
-        - horarios-clinica-controller
-      operationId: listarHorarios_1
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/HorarioAtencion"
-    post:
-      tags:
-        - horarios-clinica-controller
-      operationId: crearHorario_1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/HorarioAtencion"
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/HorarioAtencion"
-  /api/clinica/horarios/excepciones:
-    get:
-      tags:
-        - horarios-clinica-controller
-      operationId: listarExcepciones_1
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ExcepcionHorario"
-    post:
-      tags:
-        - horarios-clinica-controller
-      operationId: crearExcepcion_1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ExcepcionHorario"
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ExcepcionHorario"
   /api/auth/refresh:
     post:
       tags:
@@ -715,6 +677,42 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/Reserva"
+  /api/agenda/reservas/confirmar:
+    post:
+      tags:
+        - agenda-controller
+      operationId: confirmar
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReservaAccionRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Reserva"
+  /api/agenda/reservas/cancelar:
+    post:
+      tags:
+        - agenda-controller
+      operationId: cancelar
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReservaAccionRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Reserva"
   /api/agenda/mis-reservas:
     post:
       tags:
@@ -773,10 +771,10 @@ paths:
                 $ref: "#/components/schemas/ProblemDetail"
       security:
         - bearerAuth: []
-  /api/horarios/owners/slots:
+  /api/horarios/slots:
     get:
       tags:
-        - horarios-unificado-controller
+        - horarios-controller
       operationId: slots
       parameters:
         - name: tipo
@@ -813,10 +811,10 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Intervalo"
-  /api/horarios/owners/disponibilidad:
+  /api/horarios/disponibilidad:
     get:
       tags:
-        - horarios-unificado-controller
+        - horarios-controller
       operationId: disponibilidad
       parameters:
         - name: tipo
@@ -848,80 +846,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Intervalo"
-  /api/horarios/disponibilidad:
-    get:
-      tags:
-        - horarios-veterinario-controller
-      operationId: disponibilidadEnFecha
-      parameters:
-        - name: fecha
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
-        - name: vetId
-          in: query
-          required: false
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Intervalo"
-  /api/clinica/horarios/slots:
-    get:
-      tags:
-        - horarios-clinica-controller
-      operationId: slotsPorProcedimiento
-      parameters:
-        - name: fecha
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
-        - name: procedimientoSku
-          in: query
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Intervalo"
-  /api/clinica/horarios/disponibilidad:
-    get:
-      tags:
-        - horarios-clinica-controller
-      operationId: disponibilidadEnFecha_1
-      parameters:
-        - name: fecha
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Intervalo"
   /api/auth/me:
     get:
       tags:
@@ -943,8 +867,8 @@ paths:
   /api/horarios/{horarioId}:
     delete:
       tags:
-        - horarios-veterinario-controller
-      operationId: eliminarHorario
+        - horarios-controller
+      operationId: eliminarHorarioVet
       parameters:
         - name: horarioId
           in: path
@@ -958,8 +882,8 @@ paths:
   /api/horarios/excepciones/{excepcionId}:
     delete:
       tags:
-        - horarios-veterinario-controller
-      operationId: eliminarExcepcion
+        - horarios-controller
+      operationId: eliminarExcepcionVet
       parameters:
         - name: excepcionId
           in: path
@@ -970,11 +894,11 @@ paths:
       responses:
         "200":
           description: OK
-  /api/clinica/horarios/{horarioId}:
+  /api/horarios/clinica/{horarioId}:
     delete:
       tags:
-        - horarios-clinica-controller
-      operationId: eliminarHorario_1
+        - horarios-controller
+      operationId: eliminarHorarioClinica
       parameters:
         - name: horarioId
           in: path
@@ -985,11 +909,11 @@ paths:
       responses:
         "200":
           description: OK
-  /api/clinica/horarios/excepciones/{excepcionId}:
+  /api/horarios/clinica/excepciones/{excepcionId}:
     delete:
       tags:
-        - horarios-clinica-controller
-      operationId: eliminarExcepcion_1
+        - horarios-controller
+      operationId: eliminarExcepcionClinica
       parameters:
         - name: excepcionId
           in: path
@@ -1000,44 +924,6 @@ paths:
       responses:
         "200":
           description: OK
-  /api/agenda/reservas/{reservaId}/cancelar-veterinario:
-    delete:
-      tags:
-        - agenda-controller
-      operationId: cancelarComoVeterinario
-      parameters:
-        - name: reservaId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/Reserva"
-  /api/agenda/reservas/{reservaId}/cancelar-clinica:
-    delete:
-      tags:
-        - agenda-controller
-      operationId: cancelarComoClinica
-      parameters:
-        - name: reservaId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/Reserva"
 components:
   schemas:
     Veterinario:
@@ -1530,71 +1416,6 @@ components:
       required:
         - especie
         - nombre
-    Reserva:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        clienteId:
-          type: string
-          format: uuid
-        veterinarioId:
-          type: string
-          format: uuid
-        clinicaId:
-          type: string
-          format: uuid
-        procedimientoSku:
-          type: string
-        procedimientoId:
-          type: string
-          format: uuid
-        precio:
-          type: number
-        duracionMinutosSnapshot:
-          type: integer
-          format: int32
-        fecha:
-          type: string
-          format: date
-        horaInicio:
-          type: string
-        horaFin:
-          type: string
-        modoAtencion:
-          type: string
-          description: Modalidades de atención que puede ofrecer el veterinario.
-          enum:
-            - DOMICILIO
-            - CLINICA
-            - URGENCIA
-        direccionTexto:
-          type: string
-        lat:
-          type: number
-          format: double
-        lng:
-          type: number
-          format: double
-        referencias:
-          type: string
-        estado:
-          type: string
-          enum:
-            - PENDIENTE
-            - CONFIRMADA
-            - CANCELADA
-      required:
-        - clienteId
-        - duracionMinutosSnapshot
-        - estado
-        - fecha
-        - horaFin
-        - horaInicio
-        - modoAtencion
-        - precio
-        - procedimientoSku
     CrearMascota:
       type: object
       properties:
@@ -1897,6 +1718,79 @@ components:
         - horaInicio
         - modoAtencion
         - procedimientoSku
+    Reserva:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        clienteId:
+          type: string
+          format: uuid
+        veterinarioId:
+          type: string
+          format: uuid
+        clinicaId:
+          type: string
+          format: uuid
+        procedimientoSku:
+          type: string
+        precio:
+          type: number
+        duracionMinutosSnapshot:
+          type: integer
+          format: int32
+        fecha:
+          type: string
+          format: date
+        horaInicio:
+          type: string
+        horaFin:
+          type: string
+        modoAtencion:
+          type: string
+          description: Modalidades de atención que puede ofrecer el veterinario.
+          enum:
+            - DOMICILIO
+            - CLINICA
+            - URGENCIA
+        direccionTexto:
+          type: string
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        referencias:
+          type: string
+        estado:
+          type: string
+          enum:
+            - PENDIENTE
+            - CONFIRMADA
+            - CANCELADA_CLIENTE
+            - CANCELADA_VETERINARIO
+            - CANCELADA_CLINICA
+            - REALIZADA
+      required:
+        - clienteId
+        - duracionMinutosSnapshot
+        - estado
+        - fecha
+        - horaFin
+        - horaInicio
+        - modoAtencion
+        - precio
+        - procedimientoSku
+    ReservaAccionRequest:
+      type: object
+      properties:
+        reservaId:
+          type: string
+          format: uuid
+      required:
+        - reservaId
     MisReservasQuery:
       type: object
       properties:
@@ -1917,7 +1811,10 @@ components:
             enum:
               - PENDIENTE
               - CONFIRMADA
-              - CANCELADA
+              - CANCELADA_CLIENTE
+              - CANCELADA_VETERINARIO
+              - CANCELADA_CLINICA
+              - REALIZADA
         modos:
           type: array
           items:
