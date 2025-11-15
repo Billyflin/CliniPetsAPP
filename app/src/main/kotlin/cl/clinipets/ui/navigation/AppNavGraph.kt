@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import cl.clinipets.openapi.models.DiscoveryRequest
+import cl.clinipets.ui.agenda.ReservaConfirmScreen
 import cl.clinipets.ui.agenda.ReservaFormScreen
 import cl.clinipets.ui.auth.LoginScreen
 import cl.clinipets.ui.auth.LoginViewModel
@@ -47,6 +48,19 @@ data class ReservaFormRoute(
     val lng: Double? = null,
     val veterinarioId: String? = null,
     val precioSugerido: Int? = null
+)
+
+@Serializable
+data class ReservaConfirmRoute(
+    val procedimientoSku: String,
+    val modo: String,
+    val fecha: String,
+    val horaInicio: String,
+    val lat: Double? = null,
+    val lng: Double? = null,
+    val veterinarioId: String? = null,
+    val direccion: String? = null,
+    val referencias: String? = null
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalStdlibApi::class)
@@ -144,7 +158,38 @@ fun AppNavGraph(
                 veterinarioId = args.veterinarioId?.let(UUID::fromString),
                 precioSugerido = args.precioSugerido,
                 onBack = { navController.popBackStack() },
-                onReservada = { navController.popBackStack(DiscoveryRoute, inclusive = false) }
+                onReservada = { navController.popBackStack(DiscoveryRoute, inclusive = false) },
+                onContinuarConfirmacion = { fecha: String, horaInicio: String, direccion: String?, referencias: String? ->
+                    navController.navigate(
+                        ReservaConfirmRoute(
+                            procedimientoSku = args.procedimientoSku,
+                            modo = args.modo,
+                            fecha = fecha,
+                            horaInicio = horaInicio,
+                            lat = args.lat,
+                            lng = args.lng,
+                            veterinarioId = args.veterinarioId,
+                            direccion = direccion,
+                            referencias = referencias
+                        )
+                    )
+                }
+            )
+        }
+        composable<ReservaConfirmRoute> { backStackEntry ->
+            val args = backStackEntry.toRoute<ReservaConfirmRoute>()
+            ReservaConfirmScreen(
+                procedimientoSku = args.procedimientoSku,
+                modo = DiscoveryRequest.ModoAtencion.valueOf(args.modo),
+                fecha = args.fecha,
+                horaInicio = args.horaInicio,
+                lat = args.lat,
+                lng = args.lng,
+                veterinarioId = args.veterinarioId?.let(UUID::fromString),
+                direccion = args.direccion,
+                referencias = args.referencias,
+                onBack = { navController.popBackStack() },
+                onDone = { navController.popBackStack(DiscoveryRoute, inclusive = false) }
             )
         }
     }

@@ -773,6 +773,81 @@ paths:
                 $ref: "#/components/schemas/ProblemDetail"
       security:
         - bearerAuth: []
+  /api/horarios/owners/slots:
+    get:
+      tags:
+        - horarios-unificado-controller
+      operationId: slots
+      parameters:
+        - name: tipo
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - VETERINARIO
+              - CLINICA
+        - name: fecha
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: procedimientoSku
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: ownerId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Intervalo"
+  /api/horarios/owners/disponibilidad:
+    get:
+      tags:
+        - horarios-unificado-controller
+      operationId: disponibilidad
+      parameters:
+        - name: tipo
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - VETERINARIO
+              - CLINICA
+        - name: fecha
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: ownerId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Intervalo"
   /api/horarios/disponibilidad:
     get:
       tags:
