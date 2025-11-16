@@ -61,7 +61,9 @@ fun HomeScreen(
     onNavigateToMiCatalogo: () -> Unit,
     onNavigateToMiDisponibilidad: () -> Unit,
     onNavigateToAgenda: () -> Unit,
-    onNavigateToAgendaGestion: () -> Unit,
+    // [CAMBIO] Parámetros actualizados para las dos rutas de agenda
+    onNavigateToAgendaCliente: () -> Unit,
+    onNavigateToAgendaVeterinario: () -> Unit,
     vm: HomeViewModel = hiltViewModel()
 ) {
     val uiState by vm.ui.collectAsState()
@@ -83,12 +85,10 @@ fun HomeScreen(
             item { Spacer(Modifier.height(12.dp)) }
             item {
                 QuickActions(
-                    isVeterinarian = isVeterinarian,
+                    isVeterinarian = isVeterinarian, // Se pasa el rol para el texto dinámico
                     onMascotas = onNavigateToMascotas,
                     onAgenda = onNavigateToAgenda,
-                    onCatalogo = onNavigateToMiCatalogo,
-                    onDisponibilidad = onNavigateToMiDisponibilidad,
-                    onGestionAgendas = onNavigateToAgendaGestion
+                    onNavigateToAgendaCliente = onNavigateToAgendaCliente
                 )
             }
 
@@ -99,7 +99,7 @@ fun HomeScreen(
                     VetToolsCompact(
                         onNavigateToMiCatalogo = onNavigateToMiCatalogo,
                         onNavigateToMiDisponibilidad = onNavigateToMiDisponibilidad,
-                        onNavigateToAgenda = onNavigateToAgenda
+                        onNavigateToAgendaVeterinario = onNavigateToAgendaVeterinario // Se pasa la acción de agenda vet
                     )
                 }
             }
@@ -197,13 +197,14 @@ private data class ActionItem(
 
 @Composable
 private fun QuickActions(
-    isVeterinarian: Boolean,
+    isVeterinarian: Boolean, // Se recibe para el texto dinámico
     onMascotas: () -> Unit,
     onAgenda: () -> Unit,
-    onCatalogo: () -> Unit,
-    onDisponibilidad: () -> Unit,
-    onGestionAgendas: () -> Unit
+    onNavigateToAgendaCliente: () -> Unit
 ) {
+    // [CAMBIO] Título dinámico para el botón de reservas de cliente
+    val tituloReservas = if (isVeterinarian) "Mis Reservas (Cliente)" else "Mis Reservas"
+
     val items = buildList {
         add(
             ActionItem(
@@ -213,20 +214,10 @@ private fun QuickActions(
                 onMascotas
             )
         )
-        if (isVeterinarian) {
-            add(
-                ActionItem(
-                    Icons.Default.Store,
-                    "Catálogo",
-                    MaterialTheme.colorScheme.secondaryContainer,
-                    onCatalogo
-                )
-            )
-        }
         add(
             ActionItem(
                 Icons.AutoMirrored.Filled.Assignment,
-                "Agenda",
+                "Buscar Servicio",
                 MaterialTheme.colorScheme.tertiaryContainer,
                 onAgenda
             )
@@ -234,21 +225,11 @@ private fun QuickActions(
         add(
             ActionItem(
                 Icons.AutoMirrored.Filled.EventNote,
-                "Gestionar agendas",
+                tituloReservas, // Se usa el título dinámico
                 MaterialTheme.colorScheme.surfaceContainerHighest,
-                onGestionAgendas
+                onNavigateToAgendaCliente
             )
         )
-        if (isVeterinarian) {
-            add(
-                ActionItem(
-                    Icons.Default.AccessTime,
-                    "Disponibilidad",
-                    MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f),
-                    onDisponibilidad
-                )
-            )
-        }
     }
 
     ActionGrid(items)
@@ -282,10 +263,9 @@ private fun ActionGrid(items: List<ActionItem>) {
 private fun ActionChip(item: ActionItem) {
     Surface(
         shape = CutCornerShape(topStart = 20.dp, bottomEnd = 20.dp),
-
         color = item.color,
         modifier = Modifier
-            .shadow(2.dp, CutCornerShape(topStart = 20.dp, bottomEnd = 20.dp)) // Sombra sutil
+            .shadow(2.dp, CutCornerShape(topStart = 20.dp, bottomEnd = 20.dp))
             .clickable { item.onClick() }
     ) {
         Row(
@@ -326,7 +306,7 @@ private fun ActionChip(item: ActionItem) {
 private fun VetToolsCompact(
     onNavigateToMiCatalogo: () -> Unit,
     onNavigateToMiDisponibilidad: () -> Unit,
-    onNavigateToAgenda: () -> Unit
+    onNavigateToAgendaVeterinario: () -> Unit // [CAMBIO] Se recibe la acción
 ) {
     val actions = listOf(
         ActionItem(
@@ -339,11 +319,13 @@ private fun VetToolsCompact(
             "Disponibilidad",
             MaterialTheme.colorScheme.surfaceVariant,
             onNavigateToMiDisponibilidad
-        ), ActionItem(
-            Icons.AutoMirrored.Filled.Assignment,
-            "Agenda",
+        ),
+        // [CAMBIO] Botón de agenda (vet) movido a esta sección
+        ActionItem(
+            Icons.AutoMirrored.Filled.EventNote,
+            "Mis Agendas (Vet)",
             MaterialTheme.colorScheme.tertiaryContainer,
-            onNavigateToAgenda
+            onNavigateToAgendaVeterinario
         )
     )
 

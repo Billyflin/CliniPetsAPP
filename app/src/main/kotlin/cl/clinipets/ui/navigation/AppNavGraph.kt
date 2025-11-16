@@ -1,4 +1,3 @@
-// ui/navigation/NavGraph.kt — NavHost usando rutas tipadas (Compose Navigation 2.8+)
 package cl.clinipets.ui.navigation
 
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -8,7 +7,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import cl.clinipets.openapi.models.DiscoveryRequest
-import cl.clinipets.ui.agenda.AgendaGestionScreen
+
+// Nuevas importaciones
+import cl.clinipets.ui.agenda.AgendaClienteScreen
+import cl.clinipets.ui.agenda.AgendaVeterinarioScreen
+// import cl.clinipets.ui.agenda.AgendaGestionScreen // Ya no se usa
 import cl.clinipets.ui.agenda.ReservaConfirmScreen
 import cl.clinipets.ui.agenda.ReservaFormScreen
 import cl.clinipets.ui.auth.LoginScreen
@@ -26,24 +29,19 @@ import cl.clinipets.ui.veterinarios.MiDisponibilidadScreen
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
-@Serializable
-object LoginRoute
-@Serializable
-object HomeRoute
-@Serializable
-object MascotasRoute
-@Serializable
-object ProfileRoute
-@Serializable
-object VeterinarianRoute
-@Serializable
-object MiCatalogoRoute
-@Serializable
-object MiDisponibilidadRoute
-@Serializable
-object DiscoveryRoute
-@Serializable
-object AgendaGestionRoute
+@Serializable object LoginRoute
+@Serializable object HomeRoute
+@Serializable object MascotasRoute
+@Serializable object ProfileRoute
+@Serializable object VeterinarianRoute
+@Serializable object MiCatalogoRoute
+@Serializable object MiDisponibilidadRoute
+@Serializable object DiscoveryRoute
+
+// Nuevas Rutas
+@Serializable object AgendaClienteRoute
+@Serializable object AgendaVeterinarioRoute
+// @Serializable object AgendaGestionRoute // Ya no se usa
 
 @Serializable
 data class MascotaDetailRoute(val id: String)
@@ -101,11 +99,13 @@ fun AppNavGraph(
                 displayName = uiState.displayName,
                 roles = uiState.roles,
                 onNavigateToMascotas = { navController.navigate(MascotasRoute) },
-                onNavigateToProfile = { navController.navigate(ProfileRoute) },
+                onNavigateToProfile = { navController.navigate(ProfileRoute) }, // Corregido
                 onNavigateToMiCatalogo = { navController.navigate(MiCatalogoRoute) },
                 onNavigateToMiDisponibilidad = { navController.navigate(MiDisponibilidadRoute) },
                 onNavigateToAgenda = { navController.navigate(DiscoveryRoute) },
-                onNavigateToAgendaGestion = { navController.navigate(AgendaGestionRoute) }
+                // --- CAMBIO AQUÍ ---
+                onNavigateToAgendaCliente = { navController.navigate(AgendaClienteRoute) },
+                onNavigateToAgendaVeterinario = { navController.navigate(AgendaVeterinarioRoute) }
             )
         }
         composable<MascotasRoute> {
@@ -220,13 +220,26 @@ fun AppNavGraph(
                 onDone = { navController.popBackStack(DiscoveryRoute, inclusive = false) }
             )
         }
-        composable<AgendaGestionRoute> {
-            AgendaGestionScreen(
+
+        // --- CAMBIO AQUÍ ---
+        // composable<AgendaGestionRoute> { ... } // Ruta antigua eliminada
+
+        composable<AgendaClienteRoute> {
+            AgendaClienteScreen(
                 onBack = { navController.popBackStack() },
                 onVerMapa = { reservaId -> navController.navigate(JuntaRoute(reservaId.toString())) },
                 userId = uiState.me?.id
             )
         }
+        composable<AgendaVeterinarioRoute> {
+            AgendaVeterinarioScreen(
+                onBack = { navController.popBackStack() },
+                onVerMapa = { reservaId -> navController.navigate(JuntaRoute(reservaId.toString())) },
+                userId = uiState.me?.id
+            )
+        }
+        // --- FIN DEL CAMBIO ---
+
         composable<JuntaRoute> { backStackEntry ->
             val args = backStackEntry.toRoute<JuntaRoute>()
             JuntaComposable(
