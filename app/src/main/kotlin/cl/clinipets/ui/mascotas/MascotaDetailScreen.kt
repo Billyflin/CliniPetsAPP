@@ -1,5 +1,6 @@
 package cl.clinipets.ui.mascotas
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,12 +12,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,9 +42,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import cl.clinipets.R // Asegúrate de que esta sea la ruta correcta a tu R
 import java.time.LocalDate
 import java.time.Period
 import java.time.format.DateTimeFormatter
@@ -99,6 +104,13 @@ fun MascotaDetailScreen(
                     IconButton(onClick = handleBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
+                },
+                actions = {
+                    if (mascota != null) {
+                        IconButton(onClick = { onEdit(mascotaId) }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Editar Mascota")
+                        }
+                    }
                 }
             )
         }
@@ -140,24 +152,42 @@ fun MascotaDetailScreen(
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Tarjeta Principal
                         item {
                             ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(
-                                        text = m.nombre,
-                                        style = MaterialTheme.typography.headlineMedium,
-                                        fontWeight = FontWeight.Bold
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(
+                                        modifier = Modifier.weight(1f),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = m.nombre,
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        InfoItem("Especie", m.especie.value)
+                                        InfoItem("Raza", m.raza?.nombre ?: "Mestizo")
+                                        m.sexo?.let { InfoItem("Sexo", it.value) }
+                                    }
+
+                                    Spacer(Modifier.width(16.dp))
+                                    val imageRes = if (m.especie.value.equals("GATO", ignoreCase = true)) {
+                                        R.drawable.gato_icon
+                                    } else {
+                                        R.drawable.perro_icon
+                                    }
+
+                                    Image(
+                                        painter = painterResource(id = imageRes),
+                                        contentDescription = m.especie.value,
+                                        modifier = Modifier.size(64.dp) // Tamaño pequeño
                                     )
-                                    Spacer(Modifier.height(8.dp))
-                                    InfoItem("Especie", m.especie.value)
-                                    InfoItem("Raza", m.raza?.nombre ?: "Mestizo")
-                                    m.sexo?.let { InfoItem("Sexo", it.value) }
                                 }
                             }
                         }
 
-                        // Tarjeta de Atributos
                         item {
                             Card(modifier = Modifier.fillMaxWidth()) {
                                 Column(
@@ -166,8 +196,6 @@ fun MascotaDetailScreen(
                                 ) {
                                     Text("Atributos", style = MaterialTheme.typography.titleMedium)
 
-                                    // --- INICIO CORRECCIÓN ---
-                                    // m.fechaNacimiento ahora es LocalDate?, no String?
                                     m.fechaNacimiento?.let { fecha ->
                                         val edad = Period.between(fecha, LocalDate.now())
                                         val aprox = if (m.esFechaAproximada) " (aprox.)" else ""
@@ -177,7 +205,6 @@ fun MascotaDetailScreen(
                                         InfoItem("Edad", edadStr)
                                         InfoItem("F. Nacimiento", "$fechaStr$aprox")
                                     }
-                                    // --- FIN CORRECCIÓN ---
 
                                     m.pesoKg?.let { InfoItem("Peso", "$it kg") }
                                     m.pelaje?.let { InfoItem("Pelaje", it.value) }
@@ -199,15 +226,11 @@ fun MascotaDetailScreen(
                             }
                         }
 
-                        // Acciones
+                        // === CAMBIO: Acciones (solo Eliminar) ===
                         item {
                             Spacer(Modifier.height(8.dp))
-                            Button(
-                                onClick = { onEdit(mascotaId) },
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text("Editar") }
 
-                            Spacer(Modifier.height(8.dp))
+                            // El botón "Editar" se movió a la TopAppBar
 
                             OutlinedButton(
                                 onClick = { showDeleteDialog = true },

@@ -2,21 +2,43 @@ package cl.clinipets.ui.agenda
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState // Importado para el scroll
+import androidx.compose.foundation.verticalScroll // Importado para el scroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.material.icons.filled.Notes
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.DiscoveryRequest
@@ -40,10 +62,9 @@ fun ReservaConfirmScreen(
 ) {
     val ui by vm.ui.collectAsState()
 
-    // Inicializar VM con datos mínimos para confirmar (no recargar slots)
     LaunchedEffect(Unit) {
         vm.init(
-            mascotaId = UUID.randomUUID(), // no se usa en VM
+            mascotaId = UUID.randomUUID(),
             procedimientoSku = procedimientoSku,
             modo = modo,
             lat = lat,
@@ -62,41 +83,121 @@ fun ReservaConfirmScreen(
         Column(
             Modifier
                 .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                // Padding aplicado al contenedor principal
+                .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
-            Text("Revisa la información antes de enviar:", style = MaterialTheme.typography.titleSmall)
-            Surface(tonalElevation = 2.dp) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Procedimiento: $procedimientoSku")
-                    Text("Modo: ${modo.name}")
-                    Text("Fecha: $fecha")
-                    Text("Hora: $horaInicio")
-                    lat?.let { Text("Lat: $it") }
-                    lng?.let { Text("Lng: $it") }
-                    veterinarioId?.let { Text("Veterinario: $it") }
-                    direccion?.let { Text("Dirección: $it") }
-                    referencias?.let { Text("Referencias: $it") }
-                }
-            }
 
-            ui.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-
-            Button(
-                onClick = { vm.crearReserva(onDone) },
-                enabled = !ui.isSubmitting,
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()), // CLAVE: Permite scroll
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                if (ui.isSubmitting) {
-                    CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
+                Text(
+                    "Revisa la información antes de enviar:",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(
+                        Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        InfoItem(Icons.Default.MedicalServices, "Procedimiento", procedimientoSku)
+                        InfoItem(Icons.Default.Info, "Modo", modo.name)
+                        InfoItem(Icons.Default.CalendarToday, "Fecha", fecha)
+                        InfoItem(Icons.Default.Schedule, "Hora", horaInicio)
+
+                        veterinarioId?.let {
+                            InfoItem(Icons.Default.Person, "Veterinario", it.toString())
+                        }
+                        direccion?.let {
+                            if (it.isNotBlank()) InfoItem(Icons.Default.LocationOn, "Dirección", it)
+                        }
+                        referencias?.let {
+                            if (it.isNotBlank()) InfoItem(Icons.Default.Notes, "Referencias", it)
+                        }
+                    }
                 }
-                Text(if (ui.isSubmitting) "Enviando..." else "Confirmar reserva")
+
+                ui.error?.let {
+                    Text(
+                        it,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 16.dp)
+                    )
+                }
             }
 
-            Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-                Text("Volver")
+
+            Column(
+                modifier = Modifier.padding(top = 16.dp), // Espacio entre contenido y botones
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { vm.crearReserva(onDone) },
+                    enabled = !ui.isSubmitting,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (ui.isSubmitting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(ButtonDefaults.IconSize),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                            Text("Confirmando...")
+                        } else {
+                            Text("Confirmar reserva")
+                        }
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = onBack,
+                    enabled = !ui.isSubmitting,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Volver")
+                }
             }
+
         }
     }
 }
 
+
+@Composable
+private fun InfoItem(
+    icon: ImageVector,
+    label: String,
+    value: String
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(Modifier.width(16.dp))
+        Column {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
