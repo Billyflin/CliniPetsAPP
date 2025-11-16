@@ -1,6 +1,8 @@
 package cl.clinipets.ui.mascotas
 
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -19,23 +22,26 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -62,6 +68,7 @@ fun MascotasScreen(
     LaunchedEffect(Unit) { vm.cargar() }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
         topBar = {
             TopAppBar(
                 title = { Text("Mis Mascotas") },
@@ -74,73 +81,87 @@ fun MascotasScreen(
                     IconButton(onClick = { vm.refrescar() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refrescar")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onNavigateToMascotaForm) {
+            FloatingActionButton(
+                onClick = onNavigateToMascotaForm,
+                shape = FloatingActionButtonDefaults.shape,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
                 Icon(Icons.Default.Add, contentDescription = "Agregar Mascota")
             }
         }
     ) { padding ->
-        Box(
+        Surface(
             modifier = Modifier
                 .padding(padding)
-                .fillMaxSize()
+                .fillMaxSize(),
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
         ) {
-            when {
-                // Estado de carga inicial
-                cargando && mascotas.isEmpty() -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                when {
+                    cargando && mascotas.isEmpty() -> {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    }
 
-                // Estado de error
-                error != null -> {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = error!!,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            textAlign = TextAlign.Center
-                        )
-                        Button(onClick = { vm.refrescar() }) {
-                            Text("Reintentar")
+                    error != null -> {
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = error!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center
+                            )
+                            Button(onClick = { vm.refrescar() }) {
+                                Text("Reintentar")
+                            }
                         }
                     }
-                }
 
-                // Estado vacío
-                mascotas.isEmpty() -> {
-                    Text(
-                        text = displayName?.let { "No hay mascotas registradas para $it." }
-                            ?: "Aún no tienes mascotas registradas.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(16.dp),
-                        textAlign = TextAlign.Center
-                    )
-                }
+                    mascotas.isEmpty() -> {
+                        Text(
+                            text = displayName?.let { "No hay mascotas registradas para $it." }
+                                ?: "Aún no tienes mascotas registradas.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(16.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
 
-                else -> {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2), // La grilla de 2 columnas
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(mascotas, key = { it.id!! }) { mascota ->
-                            MascotaCard( // El Card ahora es un casillero
-                                mascota = mascota,
-                                onClick = { onNavigateToMascotaDetail(mascota.id!!) }
-                            )
+                    else -> {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 160.dp),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(mascotas, key = { it.id!! }) { mascota ->
+                                MascotaCard(
+                                    mascota = mascota,
+                                    onClick = { onNavigateToMascotaDetail(mascota.id!!) }
+                                )
+                            }
                         }
                     }
                 }
@@ -151,19 +172,43 @@ fun MascotasScreen(
 
 @Composable
 private fun MascotaCard(mascota: Mascota, onClick: () -> Unit) {
-    ElevatedCard(
+    val cardShape = RoundedCornerShape(24.dp)
+
+
+    Box(
         modifier = Modifier
-            .height(185.dp)
+            .heightIn(min = 190.dp)
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+            .clip(cardShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .clickable(onClick = onClick)
     ) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .size(40.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(bottomEnd = 24.dp)
+                )
+        )
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .size(40.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(topStart = 24.dp)
+                )
+        )
+
         Column(
             modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
+                .fillMaxSize()
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             val imageRes = if (mascota.especie.value.equals("GATO", ignoreCase = true)) {
                 R.drawable.gato_icon
@@ -174,25 +219,33 @@ private fun MascotaCard(mascota: Mascota, onClick: () -> Unit) {
             Image(
                 painter = painterResource(id = imageRes),
                 contentDescription = mascota.especie.value,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier
+                    .size(75.dp)
+                    .padding(top = 8.dp)
             )
 
-            Text(
-                text = mascota.nombre,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center
-            )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = mascota.nombre,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Start
+                )
 
-            val razaNombre = mascota.raza?.nombre?.takeIf { it.isNotBlank() }
-            Text(
-                text = "${mascota.especie.value}${razaNombre?.let { " - $it" } ?: ""}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
+                val razaNombre = mascota.raza?.nombre?.takeIf { it.isNotBlank() }
+                Text(
+                    text = "${mascota.especie.value}${razaNombre?.let { " - $it" } ?: ""}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Start
+                )
+            }
         }
     }
 }
