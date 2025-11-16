@@ -61,7 +61,6 @@ fun HomeScreen(
     onNavigateToMiCatalogo: () -> Unit,
     onNavigateToMiDisponibilidad: () -> Unit,
     onNavigateToAgenda: () -> Unit,
-    // [CAMBIO] Parámetros actualizados para las dos rutas de agenda
     onNavigateToAgendaCliente: () -> Unit,
     onNavigateToAgendaVeterinario: () -> Unit,
     vm: HomeViewModel = hiltViewModel()
@@ -85,7 +84,7 @@ fun HomeScreen(
             item { Spacer(Modifier.height(12.dp)) }
             item {
                 QuickActions(
-                    isVeterinarian = isVeterinarian, // Se pasa el rol para el texto dinámico
+                    isVeterinarian = isVeterinarian,
                     onMascotas = onNavigateToMascotas,
                     onAgenda = onNavigateToAgenda,
                     onNavigateToAgendaCliente = onNavigateToAgendaCliente
@@ -99,7 +98,7 @@ fun HomeScreen(
                     VetToolsCompact(
                         onNavigateToMiCatalogo = onNavigateToMiCatalogo,
                         onNavigateToMiDisponibilidad = onNavigateToMiDisponibilidad,
-                        onNavigateToAgendaVeterinario = onNavigateToAgendaVeterinario // Se pasa la acción de agenda vet
+                        onNavigateToAgendaVeterinario = onNavigateToAgendaVeterinario
                     )
                 }
             }
@@ -111,7 +110,7 @@ fun HomeScreen(
 private fun HomeHeader(
     displayName: String?, onNavigateToProfile: () -> Unit
 ) {
-    val name = displayName?.takeIf { it.isNotBlank() } ?: "Bienvenido"
+    val name = displayName?.takeIf { it.isNotBlank() }?.split(" ")?.firstOrNull() ?: "Bienvenido"
 
     Card(
         modifier = Modifier
@@ -197,12 +196,11 @@ private data class ActionItem(
 
 @Composable
 private fun QuickActions(
-    isVeterinarian: Boolean, // Se recibe para el texto dinámico
+    isVeterinarian: Boolean,
     onMascotas: () -> Unit,
     onAgenda: () -> Unit,
     onNavigateToAgendaCliente: () -> Unit
 ) {
-    // [CAMBIO] Título dinámico para el botón de reservas de cliente
     val tituloReservas = if (isVeterinarian) "Mis Reservas (Cliente)" else "Mis Reservas"
 
     val items = buildList {
@@ -225,7 +223,7 @@ private fun QuickActions(
         add(
             ActionItem(
                 Icons.AutoMirrored.Filled.EventNote,
-                tituloReservas, // Se usa el título dinámico
+                tituloReservas,
                 MaterialTheme.colorScheme.surfaceContainerHighest,
                 onNavigateToAgendaCliente
             )
@@ -306,7 +304,7 @@ private fun ActionChip(item: ActionItem) {
 private fun VetToolsCompact(
     onNavigateToMiCatalogo: () -> Unit,
     onNavigateToMiDisponibilidad: () -> Unit,
-    onNavigateToAgendaVeterinario: () -> Unit // [CAMBIO] Se recibe la acción
+    onNavigateToAgendaVeterinario: () -> Unit
 ) {
     val actions = listOf(
         ActionItem(
@@ -320,7 +318,6 @@ private fun VetToolsCompact(
             MaterialTheme.colorScheme.surfaceVariant,
             onNavigateToMiDisponibilidad
         ),
-        // [CAMBIO] Botón de agenda (vet) movido a esta sección
         ActionItem(
             Icons.AutoMirrored.Filled.EventNote,
             "Mis Agendas (Vet)",
