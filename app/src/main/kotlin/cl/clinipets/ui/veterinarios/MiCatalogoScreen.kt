@@ -1,5 +1,7 @@
 package cl.clinipets.ui.veterinarios
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -13,16 +15,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -37,11 +44,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -62,12 +71,10 @@ import java.text.NumberFormat
 import java.util.Locale
 import java.util.logging.Logger
 
-// Helper para formatear moneda CLP ($10.000)
 private val clpFormatter: NumberFormat = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-CL")).apply {
     maximumFractionDigits = 0
 }
 
-// Helpers para formatear compatibilidad como texto amigable
 private fun formatCompatItem(set: Set<Procedimiento.CompatibleCon>): String {
     val perro = set.contains(Procedimiento.CompatibleCon.PERRO)
     val gato = set.contains(Procedimiento.CompatibleCon.GATO)
@@ -80,7 +87,15 @@ private fun formatCompatItem(set: Set<Procedimiento.CompatibleCon>): String {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) // Añadido ExperimentalLayoutApi
+private val fieldShape = RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
+private val chipShape = CutCornerShape(topStart = 12.dp, bottomEnd = 12.dp)
+private val buttonShape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
+private val itemCardShape = RoundedCornerShape(topStart = 32.dp, topEnd = 8.dp, bottomStart = 8.dp, bottomEnd = 32.dp)
+private val pendingCardShape = RoundedCornerShape(topStart = 8.dp, topEnd = 32.dp, bottomStart = 32.dp, bottomEnd = 8.dp)
+private val addCardShape = RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
+
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CatalogoItemRow(
     item: ItemCatalogo,
@@ -88,7 +103,14 @@ fun CatalogoItemRow(
     onEditDuracion: () -> Unit,
     onEditPrecio: () -> Unit
 ) {
-    ElevatedCard(Modifier.fillMaxWidth()) {
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = itemCardShape,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -96,7 +118,7 @@ fun CatalogoItemRow(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
-                    modifier = Modifier.weight(1f), // Devolver el weight para que el Switch no se comprima
+                    modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
@@ -105,7 +127,6 @@ fun CatalogoItemRow(
                         fontWeight = FontWeight.SemiBold
                     )
 
-                    // --- Lógica de Precio ---
                     val precioEfectivo = item.precioOverride ?: item.procedimiento.precio
                     val precioFormateado = remember(precioEfectivo) { clpFormatter.format(precioEfectivo) }
                     val precioOverrideText = if (item.precioOverride != null) " (personalizado)" else ""
@@ -115,7 +136,6 @@ fun CatalogoItemRow(
                         color = if (item.precioOverride != null) MaterialTheme.colorScheme.primary else Color.Unspecified
                     )
 
-                    // --- Lógica de Duración ---
                     val duracionEfectiva = item.duracionMinutosOverride ?: item.procedimiento.duracionMinutos
                     val duracionOverrideText = if (item.duracionMinutosOverride != null) " (personalizado)" else ""
                     Text(
@@ -124,7 +144,6 @@ fun CatalogoItemRow(
                         color = if (item.duracionMinutosOverride != null) MaterialTheme.colorScheme.primary else Color.Unspecified
                     )
 
-                    // 1. Mostrar Compatibilidad (formateado)
                     Text(
                         "Compatible con: ${formatCompatItem(item.procedimiento.compatibleCon)}",
                         style = MaterialTheme.typography.bodySmall,
@@ -143,9 +162,9 @@ fun CatalogoItemRow(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedButton(onClick = onEditPrecio) { Text("Editar Precio") }
+                OutlinedButton(onClick = onEditPrecio, shape = buttonShape) { Text("Editar Precio") }
                 Spacer(Modifier.width(8.dp))
-                OutlinedButton(onClick = onEditDuracion) { Text("Editar Duración") }
+                OutlinedButton(onClick = onEditDuracion, shape = buttonShape) { Text("Editar Duración") }
             }
         }
     }
@@ -159,13 +178,23 @@ fun ProcedimientoSelectableRow(
     badge: String? = null,
     onToggle: () -> Unit
 ) {
-    ElevatedCard(Modifier.fillMaxWidth()) {
+    Card(
+        Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClick = onToggle),
+        shape = addCardShape,
+        colors = CardDefaults.cardColors(
+            containerColor = if (enabled) MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
+            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
+    ) {
         Row(
             Modifier.padding(12.dp),
             verticalAlignment = Alignment.Top
         ) {
             Checkbox(
-                checked = selected, onCheckedChange = { if (enabled) onToggle() }, enabled = enabled
+                checked = selected, onCheckedChange = null, enabled = enabled
             )
             Column(Modifier.padding(start = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -180,7 +209,6 @@ fun ProcedimientoSelectableRow(
                     }
                 }
                 Text("SKU: ${proc.sku}", style = MaterialTheme.typography.bodySmall)
-                // --- Compatibilidad formateada ---
                 Text(
                     "Compatible con: ${formatCompatItem(proc.compatibleCon)}",
                     style = MaterialTheme.typography.bodySmall,
@@ -194,7 +222,7 @@ fun ProcedimientoSelectableRow(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MiCatalogoScreen(
     onBack: () -> Unit,
@@ -202,46 +230,43 @@ fun MiCatalogoScreen(
 ) {
     val cargando by vm.cargando.collectAsState()
     val error by vm.error.collectAsState()
-    val success by vm.success.collectAsState() // <-- CORRECCIÓN 3: Recolectar success
+    val success by vm.success.collectAsState()
     val catalogo by vm.miCatalogo.collectAsState()
     val seleccion by vm.seleccionParaAgregar.collectAsState()
     val filtro by vm.filtroCompatible.collectAsState()
     val procsFiltrados by vm.procedimientosFiltrados.collectAsState(initial = emptyList())
     val procedimientosAll by vm.procedimientos.collectAsState(initial = emptyList())
     val itemsEfectivos by vm.itemsCatalogoEfectivos.collectAsState(initial = emptyList())
-    val isDirty by vm.isDirty.collectAsState() // <-- CORRECCIÓN 1: Recolectar isDirty
+    val isDirty by vm.isDirty.collectAsState()
 
     val showSheet = remember { mutableStateOf(false) }
 
-    // Estados separados para cada diálogo
     var editDuracionSku by remember { mutableStateOf<String?>(null) }
     var editPrecioSku by remember { mutableStateOf<String?>(null) }
 
-    // --- CORRECCIÓN 3: Preparar Snackbar ---
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) { vm.cargarCatalogoYProcedimientos() }
 
-    // --- CORRECCIÓN 3: Efecto para mostrar Snackbar de error ---
     LaunchedEffect(error) {
         if (error != null) {
             snackbarHostState.showSnackbar(
                 message = error!!,
                 duration = SnackbarDuration.Long
             )
-            vm.limpiarError() // Limpiar después de mostrar
+            vm.limpiarError()
         }
     }
 
-    // --- CORRECCIÓN 3: Efecto para mostrar Snackbar de éxito ---
     LaunchedEffect(success) {
         if (success != null) {
             snackbarHostState.showSnackbar(message = success!!)
-            vm.limpiarError() // La función también limpia 'success'
+            vm.limpiarError()
         }
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
         topBar = {
             TopAppBar(
                 title = { Text("Mi catálogo") },
@@ -253,123 +278,135 @@ fun MiCatalogoScreen(
                     ) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refrescar")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         },
-        // --- CORRECCIÓN 3: Añadir SnackbarHost ---
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
+            BottomAppBar(
+                containerColor = MaterialTheme.colorScheme.surface
             ) {
-                OutlinedButton(onClick = { showSheet.value = true }, enabled = !cargando) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Agregar servicios")
-                }
-                Spacer(Modifier.width(8.dp))
-                Button(
-                    onClick = { vm.guardarCatalogo() },
-                    // --- CORRECCIÓN 1: Usar isDirty para habilitar el botón ---
-                    enabled = !cargando && isDirty
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Guardar cambios")
+                    OutlinedButton(onClick = { showSheet.value = true }, enabled = !cargando, shape = buttonShape) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Agregar servicios")
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = { vm.guardarCatalogo() },
+                        enabled = !cargando && isDirty,
+                        shape = buttonShape
+                    ) {
+                        Text("Guardar cambios")
+                    }
                 }
             }
         }
     ) { padding ->
-        LazyColumn(
+        Surface(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize(),
-            contentPadding = PaddingValues(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
         ) {
-            // --- CORRECCIÓN 3: Quitar el AssistChip de error ---
-            // if (error != null) { ... }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
 
-            if (cargando && catalogo == null) {
-                item {
-                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (cargando && catalogo == null) {
+                    item {
+                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                    }
                 }
-            }
 
-            // Sección de pendientes por agregar (previa al guardado)
-            if (seleccion.isNotEmpty()) {
-                item {
-                    ElevatedCard(
-                        Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                "Pendientes por agregar (${seleccion.size})",
-                                fontWeight = FontWeight.Bold
+                if (seleccion.isNotEmpty()) {
+                    item {
+                        Card(
+                            Modifier.fillMaxWidth(),
+                            shape = pendingCardShape,
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
                             )
-                            val mapProc = procedimientosAll.associateBy { it.sku }
-                            seleccion.sorted().forEach { sku ->
-                                val p = mapProc[sku]
-                                Text(text = p?.let { "${it.nombre} (${it.sku})" } ?: sku, style = MaterialTheme.typography.bodySmall)
+                        ) {
+                            Column(
+                                Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    "Pendientes por agregar (${seleccion.size})",
+                                    fontWeight = FontWeight.Bold
+                                )
+                                val mapProc = procedimientosAll.associateBy { it.sku }
+                                seleccion.sorted().forEach { sku ->
+                                    val p = mapProc[sku]
+                                    Text(text = p?.let { "${it.nombre} (${it.sku})" } ?: sku, style = MaterialTheme.typography.bodySmall)
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // Encabezado para la lista principal
-            item {
-                Text(
-                    "Servicios en mi catálogo",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
-                )
-            }
+                item {
+                    Text(
+                        "Servicios en mi catálogo",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+                    )
+                }
 
-            // Lista principal de items
-            items(
-                items = itemsEfectivos,
-                key = { it.procedimiento.sku } // Key para mejor performance
-            ) { item: ItemCatalogo ->
-                CatalogoItemRow(
-                    item = item,
-                    onToggleHabilitado = { newVal: Boolean ->
-                        vm.setItemHabilitado(item.procedimiento.sku, newVal)
-                    },
-                    onEditDuracion = { editDuracionSku = item.procedimiento.sku },
-                    onEditPrecio = { editPrecioSku = item.procedimiento.sku }
-                )
+                items(
+                    items = itemsEfectivos,
+                    key = { it.procedimiento.sku }
+                ) { item: ItemCatalogo ->
+                    CatalogoItemRow(
+                        item = item,
+                        onToggleHabilitado = { newVal: Boolean ->
+                            vm.setItemHabilitado(item.procedimiento.sku, newVal)
+                        },
+                        onEditDuracion = { editDuracionSku = item.procedimiento.sku },
+                        onEditPrecio = { editPrecioSku = item.procedimiento.sku }
+                    )
+                }
             }
         }
 
-        // Bottom sheet para agregar
         if (showSheet.value) {
             ModalBottomSheet(onDismissRequest = { showSheet.value = false }) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Agregar desde procedimientos", style = MaterialTheme.typography.titleLarge)
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = (filtro == null), onClick = { vm.setFiltroCompatibleCon(null) }, label = { Text("Todos") })
-                        FilterChip(selected = (filtro == Procedimiento.CompatibleCon.PERRO), onClick = { vm.setFiltroCompatibleCon(Procedimiento.CompatibleCon.PERRO) }, label = { Text("Perro") })
-                        FilterChip(selected = (filtro == Procedimiento.CompatibleCon.GATO), onClick = { vm.setFiltroCompatibleCon(Procedimiento.CompatibleCon.GATO) }, label = { Text("Gato") })
+                        FilterChip(selected = (filtro == null), onClick = { vm.setFiltroCompatibleCon(null) }, label = { Text("Todos") }, shape = chipShape)
+                        FilterChip(selected = (filtro == Procedimiento.CompatibleCon.PERRO), onClick = { vm.setFiltroCompatibleCon(Procedimiento.CompatibleCon.PERRO) }, label = { Text("Perro") }, shape = chipShape)
+                        FilterChip(selected = (filtro == Procedimiento.CompatibleCon.GATO), onClick = { vm.setFiltroCompatibleCon(Procedimiento.CompatibleCon.GATO) }, label = { Text("Gato") }, shape = chipShape)
                     }
                     Spacer(Modifier.height(8.dp))
-                    TextField(
+                    OutlinedTextField(
                         value = vm.busqueda.collectAsState().value,
                         onValueChange = vm::setBusqueda,
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Buscar por nombre o SKU") }
+                        label = { Text("Buscar por nombre o SKU") },
+                        shape = fieldShape
                     )
                     Spacer(Modifier.height(8.dp))
                     val existentesSkus = remember(catalogo) { catalogo?.items?.map { it.procedimiento.sku }?.toSet() ?: emptySet() }
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(360.dp), // Altura fija es ok dentro de un BottomSheet
+                            .height(360.dp),
                         contentPadding = PaddingValues(vertical = 6.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -386,15 +423,14 @@ fun MiCatalogoScreen(
                     }
                     Spacer(Modifier.height(8.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        OutlinedButton(onClick = { vm.limpiarSeleccion() }) { Text("Limpiar selección") }
+                        OutlinedButton(onClick = { vm.limpiarSeleccion() }, shape = buttonShape) { Text("Limpiar selección") }
                         Spacer(Modifier.width(8.dp))
-                        Button(onClick = { showSheet.value = false }) { Text("Listo") }
+                        Button(onClick = { showSheet.value = false }, shape = buttonShape) { Text("Listo") }
                     }
                 }
             }
         }
 
-        // --- Diálogo para editar DURACIÓN ---
         val itemParaEditarDuracion = itemsEfectivos.find { it.procedimiento.sku == editDuracionSku }
         if (itemParaEditarDuracion != null) {
             var input by remember(editDuracionSku) {
@@ -415,33 +451,40 @@ fun MiCatalogoScreen(
                             },
                             label = { Text("Minutos") },
                             singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            shape = fieldShape
                         )
                         Text("Vista previa: ${input.toIntOrNull() ?: itemParaEditarDuracion.procedimiento.duracionMinutos} min efectivos")
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        vm.setItemDuracionOverride(itemParaEditarDuracion.procedimiento.sku, input.toIntOrNull())
-                        editDuracionSku = null
-                    }) { Text("Guardar") }
-                },
-                dismissButton = {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(
+
+                        OutlinedButton(
                             onClick = {
                                 vm.setItemDuracionOverride(itemParaEditarDuracion.procedimiento.sku, null)
                                 editDuracionSku = null
                             },
-                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                        ) { Text("Quitar override") }
-                        TextButton(onClick = { editDuracionSku = null }) { Text("Cancelar") }
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            modifier = Modifier.padding(top = 8.dp),
+                            shape = buttonShape
+                        ) { Text("Reestablecer a valor estándar") }
                     }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            vm.setItemDuracionOverride(itemParaEditarDuracion.procedimiento.sku, input.toIntOrNull())
+                            editDuracionSku = null
+                        },
+                        shape = buttonShape
+                    ) { Text("Guardar") }
+                },
+                dismissButton = {
+                    OutlinedButton(
+                        onClick = { editDuracionSku = null },
+                        shape = buttonShape
+                    ) { Text("Cancelar") }
                 }
             )
         }
 
-        // --- Diálogo para editar PRECIO ---
         val itemParaEditarPrecio = itemsEfectivos.find { it.procedimiento.sku == editPrecioSku }
         if (itemParaEditarPrecio != null) {
             var input by remember(editPrecioSku) {
@@ -462,30 +505,38 @@ fun MiCatalogoScreen(
                             label = { Text("Precio (CLP)") },
                             prefix = { Text("$ ") },
                             singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            shape = fieldShape
                         )
                         val precioEfectivo = input.toIntOrNull() ?: itemParaEditarPrecio.procedimiento.precio
                         val precioFormateado = remember(precioEfectivo) { clpFormatter.format(precioEfectivo) }
                         Text("Vista previa: $precioFormateado efectivos")
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        vm.setItemPrecioOverride(itemParaEditarPrecio.procedimiento.sku, input.toIntOrNull())
-                        editPrecioSku = null
-                    }) { Text("Guardar") }
-                },
-                dismissButton = {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(
+
+                        OutlinedButton(
                             onClick = {
                                 vm.setItemPrecioOverride(itemParaEditarPrecio.procedimiento.sku, null)
                                 editPrecioSku = null
                             },
-                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                        ) { Text("Quitar override") }
-                        TextButton(onClick = { editPrecioSku = null }) { Text("Cancelar") }
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            modifier = Modifier.padding(top = 8.dp),
+                            shape = buttonShape
+                        ) { Text("Reestablecer a valor estándar") }
                     }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            vm.setItemPrecioOverride(itemParaEditarPrecio.procedimiento.sku, input.toIntOrNull())
+                            editPrecioSku = null
+                        },
+                        shape = buttonShape
+                    ) { Text("Guardar") }
+                },
+                dismissButton = {
+                    OutlinedButton(
+                        onClick = { editPrecioSku = null },
+                        shape = buttonShape
+                    ) { Text("Cancelar") }
                 }
             )
         }
