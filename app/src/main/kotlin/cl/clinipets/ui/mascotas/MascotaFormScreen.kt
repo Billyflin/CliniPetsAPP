@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -40,9 +42,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,6 +58,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -68,6 +74,9 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 private val UI_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
+
+private val fieldShape = RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
+private val chipShape = CutCornerShape(topStart = 12.dp, bottomEnd = 12.dp)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -84,7 +93,6 @@ fun MascotaFormScreen(
     val isEditing = mascotaId != null
     var didPrefill by rememberSaveable { mutableStateOf(false) }
 
-    // --- Estados del Formulario ---
     var nombre by rememberSaveable { mutableStateOf("") }
     var especie by rememberSaveable { mutableStateOf(CrearMascota.Especie.PERRO) }
     var selectedRaza by remember { mutableStateOf<Raza?>(null) }
@@ -99,23 +107,17 @@ fun MascotaFormScreen(
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
 
-    // NUEVO: Estado para controlar si el campo "nombre" ha sido tocado
     var nombreIsDirty by rememberSaveable { mutableStateOf(false) }
-    // --- Fin Estados ---
 
-    // === Lógica de Validación ===
-    // Define si el nombre es válido (requisito obligatorio)
     val isNombreValido = nombre.isNotBlank()
-    // Define si se debe mostrar el error: solo si el campo ha sido tocado Y no es válido
     val showNombreError = nombreIsDirty && !isNombreValido
-    // ===========================
+
 
     val handleBack = {
         vm.limpiarSeleccion()
         onBack()
     }
 
-    // --- Lógica de Carga y Pre-llenado ---
     LaunchedEffect(mascotaId) {
         if (isEditing && !didPrefill) {
             vm.detalle(mascotaId!!)
@@ -140,7 +142,7 @@ fun MascotaFormScreen(
                     .toSet()
 
             didPrefill = true
-            nombreIsDirty = true // CAMBIO: Si estamos editando, asumimos que el campo ya está "sucio"
+            nombreIsDirty = true
         }
     }
 
@@ -148,9 +150,7 @@ fun MascotaFormScreen(
         val dtoEspecie = ListarRazasRequest.Especie.valueOf(especie.value)
         vm.cargarRazas(dtoEspecie)
     }
-    // --- Fin Lógica de Carga ---
 
-    // --- Lógica del DatePicker ---
     val selectedDateMillis = remember(fechaNacimiento) {
         if (fechaNacimiento.isBlank()) null
         else {
@@ -196,9 +196,7 @@ fun MascotaFormScreen(
             DatePicker(state = datePickerState)
         }
     }
-    // --- FIN DatePicker ---
 
-    // --- Lógica del ColorPicker (Diálogo) ---
     if (showColorPicker) {
         MultiSelectDialog(
             title = "Seleccionar Colores",
@@ -212,10 +210,10 @@ fun MascotaFormScreen(
             optionToString = { it.value }
         )
     }
-    // --- FIN ColorPicker ---
 
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
         topBar = {
             TopAppBar(
                 title = { Text(if (isEditing) "Editar Mascota" else "Nueva Mascota") },
@@ -223,21 +221,23 @@ fun MascotaFormScreen(
                     IconButton(onClick = handleBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    // CAMBIO: Si el formulario no es válido...
                     if (!isNombreValido || cargando) {
-                        // NUEVO: ...forzamos que el campo "nombre" se marque como "sucio"...
                         nombreIsDirty = true
-                        // ...y detenemos la ejecución.
                         return@FloatingActionButton
                     }
 
-                    // Si llegamos aquí, el formulario es válido
                     val dtoRazaId = selectedRaza?.id
                     val dtoPeso = pesoKg.toDoubleOrNull()
                     val dtoFecha = try {
@@ -281,7 +281,7 @@ fun MascotaFormScreen(
                     }
                     handleBack()
                 },
-                // CAMBIO: Usar la variable de validación para el color
+                shape = MaterialTheme.shapes.large,
                 containerColor = if (!isNombreValido || cargando) {
                     MaterialTheme.colorScheme.surfaceVariant
                 } else {
@@ -296,229 +296,237 @@ fun MascotaFormScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
+        Surface(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
         ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
 
-            if (cargando && isEditing && !didPrefill) {
-                item {
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-            }
-
-            // --- Título de Sección ---
-            item {
-                Text(
-                    "Información Básica",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-            }
-
-            // === CAMBIO: Campo Nombre con Mensaje de Error ===
-            item {
-                OutlinedTextField(
-                    value = nombre,
-                    onValueChange = {
-                        nombre = it
-                        // NUEVO: Marcar el campo como "sucio" en cuanto el usuario escribe
-                        nombreIsDirty = true
-                    },
-                    label = { Text("Nombre *") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    // CAMBIO: El error se muestra solo si 'showNombreError' es verdadero
-                    isError = showNombreError,
-                    // NUEVO: Mensaje de error descriptivo
-                    supportingText = {
-                        if (showNombreError) {
-                            Text("El nombre es un campo obligatorio")
+                if (cargando && isEditing && !didPrefill) {
+                    item {
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
                         }
                     }
-                )
-            }
-            // === FIN CAMBIO ===
-
-            item {
-                Text("Especie *", style = MaterialTheme.typography.bodyLarge)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CrearMascota.Especie.entries.forEach { e ->
-                        FilterChip(
-                            selected = (e == especie),
-                            onClick = {
-                                if (e != especie) selectedRaza = null
-                                especie = e
-                            },
-                            label = { Text(e.value) },
-                            enabled = !isEditing
-                        )
-                    }
                 }
-            }
 
-            item {
-                RazaSelector(
-                    razas = razas,
-                    selected = selectedRaza,
-                    onSelected = { selectedRaza = it },
-                    enabled = razas.isNotEmpty()
-                )
-            }
-
-            item {
-                Text("Sexo", style = MaterialTheme.typography.bodyLarge)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CrearMascota.Sexo.entries.forEach { s ->
-                        FilterChip(
-                            selected = (s == sexo),
-                            onClick = { sexo = s },
-                            label = { Text(s.value) }
-                        )
-                    }
+                item {
+                    Text(
+                        "Información Básica",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
                 }
-            }
 
-            // --- Título de Sección ---
-            item {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Detalles Físicos y Salud",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-            }
-
-            item {
-                OutlinedTextField(
-                    value = pesoKg,
-                    onValueChange = { pesoKg = it.replace(",", ".") },
-                    label = { Text("Peso (kg)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                )
-            }
-
-            // Campo fecha con calendario
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showDatePicker = true }
-                ) {
+                item {
                     OutlinedTextField(
-                        value = fechaNacimiento,
-                        onValueChange = {}, // No editable manualmente
-                        label = { Text("Fecha Nacimiento") },
+                        value = nombre,
+                        onValueChange = {
+                            nombre = it
+                            nombreIsDirty = true
+                        },
+                        label = { Text("Nombre *") },
                         modifier = Modifier.fillMaxWidth(),
-                        readOnly = true,
-                        enabled = false,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                            disabledBorderColor = MaterialTheme.colorScheme.outline,
-                            disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        trailingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.CalendarToday,
-                                contentDescription = "Seleccionar fecha"
+                        singleLine = true,
+                        isError = showNombreError,
+                        supportingText = {
+                            if (showNombreError) {
+                                Text("El nombre es un campo obligatorio")
+                            }
+                        },
+                        shape = fieldShape
+                    )
+                }
+
+                item {
+                    Text("Especie *", style = MaterialTheme.typography.bodyLarge)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        CrearMascota.Especie.entries.forEach { e ->
+                            FilterChip(
+                                selected = (e == especie),
+                                onClick = {
+                                    if (e != especie) selectedRaza = null
+                                    especie = e
+                                },
+                                label = { Text(e.value) },
+                                enabled = !isEditing,
+                                shape = chipShape
                             )
                         }
-                    )
-                }
-            }
-
-            item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = esFechaAproximada,
-                        onCheckedChange = { esFechaAproximada = it }
-                    )
-                    Text(
-                        text = "La fecha de nacimiento es aproximada",
-                        modifier = Modifier.clickable { esFechaAproximada = !esFechaAproximada }
-                    )
-                }
-            }
-
-            item {
-                EnumDropdownSelector(
-                    label = "Pelaje",
-                    options = CrearMascota.Pelaje.entries,
-                    selected = pelaje,
-                    onSelected = { pelaje = it },
-                    optionToString = { it.value },
-                    enabled = true
-                )
-            }
-
-            item {
-                EnumDropdownSelector(
-                    label = "Patrón",
-                    options = CrearMascota.Patron.entries,
-                    selected = patron,
-                    onSelected = { patron = it },
-                    optionToString = { it.value },
-                    enabled = true
-                )
-            }
-
-            item {
-                val coloresText = if (colores.isEmpty()) {
-                    "Selecciona colores"
-                } else {
-                    colores.sortedBy { it.value }.joinToString(", ") { it.value }
+                    }
                 }
 
-                Box(modifier = Modifier.clickable { showColorPicker = true }) {
-                    OutlinedTextField(
-                        value = coloresText,
-                        onValueChange = {},
-                        label = { Text("Colores") },
-                        readOnly = true,
-                        enabled = false,
-                        modifier = Modifier.fillMaxWidth(),
-                        trailingIcon = {
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Abrir selector de colores")
-                        },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                            disabledBorderColor = MaterialTheme.colorScheme.outline,
-                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                item {
+                    RazaSelector(
+                        razas = razas,
+                        selected = selectedRaza,
+                        onSelected = { selectedRaza = it },
+                        enabled = razas.isNotEmpty()
                     )
                 }
-            }
 
+                item {
+                    Text("Sexo", style = MaterialTheme.typography.bodyLarge)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        CrearMascota.Sexo.entries.forEach { s ->
+                            FilterChip(
+                                selected = (s == sexo),
+                                onClick = { sexo = s },
+                                label = { Text(s.value) },
+                                shape = chipShape
+                            )
+                        }
+                    }
+                }
 
-            if (error != null) {
                 item {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = error!!,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
+                        "Detalles Físicos y Salud",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 4.dp)
                     )
-                    Button(onClick = { vm.limpiarError() }) { Text("Entendido") }
                 }
-            }
 
-            item { Spacer(Modifier.height(80.dp)) } // Espacio para el FAB
+                item {
+                    OutlinedTextField(
+                        value = pesoKg,
+                        onValueChange = { pesoKg = it.replace(",", ".") },
+                        label = { Text("Peso (kg)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        shape = fieldShape
+                    )
+                }
+
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(fieldShape)
+                            .clickable { showDatePicker = true }
+                    ) {
+                        OutlinedTextField(
+                            value = fechaNacimiento,
+                            onValueChange = {},
+                            label = { Text("Fecha Nacimiento") },
+                            modifier = Modifier.fillMaxWidth(),
+                            readOnly = true,
+                            enabled = false,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            trailingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = "Seleccionar fecha"
+                                )
+                            },
+                            shape = fieldShape
+                        )
+                    }
+                }
+
+                item {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = esFechaAproximada,
+                            onCheckedChange = { esFechaAproximada = it }
+                        )
+                        Text(
+                            text = "La fecha de nacimiento es aproximada",
+                            modifier = Modifier.clickable { esFechaAproximada = !esFechaAproximada }
+                        )
+                    }
+                }
+
+                item {
+                    EnumDropdownSelector(
+                        label = "Pelaje",
+                        options = CrearMascota.Pelaje.entries,
+                        selected = pelaje,
+                        onSelected = { pelaje = it },
+                        optionToString = { it.value },
+                        enabled = true
+                    )
+                }
+
+                item {
+                    EnumDropdownSelector(
+                        label = "Patrón",
+                        options = CrearMascota.Patron.entries,
+                        selected = patron,
+                        onSelected = { patron = it },
+                        optionToString = { it.value },
+                        enabled = true
+                    )
+                }
+
+                item {
+                    val coloresText = if (colores.isEmpty()) {
+                        "Selecciona colores"
+                    } else {
+                        colores.sortedBy { it.value }.joinToString(", ") { it.value }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(fieldShape)
+                            .clickable { showColorPicker = true }
+                    ) {
+                        OutlinedTextField(
+                            value = coloresText,
+                            onValueChange = {},
+                            label = { Text("Colores") },
+                            readOnly = true,
+                            enabled = false,
+                            modifier = Modifier.fillMaxWidth(),
+                            trailingIcon = {
+                                Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Abrir selector de colores")
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            shape = fieldShape
+                        )
+                    }
+                }
+
+                if (error != null) {
+                    item {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = error!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Button(onClick = { vm.limpiarError() }) { Text("Entendido") }
+                    }
+                }
+
+                item { Spacer(Modifier.height(80.dp)) }
+            }
         }
     }
 }
 
-// ... (El resto de los Composables: RazaSelector, EnumDropdownSelector, MultiSelectDialog quedan exactamente igual)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RazaSelector(
@@ -545,7 +553,8 @@ private fun RazaSelector(
                     androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable,
                     enabled
                 ),
-            enabled = enabled
+            enabled = enabled,
+            shape = fieldShape
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -602,7 +611,8 @@ private fun <E> EnumDropdownSelector(
                     androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable,
                     enabled
                 ),
-            enabled = enabled
+            enabled = enabled,
+            shape = fieldShape
         )
         ExposedDropdownMenu(
             expanded = expanded,
