@@ -1,22 +1,31 @@
 package cl.clinipets.ui.agenda
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -25,6 +34,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,7 +42,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -42,6 +54,11 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
+
+private val fieldShape = RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
+private val buttonShape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
+private val slotCardShape = RoundedCornerShape(topStart = 8.dp, topEnd = 24.dp, bottomStart = 24.dp, bottomEnd = 8.dp)
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,7 +79,6 @@ fun ReservaFormScreen(
 
     LaunchedEffect(Unit) { vm.init(mascotaId, procedimientoSku, modo, lat, lng, veterinarioId) }
 
-    // DatePicker dialog state
     val openDatePicker = remember { mutableStateOf(false) }
     val pickerState = rememberDatePickerState(
         initialSelectedDateMillis = runCatching {
@@ -71,6 +87,7 @@ fun ReservaFormScreen(
     )
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
         topBar = {
             TopAppBar(
                 title = {
@@ -89,150 +106,228 @@ fun ReservaFormScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
     ) { padding ->
-        Column(
-            Modifier
+        Surface(
+            modifier = Modifier
                 .padding(padding)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .fillMaxSize(),
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
         ) {
-            // Mensaje informativo
-            Text(
-                text = "Revisa los datos antes de confirmar tu reserva.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            // Error en un contenedor más visible
-            ui.error?.let {
-                Surface(
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    shape = MaterialTheme.shapes.medium
-                ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
                     Text(
-                        text = it,
-                        modifier = Modifier.padding(12.dp),
-                        style = MaterialTheme.typography.bodySmall
+                        text = "Revisa los datos antes de confirmar tu reserva.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
 
-            // --- Sección: Fecha y horario ---
-            Text("Fecha y horario", style = MaterialTheme.typography.titleSmall)
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = ui.fecha,
-                    onValueChange = {},
-                    modifier = Modifier.weight(1f),
-                    readOnly = true,
-                    label = { Text("Fecha") }
-                )
-                Button(onClick = { openDatePicker.value = true }) { Text("Cambiar") }
-            }
-
-            if (openDatePicker.value) {
-                DatePickerDialog(
-                    onDismissRequest = { openDatePicker.value = false },
-                    confirmButton = {
-                        Button(onClick = {
-                            val millis: Long? = pickerState.selectedDateMillis
-                            if (millis != null) {
-                                val ld = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
-                                vm.setFecha(ld.toString())
-                            }
-                            openDatePicker.value = false
-                        }) { Text("Aceptar") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { openDatePicker.value = false }) { Text("Cancelar") }
-                    }
-                ) {
-                    DatePicker(state = pickerState)
-                }
-            }
-
-            if (ui.isLoadingSlots) {
-                androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
-            }
-
-            if (ui.slots.isNotEmpty()) {
-                Text("Horarios disponibles", style = MaterialTheme.typography.titleSmall)
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(ui.slots) { slot: Intervalo ->
-                        val selected = slot.inicio == ui.horaInicio
-                        androidx.compose.material3.Card(onClick = { vm.seleccionarSlot(slot) }) {
-                            Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text("${slot.inicio} - ${slot.fin}")
-                                if (selected) Text("(seleccionado)", color = MaterialTheme.colorScheme.primary)
-                            }
+                ui.error?.let {
+                    item {
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = it,
+                                modifier = Modifier.padding(12.dp),
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
                     }
                 }
-            } else if (!ui.isLoadingSlots) {
-                Text("No hay horarios disponibles para la fecha seleccionada.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
 
-            // --- Sección: Ubicación ---
-            Text("Ubicación", style = MaterialTheme.typography.titleSmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Usar mi ubicación")
-                Switch(checked = ui.usarMiUbicacion, onCheckedChange = { vm.setUsarMiUbicacion(it) })
-            }
-            if (ui.usarMiUbicacion) {
-                Text(
-                    text = "Usaremos tu ubicación actual para la reserva.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                OutlinedTextField(
-                    value = ui.direccion,
-                    onValueChange = vm::setDireccion,
-                    label = { Text("Dirección (opcional)") },
-                    placeholder = { Text("Calle, número, comuna") }
-                )
-                OutlinedTextField(
-                    value = ui.referencias,
-                    onValueChange = vm::setReferencias,
-                    label = { Text("Referencias (opcional)") },
-                    placeholder = { Text("Piso, portón, timbre, etc.") }
-                )
-            }
+                item {
+                    Text("Fecha y horario", style = MaterialTheme.typography.titleSmall)
+                }
 
-            // --- Acciones finales ---
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                    onClick = {
-                        onContinuarConfirmacion(
-                            ui.fecha,
-                            ui.horaInicio,
-                            ui.direccion.ifBlank { null },
-                            ui.referencias.ifBlank { null }
+                item {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = ui.fecha,
+                            onValueChange = {},
+                            modifier = Modifier.weight(1f),
+                            readOnly = true,
+                            label = { Text("Fecha") },
+                            shape = fieldShape
                         )
-                    },
-                    enabled = !ui.isSubmitting,
-                    modifier = Modifier.weight(1f)
-                ) { Text("Revisar y confirmar") }
+                        Button(
+                            onClick = { openDatePicker.value = true },
+                            shape = buttonShape
+                        ) { Text("Cambiar") }
+                    }
+                }
 
-                Button(
-                    onClick = { vm.crearReserva(onReservada) },
-                    enabled = !ui.isSubmitting,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    if (ui.isSubmitting) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .padding(end = 8.dp)
-                                .size(18.dp),
-                            strokeWidth = 2.dp
+                if (openDatePicker.value) {
+                    item {
+                        DatePickerDialog(
+                            onDismissRequest = { openDatePicker.value = false },
+                            confirmButton = {
+                                Button(onClick = {
+                                    val millis: Long? = pickerState.selectedDateMillis
+                                    if (millis != null) {
+                                        val ld = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                                        vm.setFecha(ld.toString())
+                                    }
+                                    openDatePicker.value = false
+                                }) { Text("Aceptar") }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { openDatePicker.value = false }) { Text("Cancelar") }
+                            }
+                        ) {
+                            DatePicker(state = pickerState)
+                        }
+                    }
+                }
+
+                if (ui.isLoadingSlots) {
+                    item {
+                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                    }
+                }
+
+                if (ui.slots.isNotEmpty()) {
+                    item {
+                        Text("Horarios disponibles", style = MaterialTheme.typography.titleSmall)
+                    }
+                    items(ui.slots) { slot: Intervalo ->
+                        val selected = slot.inicio == ui.horaInicio
+                        Card(
+                            onClick = { vm.seleccionarSlot(slot) },
+                            shape = slotCardShape,
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surfaceContainerHigh
+                            ),
+                            border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
+                        ) {
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(
+                                    "${slot.inicio} - ${slot.fin}",
+                                    modifier = Modifier.weight(1f),
+                                    fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else null
+                                )
+                                if (selected) {
+                                    Text(
+                                        "(seleccionado)",
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else if (!ui.isLoadingSlots) {
+                    item {
+                        Text("No hay horarios disponibles para la fecha seleccionada.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                item {
+                    Text("Ubicación", style = MaterialTheme.typography.titleSmall)
+                }
+
+                item {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { vm.setUsarMiUbicacion(!ui.usarMiUbicacion) }
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Text("Usar mi ubicación", modifier = Modifier.weight(1f))
+                        Switch(checked = ui.usarMiUbicacion, onCheckedChange = { vm.setUsarMiUbicacion(it) })
+                    }
+                }
+
+                if (ui.usarMiUbicacion) {
+                    item {
+                        Text(
+                            text = "Usaremos tu ubicación actual para la reserva.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Text(if (ui.isSubmitting) "Creando..." else "Confirmar ahora")
+                } else {
+                    item {
+                        OutlinedTextField(
+                            value = ui.direccion,
+                            onValueChange = vm::setDireccion,
+                            label = { Text("Dirección (opcional)") },
+                            placeholder = { Text("Calle, número, comuna") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = fieldShape
+                        )
+                    }
+                    item {
+                        OutlinedTextField(
+                            value = ui.referencias,
+                            onValueChange = vm::setReferencias,
+                            label = { Text("Referencias (opcional)") },
+                            placeholder = { Text("Piso, portón, timbre, etc.") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = fieldShape
+                        )
+                    }
+                }
+
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Button(
+                            onClick = {
+                                onContinuarConfirmacion(
+                                    ui.fecha,
+                                    ui.horaInicio,
+                                    ui.direccion.ifBlank { null },
+                                    ui.referencias.ifBlank { null }
+                                )
+                            },
+                            enabled = !ui.isSubmitting,
+                            modifier = Modifier.weight(1f),
+                            shape = buttonShape
+                        ) { Text("Revisar y confirmar") }
+
+                        Button(
+                            onClick = { vm.crearReserva(onReservada) },
+                            enabled = !ui.isSubmitting,
+                            modifier = Modifier.weight(1f),
+                            shape = buttonShape
+                        ) {
+                            if (ui.isSubmitting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier
+                                        .padding(end = 8.dp)
+                                        .size(18.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            }
+                            Text(if (ui.isSubmitting) "Creando..." else "Confirmar ahora")
+                        }
+                    }
                 }
             }
         }
