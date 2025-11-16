@@ -16,10 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.automirrored.filled.EventNote // NUEVO: Import para el ícono
+import androidx.compose.material.icons.automirrored.filled.EventNote
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Pets
@@ -34,7 +35,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -61,16 +61,11 @@ fun HomeScreen(
     onNavigateToMiCatalogo: () -> Unit,
     onNavigateToMiDisponibilidad: () -> Unit,
     onNavigateToAgenda: () -> Unit,
-    onNavigateToAgendaGestion: () -> Unit, // NUEVO: Parámetro de V2
+    onNavigateToAgendaGestion: () -> Unit,
     vm: HomeViewModel = hiltViewModel()
 ) {
-    val uiState by vm.ui.collectAsState() // Esto ya no se usa, pero se mantiene por si vm es necesario
+    val uiState by vm.ui.collectAsState()
     val isVeterinarian = roles.contains("VETERINARIO")
-
-    // Esto ya no es necesario si quitamos las citas
-    // LaunchedEffect(Unit) {
-    //     vm.cargarCitas()
-    // }
 
     Scaffold { padding ->
         LazyColumn(
@@ -93,11 +88,9 @@ fun HomeScreen(
                     onAgenda = onNavigateToAgenda,
                     onCatalogo = onNavigateToMiCatalogo,
                     onDisponibilidad = onNavigateToMiDisponibilidad,
-                    onGestionAgendas = onNavigateToAgendaGestion // NUEVO: Pasando el parámetro
+                    onGestionAgendas = onNavigateToAgendaGestion
                 )
             }
-
-            // === SECCIÓN DE CITAS ELIMINADA ===
 
             if (isVeterinarian) {
                 item { Spacer(Modifier.height(28.dp)) }
@@ -125,9 +118,9 @@ private fun HomeHeader(
             .padding(horizontal = 16.dp)
             .fillMaxWidth()
             .heightIn(min = 120.dp),
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(topStart = 40.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 40.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+            containerColor = MaterialTheme.colorScheme.primaryContainer
         )
     ) {
         Column(
@@ -152,13 +145,14 @@ private fun HomeHeader(
                     onClick = onNavigateToProfile, modifier = Modifier.size(36.dp)
                 ) {
                     Surface(
-                        shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary
                     ) {
                         Icon(
                             imageVector = Icons.Default.Person,
                             contentDescription = "Perfil",
                             modifier = Modifier.padding(6.dp),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 }
@@ -172,8 +166,7 @@ private fun HomeHeader(
                 Text(
                     text = "Gestiona tu mundo veterinario y tus mascotas.",
                     modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    style = MaterialTheme.typography.bodyMedium
                 )
 
                 Image(
@@ -209,7 +202,7 @@ private fun QuickActions(
     onAgenda: () -> Unit,
     onCatalogo: () -> Unit,
     onDisponibilidad: () -> Unit,
-    onGestionAgendas: () -> Unit // NUEVO: Parámetro de V2
+    onGestionAgendas: () -> Unit
 ) {
     val items = buildList {
         add(
@@ -238,12 +231,11 @@ private fun QuickActions(
                 onAgenda
             )
         )
-        // NUEVO: Botón "Gestionar agendas" añadido a la lista
         add(
             ActionItem(
                 Icons.AutoMirrored.Filled.EventNote,
                 "Gestionar agendas",
-                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f), // Color similar a V2
+                MaterialTheme.colorScheme.surfaceContainerHighest,
                 onGestionAgendas
             )
         )
@@ -252,7 +244,7 @@ private fun QuickActions(
                 ActionItem(
                     Icons.Default.AccessTime,
                     "Disponibilidad",
-                    MaterialTheme.colorScheme.surfaceVariant,
+                    MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f),
                     onDisponibilidad
                 )
             )
@@ -289,11 +281,13 @@ private fun ActionGrid(items: List<ActionItem>) {
 @Composable
 private fun ActionChip(item: ActionItem) {
     Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = item.color.copy(alpha = 0.35f),
+        shape = CutCornerShape(topStart = 20.dp, bottomEnd = 20.dp),
+
+        color = item.color,
         modifier = Modifier
-            .shadow(1.dp, RoundedCornerShape(20.dp))
-            .clickable { item.onClick() }) {
+            .shadow(2.dp, CutCornerShape(topStart = 20.dp, bottomEnd = 20.dp)) // Sombra sutil
+            .clickable { item.onClick() }
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -301,8 +295,10 @@ private fun ActionChip(item: ActionItem) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+
             Surface(
-                shape = CircleShape, color = MaterialTheme.colorScheme.surface
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Icon(
                     imageVector = item.icon,
