@@ -1,5 +1,6 @@
 package cl.clinipets.ui.profile
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -61,6 +64,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +74,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.Veterinario
 import cl.clinipets.ui.auth.LoginViewModel
 import coil.compose.AsyncImage
+
+private val buttonShape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
+private val headerCardShape = RoundedCornerShape(topStart = 32.dp, topEnd = 8.dp, bottomStart = 8.dp, bottomEnd = 32.dp)
+private val sectionCardShape = RoundedCornerShape(topStart = 8.dp, topEnd = 32.dp, bottomStart = 32.dp, bottomEnd = 8.dp)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,6 +104,7 @@ fun ProfileScreen(
     val isLoading = ui.isLoading
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
         topBar = {
             TopAppBar(
                 title = { Text("Mi Perfil", fontWeight = FontWeight.Medium) },
@@ -113,48 +122,54 @@ fun ProfileScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
     ) { padding ->
-        Column(
+        Surface(
             modifier = Modifier
-                .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .fillMaxSize(),
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
         ) {
-            // Header con foto de perfil
-            ProfileHeader(
-                displayName = displayName,
-                email = me?.email,
-                fotoUrl = fotoUrl
-            )
-
-            // Estado profesional
-            if (perfil != null || isLoading) {
-                ProfessionalStatusCard(
-                    isLoading = isLoading,
-                    perfil = perfil
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                ProfileHeader(
+                    displayName = displayName,
+                    email = me?.email,
+                    fotoUrl = fotoUrl
                 )
+
+                if (perfil != null || isLoading) {
+                    ProfessionalStatusCard(
+                        isLoading = isLoading,
+                        perfil = perfil
+                    )
+                }
+
+                PersonalizationSection()
+
+                ActionsSection(
+                    canBecomeVet = canBecomeVet,
+                    isLoading = isLoading,
+                    perfil = perfil,
+                    onEditProfessional = onEditProfessional,
+                    onBecomeVeterinarian = onBecomeVeterinarian,
+                    onLogout = onLogout
+                )
+
+                Spacer(Modifier.height(16.dp))
             }
-
-            // Sección de personalización
-            PersonalizationSection()
-
-            // Sección de acciones
-            ActionsSection(
-                canBecomeVet = canBecomeVet,
-                isLoading = isLoading,
-                perfil = perfil,
-                onEditProfessional = onEditProfessional,
-                onBecomeVeterinarian = onBecomeVeterinarian,
-                onLogout = onLogout
-            )
-
-            Spacer(Modifier.height(16.dp))
         }
     }
 }
@@ -168,9 +183,9 @@ private fun ProfileHeader(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            containerColor = MaterialTheme.colorScheme.primaryContainer
         ),
-        shape = MaterialTheme.shapes.large
+        shape = headerCardShape
     ) {
         Column(
             modifier = Modifier
@@ -179,7 +194,6 @@ private fun ProfileHeader(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Foto de perfil
             Surface(
                 modifier = Modifier.size(120.dp),
                 shape = CircleShape,
@@ -218,16 +232,14 @@ private fun ProfileHeader(
                 }
             }
 
-            // Nombre
             Text(
                 text = displayName ?: "Usuario",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onPrimaryContainer
             )
 
-            // Email con badge
             if (!email.isNullOrBlank()) {
                 Surface(
                     shape = MaterialTheme.shapes.medium,
@@ -252,7 +264,7 @@ private fun ProfessionalStatusCard(
 ) {
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = sectionCardShape,
         colors = CardDefaults.outlinedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
@@ -264,7 +276,6 @@ private fun ProfessionalStatusCard(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icono
             Surface(
                 modifier = Modifier.size(56.dp),
                 shape = CircleShape,
@@ -315,7 +326,6 @@ private fun ProfessionalStatusCard(
                 }
             }
 
-            // Texto
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -354,7 +364,7 @@ private fun PersonalizationSection() {
 
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = sectionCardShape,
         colors = CardDefaults.outlinedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
@@ -365,7 +375,6 @@ private fun PersonalizationSection() {
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Header de sección
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -395,7 +404,6 @@ private fun PersonalizationSection() {
                 )
             }
 
-            // Modo oscuro
             SettingItem(
                 icon = if (isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
                 title = "Modo Oscuro",
@@ -412,7 +420,6 @@ private fun PersonalizationSection() {
                 }
             )
 
-            // Tamaño de letra
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -453,7 +460,6 @@ private fun PersonalizationSection() {
                 }
             }
 
-            // Colores dinámicos
             SettingItem(
                 icon = Icons.Default.ColorLens,
                 title = "Colores Dinámicos",
@@ -525,14 +531,13 @@ private fun ActionsSection(
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Editar datos profesionales
         val perfilVerificado = perfil?.verificado == true
         if (perfil != null) {
             Button(
                 onClick = onEditProfessional,
                 enabled = perfilVerificado,
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
+                shape = buttonShape,
                 contentPadding = PaddingValues(vertical = 16.dp)
             ) {
                 Icon(
@@ -549,13 +554,12 @@ private fun ActionsSection(
             }
         }
 
-        // Registrarse como veterinario
         if (canBecomeVet) {
             FilledTonalButton(
                 onClick = onBecomeVeterinarian,
                 enabled = !isLoading && perfil == null,
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
+                shape = buttonShape,
                 contentPadding = PaddingValues(vertical = 16.dp)
             ) {
                 Icon(
@@ -574,15 +578,15 @@ private fun ActionsSection(
 
         Spacer(Modifier.height(8.dp))
 
-        // Cerrar sesión
         OutlinedButton(
             onClick = onLogout,
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
+            shape = buttonShape,
             contentPadding = PaddingValues(vertical = 16.dp),
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = MaterialTheme.colorScheme.error
-            )
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Logout,
