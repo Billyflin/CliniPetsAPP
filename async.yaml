@@ -1,0 +1,99 @@
+asyncapi: '2.6.0'
+info:
+  title: Clinipets WS (STOMP)
+  version: '1.0.0'
+  description: |
+    Canales STOMP para la "junta" (visita DOMICILIO):
+    - El cliente publica posiciones del veterinario a /app/junta/{reservaId}/pos.
+    - El backend reemite a los suscriptores en /topic/junta/{reservaId}.
+
+defaultContentType: application/json
+servers:
+  local:
+    url: ws://localhost:8080/ws
+    protocol: ws
+    description: Servidor local de desarrollo
+
+channels:
+  /app/junta/{reservaId}/pos:
+    description: Canal de entrada (el cliente publica; el backend recibe)
+    parameters:
+      reservaId:
+        description: ID de la reserva/junta
+        schema:
+          type: string
+          format: uuid
+    subscribe:
+      summary: Backend recibe la posición del veterinario
+      operationId: publicarPosicion
+      tags:
+        - name: junta
+      message:
+        $ref: '#/components/messages/PosicionVet'
+
+  /topic/junta/{reservaId}:
+    description: Canal de salida (el backend publica; los clientes se suscriben)
+    parameters:
+      reservaId:
+        description: ID de la reserva/junta
+        schema:
+          type: string
+          format: uuid
+    publish:
+      summary: Eventos de la junta para los suscriptores
+      tags:
+        - name: junta
+      message:
+        oneOf:
+          - $ref: '#/components/messages/PosicionVet'
+
+components:
+  messages:
+    PosicionVet:
+      name: PosicionVet
+      title: Posición del veterinario
+      contentType: application/json
+      payload:
+        type: object
+        required: [lat, lng]
+        properties:
+          lat:
+            type: number
+            format: double
+            description: Latitud
+            example: -33.45
+          lng:
+            type: number
+            format: double
+            description: Longitud
+            example: -70.66
+          speed:
+            type: number
+            nullable: true
+            description: Velocidad km/h (opcional)
+            example: 10.0
+          heading:
+            type: number
+            nullable: true
+            description: Rumbo (grados) (opcional)
+            example: 180.0
+          ts:
+            type: integer
+            format: int64
+            description: Epoch millis de la lectura
+            example: 1713300000000
+
+  securitySchemes:
+    httpBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    accessToken:
+      type: apiKey
+      in: query
+      name: access_token
+
+security:
+  - httpBearer: []
+  - accessToken: []
+

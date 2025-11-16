@@ -15,6 +15,7 @@ import cl.clinipets.ui.auth.LoginScreen
 import cl.clinipets.ui.auth.LoginViewModel
 import cl.clinipets.ui.discovery.DiscoveryScreen
 import cl.clinipets.ui.home.HomeScreen
+import cl.clinipets.ui.junta.JuntaComposable
 import cl.clinipets.ui.mascotas.MascotaDetailScreen
 import cl.clinipets.ui.mascotas.MascotaFormScreen
 import cl.clinipets.ui.mascotas.MascotasScreen
@@ -64,6 +65,9 @@ data class ReservaConfirmRoute(
     val direccion: String? = null,
     val referencias: String? = null
 )
+
+@Serializable
+data class JuntaRoute(val reservaId: String)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalStdlibApi::class)
 @Composable
@@ -195,6 +199,18 @@ fun AppNavGraph(
                 onDone = { navController.popBackStack(DiscoveryRoute, inclusive = false) }
             )
         }
-        composable<AgendaGestionRoute> { AgendaGestionScreen(onBack = { navController.popBackStack() }) }
+        composable<AgendaGestionRoute> {
+            AgendaGestionScreen(
+                onBack = { navController.popBackStack() },
+                onVerMapa = { reservaId -> navController.navigate(JuntaRoute(reservaId.toString())) }
+            )
+        }
+        composable<JuntaRoute> { backStackEntry ->
+            val args = backStackEntry.toRoute<JuntaRoute>()
+            JuntaComposable(
+                reservaId = UUID.fromString(args.reservaId),
+                onBack = { navController.popBackStack() }
+            )
+        }
     }
 }

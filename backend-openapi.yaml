@@ -677,6 +677,24 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/Reserva"
+  /api/agenda/reservas/info:
+    post:
+      tags:
+        - agenda-controller
+      operationId: obtenerInfo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReservaAccionRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Reserva"
   /api/agenda/reservas/confirmar:
     post:
       tags:

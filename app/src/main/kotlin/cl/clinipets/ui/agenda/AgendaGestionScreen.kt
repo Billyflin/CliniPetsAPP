@@ -42,11 +42,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.MisReservasQuery
 import cl.clinipets.openapi.models.Reserva
 import java.time.LocalDate
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AgendaGestionScreen(
     onBack: () -> Unit,
+    onVerMapa: (UUID) -> Unit,
     vm: AgendaGestionViewModel = hiltViewModel()
 ) {
     val ui by vm.ui.collectAsState()
@@ -97,12 +99,15 @@ fun AgendaGestionScreen(
             val agrupadas = ui.reservas.groupBy { it.fecha.toString() }
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.weight(1f)) {
                 agrupadas.forEach { (fecha, list) ->
-                    item {
-                        Text(fecha, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    item { Text(fecha, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary) }
+                    items(list) { r ->
+                        ReservaItem(
+                            r,
+                            onAceptar = { vm.confirmar(r) },
+                            onCancelar = { reservaAConfirmarCancelacion.value = r },
+                            onVerMapa = onVerMapa
+                        )
                     }
-                    items(list) { r -> ReservaItem(r,
-                        onAceptar = { vm.confirmar(r) },
-                        onCancelar = { reservaAConfirmarCancelacion.value = r }) }
                 }
             }
         }
@@ -171,7 +176,12 @@ private fun FiltroCheck(label: String, checked: Boolean, onToggle: () -> Unit) {
 }
 
 @Composable
-private fun ReservaItem(r: Reserva, onAceptar: () -> Unit, onCancelar: () -> Unit) {
+private fun ReservaItem(
+    r: Reserva,
+    onAceptar: () -> Unit,
+    onCancelar: () -> Unit,
+    onVerMapa: (UUID) -> Unit
+) {
     Surface(tonalElevation = 2.dp, shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
@@ -190,6 +200,9 @@ private fun ReservaItem(r: Reserva, onAceptar: () -> Unit, onCancelar: () -> Uni
                 val puedeCancelar = r.estado != Reserva.Estado.CANCELADA_CLIENTE && r.estado != Reserva.Estado.CANCELADA_VETERINARIO && r.estado != Reserva.Estado.CANCELADA_CLINICA && r.estado != Reserva.Estado.REALIZADA
                 Button(onClick = onAceptar, enabled = puedeAceptar) { Text("Aceptar") }
                 OutlinedButton(onClick = onCancelar, enabled = puedeCancelar) { Text("Cancelar") }
+                if (r.estado == Reserva.Estado.CONFIRMADA) {
+                    OutlinedButton(onClick = { r.id?.let(onVerMapa) }, enabled = r.id != null) { Text("Ver mapa") }
+                }
             }
         }
     }
