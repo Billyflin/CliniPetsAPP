@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
@@ -22,17 +24,19 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,11 +46,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import cl.clinipets.R // Asegúrate de que esta sea la ruta correcta a tu R
+import cl.clinipets.R
 import java.time.LocalDate
 import java.time.Period
 import java.time.format.DateTimeFormatter
@@ -85,7 +90,7 @@ fun MascotaDetailScreen(
                     onClick = {
                         showDeleteDialog = false
                         vm.eliminar(mascotaId)
-                        handleBack() // Volver después de eliminar
+                        handleBack()
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) { Text("Eliminar") }
@@ -97,6 +102,7 @@ fun MascotaDetailScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
         topBar = {
             TopAppBar(
                 title = { Text(mascota?.nombre ?: "Detalle de Mascota") },
@@ -111,134 +117,156 @@ fun MascotaDetailScreen(
                             Icon(Icons.Default.Edit, contentDescription = "Editar Mascota")
                         }
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
     ) { padding ->
-        Box(
+        Surface(
             modifier = Modifier
                 .padding(padding)
-                .fillMaxSize()
+                .fillMaxSize(),
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
         ) {
-            when {
-                cargando && mascota == null -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                when {
+                    cargando && mascota == null -> {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    }
 
-                error != null -> {
-                    Text(
-                        text = error!!,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(16.dp)
-                    )
-                }
+                    error != null -> {
+                        Text(
+                            text = error!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(16.dp)
+                        )
+                    }
 
-                mascota == null -> {
-                    Text(
-                        "No se encontró información de la mascota.",
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(16.dp)
-                    )
-                }
+                    mascota == null -> {
+                        Text(
+                            "No se encontró información de la mascota.",
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(16.dp)
+                        )
+                    }
 
-                else -> {
-                    val m = mascota!!
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        item {
-                            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(
-                                        modifier = Modifier.weight(1f),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Text(
-                                            text = m.nombre,
-                                            style = MaterialTheme.typography.headlineMedium,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        InfoItem("Especie", m.especie.value)
-                                        InfoItem("Raza", m.raza?.nombre ?: "Mestizo")
-                                        m.sexo?.let { InfoItem("Sexo", it.value) }
-                                    }
-
-                                    Spacer(Modifier.width(16.dp))
-                                    val imageRes = if (m.especie.value.equals("GATO", ignoreCase = true)) {
-                                        R.drawable.gato_icon
-                                    } else {
-                                        R.drawable.perro_icon
-                                    }
-
-                                    Image(
-                                        painter = painterResource(id = imageRes),
-                                        contentDescription = m.especie.value,
-                                        modifier = Modifier.size(64.dp) // Tamaño pequeño
+                    else -> {
+                        val m = mascota!!
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(topStart = 32.dp, topEnd = 8.dp, bottomStart = 8.dp, bottomEnd = 32.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
                                     )
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                text = m.nombre,
+                                                style = MaterialTheme.typography.headlineMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            InfoItem("Especie", m.especie.value)
+                                            InfoItem("Raza", m.raza?.nombre ?: "Mestizo")
+                                            m.sexo?.let { InfoItem("Sexo", it.value) }
+                                        }
+
+                                        Spacer(Modifier.width(16.dp))
+                                        val imageRes = if (m.especie.value.equals("GATO", ignoreCase = true)) {
+                                            R.drawable.gato_icon
+                                        } else {
+                                            R.drawable.perro_icon
+                                        }
+
+                                        Image(
+                                            painter = painterResource(id = imageRes),
+                                            contentDescription = m.especie.value,
+                                            modifier = Modifier.size(80.dp)
+                                        )
+                                    }
                                 }
                             }
-                        }
 
-                        item {
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(topStart = 8.dp, topEnd = 32.dp, bottomStart = 32.dp, bottomEnd = 8.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                                    )
                                 ) {
-                                    Text("Atributos", style = MaterialTheme.typography.titleMedium)
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text("Atributos", style = MaterialTheme.typography.titleMedium)
 
-                                    m.fechaNacimiento?.let { fecha ->
-                                        val edad = Period.between(fecha, LocalDate.now())
-                                        val aprox = if (m.esFechaAproximada) " (aprox.)" else ""
-                                        val edadStr = "${edad.years} años, ${edad.months} meses$aprox"
-                                        val fechaStr = fecha.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                                        m.fechaNacimiento?.let { fecha ->
+                                            val edad = Period.between(fecha, LocalDate.now())
+                                            val aprox = if (m.esFechaAproximada) " (aprox.)" else ""
+                                            val edadStr = "${edad.years} años, ${edad.months} meses$aprox"
+                                            val fechaStr = fecha.format(DateTimeFormatter.ISO_LOCAL_DATE)
 
-                                        InfoItem("Edad", edadStr)
-                                        InfoItem("F. Nacimiento", "$fechaStr$aprox")
-                                    }
+                                            InfoItem("Edad", edadStr)
+                                            InfoItem("F. Nacimiento", "$fechaStr$aprox")
+                                        }
 
-                                    m.pesoKg?.let { InfoItem("Peso", "$it kg") }
-                                    m.pelaje?.let { InfoItem("Pelaje", it.value) }
-                                    m.patron?.let { InfoItem("Patrón", it.value) }
+                                        m.pesoKg?.let { InfoItem("Peso", "$it kg") }
+                                        m.pelaje?.let { InfoItem("Pelaje", it.value) }
+                                        m.patron?.let { InfoItem("Patrón", it.value) }
 
-                                    if (m.colores.isNotEmpty()) {
-                                        Text(
-                                            "Colores",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            m.colores.forEach { color ->
-                                                AssistChip(onClick = { }, label = { Text(color.value) })
+                                        if (m.colores.isNotEmpty()) {
+                                            Text(
+                                                "Colores",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                m.colores.forEach { color ->
+                                                    AssistChip(onClick = { }, label = { Text(color.value) })
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        // === CAMBIO: Acciones (solo Eliminar) ===
-                        item {
-                            Spacer(Modifier.height(8.dp))
+                            item {
+                                Spacer(Modifier.height(8.dp))
 
-                            // El botón "Editar" se movió a la TopAppBar
-
-                            OutlinedButton(
-                                onClick = { showDeleteDialog = true },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.error
-                                )
-                            ) { Text("Eliminar Mascota") }
+                                OutlinedButton(
+                                    onClick = { showDeleteDialog = true },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.error
+                                    )
+                                ) { Text("Eliminar Mascota") }
+                            }
                         }
                     }
                 }
