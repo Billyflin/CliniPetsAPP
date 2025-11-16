@@ -5,41 +5,40 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.ExperimentalFoundationApi // NUEVO: Para stickyHeader
-import androidx.compose.foundation.clickable // NUEVO
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box // NUEVO
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi // NUEVO: Para FlowRow
-import androidx.compose.foundation.layout.FlowRow // NUEVO
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer // NUEVO
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height // NUEVO
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size // NUEVO
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons // NUEVO
-import androidx.compose.material.icons.automirrored.filled.ArrowBack // NUEVO
-import androidx.compose.material.icons.filled.CalendarToday // NUEVO
-import androidx.compose.material.icons.filled.Check // NUEVO
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults // NUEVO
-import androidx.compose.material3.DatePicker // NUEVO
-import androidx.compose.material3.DatePickerDialog // NUEVO
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip // NUEVO
-import androidx.compose.material3.Icon // NUEVO
-import androidx.compose.material3.IconButton // NUEVO
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults // NUEVO
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -47,26 +46,27 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState // NUEVO
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable // NUEVO
-import androidx.compose.runtime.setValue // NUEVO
-import androidx.compose.ui.Alignment // NUEVO
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.MisReservasQuery
 import cl.clinipets.openapi.models.Reserva
-import java.time.Instant // NUEVO
+import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId // NUEVO
-import java.time.format.DateTimeFormatter // NUEVO
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 // Formateador para la fecha en la UI (ej: 15-11-2025)
 private val UI_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
@@ -75,6 +75,8 @@ private val UI_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("
 @Composable
 fun AgendaGestionScreen(
     onBack: () -> Unit,
+    onVerMapa: (UUID) -> Unit,
+    userId: UUID?,
     vm: AgendaGestionViewModel = hiltViewModel()
 ) {
     val ui by vm.ui.collectAsState()
@@ -170,7 +172,9 @@ fun AgendaGestionScreen(
                     items(list, key = { it.id!! }) { r ->
                         ReservaItem(r,
                             onAceptar = { vm.confirmar(r) },
-                            onCancelar = { reservaAConfirmarCancelacion.value = r }
+                            onCancelar = { reservaAConfirmarCancelacion.value = r },
+                            onVerMapa   = { onVerMapa(r.id!!) }
+                            , userId = userId
                         )
                     }
                 }
@@ -353,7 +357,13 @@ private fun FiltroChipItem(label: String, selected: Boolean, onToggle: () -> Uni
 // Composable 'FiltroCheck' eliminado, ya no se usa.
 
 @Composable
-private fun ReservaItem(r: Reserva, onAceptar: () -> Unit, onCancelar: () -> Unit) {
+private fun ReservaItem(
+    r: Reserva,
+    onAceptar: () -> Unit,
+    onCancelar: () -> Unit,
+    userId: UUID?,
+    onVerMapa: () -> Unit
+) {
     Surface(tonalElevation = 2.dp, shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
@@ -371,9 +381,9 @@ private fun ReservaItem(r: Reserva, onAceptar: () -> Unit, onCancelar: () -> Uni
             Spacer(Modifier.height(4.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                val puedeAceptar = r.estado == Reserva.Estado.PENDIENTE
+                val puedeAceptar = r.estado == Reserva.Estado.PENDIENTE && (r.clienteId!= userId)
                 val puedeCancelar = r.estado != Reserva.Estado.CANCELADA_CLIENTE && r.estado != Reserva.Estado.CANCELADA_VETERINARIO && r.estado != Reserva.Estado.CANCELADA_CLINICA && r.estado != Reserva.Estado.REALIZADA
-
+                val  puedeVerMapa = r.estado == Reserva.Estado.CONFIRMADA
                 Button(onClick = onAceptar, enabled = puedeAceptar) { Text("Aceptar") }
 
                 // CAMBIO: "Cancelar" es ahora un TextButton para menor énfasis y con color de error
@@ -382,6 +392,10 @@ private fun ReservaItem(r: Reserva, onAceptar: () -> Unit, onCancelar: () -> Uni
                     enabled = puedeCancelar,
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) { Text("Cancelar") }
+
+                if (puedeVerMapa) {
+                    TextButton(onClick = onVerMapa) { Text("Ver mapa") }
+                }
             }
         }
     }

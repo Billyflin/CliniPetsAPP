@@ -202,7 +202,8 @@ fun AppNavGraph(
         composable<AgendaGestionRoute> {
             AgendaGestionScreen(
                 onBack = { navController.popBackStack() },
-                onVerMapa = { reservaId -> navController.navigate(JuntaRoute(reservaId.toString())) }
+                onVerMapa = { reservaId -> navController.navigate(JuntaRoute(reservaId.toString())) },
+                userId = uiState.me?.id
             )
         }
         composable<JuntaRoute> { backStackEntry ->
