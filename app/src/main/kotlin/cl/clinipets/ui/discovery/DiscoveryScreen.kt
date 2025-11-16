@@ -2,21 +2,25 @@ package cl.clinipets.ui.discovery
 
 import android.annotation.SuppressLint
 import android.util.Log
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,9 +39,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.DiscoveryRequest
@@ -46,6 +51,20 @@ import cl.clinipets.openapi.models.Procedimiento.ModosHabilitados
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import java.util.UUID
+
+private fun DiscoveryRequest.ModoAtencion.toFriendlyString(): String {
+    return this.name.split('_').joinToString(" ") {
+        it.lowercase().replaceFirstChar { char ->
+            if (char.isLowerCase()) char.titlecase() else char.toString()
+        }
+    }
+}
+
+private enum class SortType {
+    NONE,
+    DISTANCE,
+    PRICE
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,26 +76,27 @@ fun DiscoveryScreen(
     val ui by vm.ui.collectAsState()
     val context = LocalContext.current
 
+    var sortType by remember { mutableStateOf(SortType.NONE) }
+
     LaunchedEffect(Unit) {
         vm.loadFormData()
-        // Intentar cargar ubicación del usuario automáticamente
         cargarUbicacionUsuario(context) { lat, lng ->
             vm.setUbicacionUsuario(lat, lng)
         }
     }
 
-    // Determinar procedimiento seleccionado para extraer modos habilitados (enum del modelo)
-    val procedimientoSeleccionado = ui.procedimientos.firstOrNull { it.sku == ui.procedimientoSeleccionadoSku }
-    val modosHabilitados: Set<ModosHabilitados>? = procedimientoSeleccionado?.modosHabilitados?.toSet()
+    val procedimientoSeleccionado =
+        ui.procedimientos.firstOrNull { it.sku == ui.procedimientoSeleccionadoSku }
+    val modosHabilitADOS: Set<ModosHabilitados>? =
+        procedimientoSeleccionado?.modosHabilitados?.toSet()
 
     fun modoHabilitado(modo: DiscoveryRequest.ModoAtencion): Boolean {
-        val mh = modosHabilitados ?: return true // si no hay restricciones, todos permitidos
+        val mh = modosHabilitADOS ?: return true // si no hay restricciones, todos permitidos
         return mh.any { it.name == modo.name }
     }
 
-    // Si hay procedimiento y el modo actual no está habilitado, forzar uno válido
     SideEffect {
-        if (procedimientoSeleccionado != null && modosHabilitados != null && modosHabilitados.isNotEmpty()) {
+        if (procedimientoSeleccionado != null && modosHabilitADOS != null && modosHabilitADOS.isNotEmpty()) {
             val actual = ui.modoAtencion
             if (!modoHabilitado(actual)) {
                 val nuevo = DiscoveryRequest.ModoAtencion.entries.firstOrNull { modoHabilitado(it) }
@@ -93,7 +113,7 @@ fun DiscoveryScreen(
                 title = { Text("Solicitar servicio") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 }
             )
@@ -104,7 +124,7 @@ fun DiscoveryScreen(
                 .padding(padding)
                 .padding(16.dp)
                 .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (ui.isLoading) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -142,57 +162,124 @@ fun DiscoveryScreen(
                 onSelect = vm::setProcedimientoSeleccionado
             )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val todosLosModos = DiscoveryRequest.ModoAtencion.entries.toTypedArray()
-                val modosParaMostrar = todosLosModos.filter { modoHabilitado(it) }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Modo de atención", style = MaterialTheme.typography.titleSmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val todosLosModos = DiscoveryRequest.ModoAtencion.entries.toTypedArray()
+                    val modosParaMostrar = todosLosModos.filter { modoHabilitado(it) }
 
-                modosParaMostrar.forEach { modo ->
-                    FilterChip(
-                        selected = ui.modoAtencion == modo,
-                        onClick = { vm.setModoAtencion(modo) },
-                        label = { Text(modo.name) }
-                    )
+                    modosParaMostrar.forEach { modo ->
+                        FilterChip(
+                            selected = ui.modoAtencion == modo,
+                            onClick = { vm.setModoAtencion(modo) },
+                            label = { Text(modo.toFriendlyString()) }
+                        )
+                    }
                 }
             }
 
-            // Botones principales de buscar/continuar (mantener)
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = { vm.buscar() },
                     enabled = !ui.isSubmitting && ui.mascotaSeleccionadaId != null && !ui.procedimientoSeleccionadoSku.isNullOrBlank()
                 ) {
-                    Text("Buscar veterinarios")
+                    if (ui.isSubmitting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Buscar veterinarios")
+                    }
                 }
                 Button(
                     onClick = {
                         val id = ui.mascotaSeleccionadaId
                         val sku = ui.procedimientoSeleccionadoSku
                         if (id != null && !sku.isNullOrBlank()) {
-                            onContinuarReserva(id, sku, ui.modoAtencion, ui.latitud, ui.longitud, null, null)
+                            onContinuarReserva(
+                                id,
+                                sku,
+                                ui.modoAtencion,
+                                ui.latitud,
+                                ui.longitud,
+                                null,
+                                null
+                            )
                         }
                     },
-                    enabled = ui.mascotaSeleccionadaId != null && !ui.procedimientoSeleccionadoSku.isNullOrBlank()
+                    enabled = !ui.isSubmitting && ui.mascotaSeleccionadaId != null && !ui.procedimientoSeleccionadoSku.isNullOrBlank()
                 ) {
                     Text("Continuar a reserva")
                 }
             }
 
-            // Lista de resultados: cada tarjeta permite reservar directamente con ese veterinario
+            val sortedResultados = remember(ui.resultados, sortType) {
+                when (sortType) {
+                    SortType.NONE -> ui.resultados
+                    SortType.DISTANCE -> ui.resultados.sortedBy { it.distanciaKm ?: Double.MAX_VALUE }
+                    SortType.PRICE -> ui.resultados.sortedBy { it.precio ?: Int.MAX_VALUE }
+                }
+            }
+
             if (ui.resultados.isNotEmpty()) {
-                Text("Resultados", style = MaterialTheme.typography.titleSmall)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Resultados", style = MaterialTheme.typography.titleSmall)
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = sortType == SortType.DISTANCE,
+                            onClick = { sortType = if (sortType == SortType.DISTANCE) SortType.NONE else SortType.DISTANCE },
+                            label = { Text("Distancia") }
+                        )
+                        FilterChip(
+                            selected = sortType == SortType.PRICE,
+                            onClick = { sortType = if (sortType == SortType.PRICE) SortType.NONE else SortType.PRICE },
+                            label = { Text("Precio") }
+                        )
+                    }
+                }
+
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(ui.resultados) { v ->
+                    items(sortedResultados) { v -> // <-- Se usa la lista ordenada
                         Card {
-                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Column(
+                                Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
                                 Text(v.nombreCompleto, style = MaterialTheme.typography.titleMedium)
                                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    v.distanciaKm?.let { Text(String.format("%.1f km", it), style = MaterialTheme.typography.bodySmall) }
-                                    v.precio?.let { Text("$it", style = MaterialTheme.typography.bodySmall) }
+                                    v.distanciaKm?.let {
+                                        Text(
+                                            String.format("%.1f km", it),
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    v.precio?.let {
+                                        Text(
+                                            "$it", // Formatear a moneda
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
                                 }
-                                // Mostrar modos habilitados del proveedor
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     v.modosAtencion.forEach { m ->
-                                        FilterChip(selected = ui.modoAtencion == m, onClick = { vm.setModoAtencion(m) }, label = { Text(m.name) })
+                                        Surface(
+                                            shape = MaterialTheme.shapes.small,
+                                            tonalElevation = 2.dp
+                                        ) {
+                                            Text(
+                                                text = m.toFriendlyString(),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                        }
                                     }
                                 }
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -200,7 +287,15 @@ fun DiscoveryScreen(
                                         val id = ui.mascotaSeleccionadaId
                                         val sku = ui.procedimientoSeleccionadoSku
                                         if (id != null && !sku.isNullOrBlank()) {
-                                            onContinuarReserva(id, sku, ui.modoAtencion, ui.latitud, ui.longitud, v.id, v.precio)
+                                            onContinuarReserva(
+                                                id,
+                                                sku,
+                                                ui.modoAtencion,
+                                                ui.latitud,
+                                                ui.longitud,
+                                                v.id,
+                                                v.precio
+                                            )
                                         }
                                     }) { Text("Reservar aquí") }
                                 }
@@ -208,103 +303,133 @@ fun DiscoveryScreen(
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MascotaSelector(
-    mascotas: List<Mascota>,
-    selectedId: UUID?,
-    onSelect: (UUID?) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val selected = mascotas.firstOrNull { it.id == selectedId }
-
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("Mascota", style = MaterialTheme.typography.titleSmall)
-        Surface(
-            tonalElevation = 1.dp,
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = true }
-        ) {
-            Text(
-                text = selected?.nombre ?: "Selecciona mascota",
-                modifier = Modifier.padding(12.dp),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        if (expanded) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    mascotas.forEach { m ->
-                        Text(
-                            text = m.nombre,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onSelect(m.id)
-                                    expanded = false
-                                }
-                                .padding(8.dp)
-                        )
-                    }
+            } else if (!ui.isLoading && !ui.isSubmitting && ui.resultados.isEmpty()) {
+                Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                    Text(
+                        "No se encontraron veterinarios con esos criterios.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MascotaSelector(
+    mascotas: List<Mascota>,
+    selectedId: UUID?,
+    onSelect: (UUID?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selected = mascotas.firstOrNull { it.id == selectedId }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("Mascota", style = MaterialTheme.typography.titleSmall)
+
+        if (mascotas.isEmpty()) {
+            Text(
+                "No tienes mascotas registradas.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            return
+        }
+
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded },
+            modifier = modifier
+        ) {
+            TextField(
+                value = selected?.nombre ?: "Selecciona mascota",
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth(),
+                maxLines = 1
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                mascotas.forEach { m ->
+                    DropdownMenuItem(
+                        text = { Text(m.nombre) },
+                        onClick = {
+                            onSelect(m.id)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProcedimientoSelector(
     procedimientos: List<Procedimiento>,
     selectedSku: String?,
-    onSelect: (String?) -> Unit
+    onSelect: (String?) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
     val selected = procedimientos.firstOrNull { it.sku == selectedSku }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text("Servicio", style = MaterialTheme.typography.titleSmall)
-        Surface(
-            tonalElevation = 1.dp,
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = true }
-        ) {
+
+        if (procedimientos.isEmpty()) {
             Text(
-                text = selected?.let { "${it.nombre} (${it.sku})" } ?: "Selecciona servicio",
-                modifier = Modifier.padding(12.dp),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                "No hay servicios disponibles.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            return
         }
-        if (expanded) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded },
+            modifier = modifier
+        ) {
+            TextField(
+                value = selected?.let { "${it.nombre} (${it.sku})" } ?: "Selecciona servicio",
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth(),
+                maxLines = 1
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
             ) {
-                Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    procedimientos.forEach { p ->
-                        Text(
-                            text = "${p.nombre} (${p.sku})",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onSelect(p.sku)
-                                    expanded = false
-                                }
-                                .padding(8.dp)
-                        )
-                    }
+                procedimientos.forEach { p ->
+                    DropdownMenuItem(
+                        text = { Text("${p.nombre} (${p.sku})") },
+                        onClick = {
+                            onSelect(p.sku)
+                            expanded = false
+                        }
+                    )
                 }
             }
         }
@@ -327,7 +452,10 @@ private fun cargarUbicacionUsuario(
                         if (last != null) {
                             onLocated(last.latitude, last.longitude)
                         } else {
-                            Log.w("DiscoveryScreen", "No se pudo obtener ubicación (loc y lastLocation nulos)")
+                            Log.w(
+                                "DiscoveryScreen",
+                                "No se pudo obtener ubicación (loc y lastLocation nulos)"
+                            )
                         }
                     }
                 }
