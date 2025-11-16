@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -33,9 +35,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -46,6 +50,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -72,6 +77,10 @@ import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.max
 
+private val fieldShape = RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
+private val chipShape = CutCornerShape(topStart = 12.dp, bottomEnd = 12.dp)
+private val buttonShape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun VeterinarianScreen(
@@ -84,23 +93,18 @@ fun VeterinarianScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // Campos de formulario (compartidos para crear/actualizar)
     var nombre by rememberSaveable { mutableStateOf(suggestedName.orEmpty()) }
     var licencia by rememberSaveable { mutableStateOf("") }
     var latitud by rememberSaveable { mutableStateOf("") }
     var longitud by rememberSaveable { mutableStateOf("") }
     var radio by rememberSaveable { mutableStateOf("") }
 
-    // UI State usa el Enum del modelo Veterinario
     var selectedModes by remember { mutableStateOf(setOf<Veterinario.ModosAtencion>()) }
 
-    // Estado local para saber si ya precargamos los campos desde el perfil
     var didPrefill by rememberSaveable { mutableStateOf(false) }
-    // Estado para mostrar diálogo de éxito post acción
     var showSuccessDialog by remember { mutableStateOf(false) }
-    var lastAction by rememberSaveable { mutableStateOf("idle") } // "idle" | "create" | "update"
+    var lastAction by rememberSaveable { mutableStateOf("idle") }
 
-    // Carga segura del perfil si aún no está disponible (prellenado al llegar)
     LaunchedEffect(Unit) {
         val s = vm.ui.value
         if (!s.isLoading && s.perfil == null) {
@@ -108,7 +112,6 @@ fun VeterinarianScreen(
         }
     }
 
-    // Mostrar errores en el Snackbar y limpiarlos luego
     val error = uiState.error
     LaunchedEffect(error) {
         if (error != null) {
@@ -122,7 +125,6 @@ fun VeterinarianScreen(
         }
     }
 
-    // Prefill cuando llegue el perfil por primera vez
     LaunchedEffect(uiState.perfil) {
         val p = uiState.perfil
         if (p != null && !didPrefill) {
@@ -155,6 +157,7 @@ fun VeterinarianScreen(
     val isUpdating = uiState.perfil != null
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
         topBar = {
             TopAppBar(
                 title = { Text("Datos profesionales") },
@@ -162,145 +165,157 @@ fun VeterinarianScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
-        LazyColumn(
+        Surface(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize(),
-            contentPadding = PaddingValues(24.dp), // Padding interior
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
         ) {
-            item {
-                Text(
-                    text = if (isUpdating) "Actualiza tus datos profesionales." else "Completa tus datos para comenzar el proceso de verificación.",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(24.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                item {
+                    Text(
+                        text = if (isUpdating) "Actualiza tus datos profesionales." else "Completa tus datos para comenzar el proceso de verificación.",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
 
-            item {
-                OutlinedTextField(
-                    value = nombre,
-                    onValueChange = { if (!isUpdating) nombre = it },
-                    label = { Text("Nombre completo") },
-                    modifier = Modifier.fillMaxWidth(),
-                    readOnly = isUpdating,
-                    enabled = !isUpdating
-                )
-            }
+                item {
+                    OutlinedTextField(
+                        value = nombre,
+                        onValueChange = { if (!isUpdating) nombre = it },
+                        label = { Text("Nombre completo") },
+                        modifier = Modifier.fillMaxWidth(),
+                        readOnly = isUpdating,
+                        enabled = !isUpdating,
+                        shape = fieldShape
+                    )
+                }
 
-            item {
-                OutlinedTextField(
-                    value = licencia,
-                    onValueChange = { if (!isUpdating) licencia = it },
-                    label = { Text("Número de licencia (opcional)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    readOnly = isUpdating,
-                    enabled = !isUpdating
-                )
-            }
+                item {
+                    OutlinedTextField(
+                        value = licencia,
+                        onValueChange = { if (!isUpdating) licencia = it },
+                        label = { Text("Número de licencia (opcional)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        readOnly = isUpdating,
+                        enabled = !isUpdating,
+                        shape = fieldShape
+                    )
+                }
 
-            item {
-                Text(
-                    text = "Modos de atención",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
+                item {
+                    Text(
+                        text = "Modos de atención",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
 
-            item {
-                ModeSelector(
-                    selectedModes = selectedModes,
-                    onToggle = {
-                        selectedModes = if (selectedModes.contains(it)) selectedModes - it else selectedModes + it
-
-                    }
-                )
-            }
-
-            item {
-                Text(
-                    text = "Ubicación y radio de cobertura",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
-
-            // Reemplazo de latitud/longitud + radio por mapa interactivo
-            item {
-                MapaCobertura(
-                    latStr = latitud,
-                    lonStr = longitud,
-                    radioStr = radio,
-                    scope = scope, // <-- AÑADIDO
-                    onChange = { newLat, newLon, newRadio ->
-                        latitud = newLat
-                        longitud = newLon
-                        radio = newRadio
-                    }
-                )
-            }
-
-            item {
-                Button(
-                    onClick = {
-                        val lat = latitud.toDoubleOrNull()
-                        val lon = longitud.toDoubleOrNull()
-                        val rad = radio.toDoubleOrNull()
-                        val lic = licencia.ifEmpty { null }
-
-                        lastAction = if (isUpdating) "update" else "create"
-
-                        if (isUpdating) {
-                            val modosParaActualizar = selectedModes.mapNotNull { uiMode ->
-                                try {
-                                    VeterinarioDto.ModosAtencion.valueOf(uiMode.name)
-                                } catch (_: IllegalArgumentException) {
-                                    null
-                                }
-                            }.toSet()
-
-                            vm.updateMyProfile(
-                                VeterinarioDto(
-                                    nombreCompleto = nombre,
-                                    numeroLicencia = lic,
-                                    modosAtencion = modosParaActualizar,
-                                    latitud = lat,
-                                    longitud = lon,
-                                    radioCobertura = rad,
-                                    estado = VeterinarioDto.Estado.ONLINE,
-                                    ofreceLogistica = false,
-                                )
-                            )
-                        } else {
-                            val modosParaRegistrar = selectedModes.mapNotNull { uiMode ->
-                                try {
-                                    VeterinarioDto.ModosAtencion.valueOf(uiMode.name)
-                                } catch (_: IllegalArgumentException) {
-                                    null
-                                }
-
-                            }.toSet()
-
-                            vm.submit(
-                                VeterinarioDto(
-                                    nombreCompleto = nombre,
-                                    numeroLicencia = lic,
-                                    modosAtencion = modosParaRegistrar,
-                                    latitud = lat,
-                                    longitud = lon,
-                                    radioCobertura = rad,
-                                    estado = VeterinarioDto.Estado.ONLINE,
-                                    ofreceLogistica = false,
-                                )
-                            )
+                item {
+                    ModeSelector(
+                        selectedModes = selectedModes,
+                        onToggle = {
+                            selectedModes = if (selectedModes.contains(it)) selectedModes - it else selectedModes + it
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isLoading
-                ) {
-                    Text(if (isUpdating) "Actualizar Cobertura" else "Registrar") // Texto actualizado
+                    )
+                }
+
+                item {
+                    Text(
+                        text = "Ubicación y radio de cobertura",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+
+                item {
+                    MapaCobertura(
+                        latStr = latitud,
+                        lonStr = longitud,
+                        radioStr = radio,
+                        scope = scope,
+                        onChange = { newLat, newLon, newRadio ->
+                            latitud = newLat
+                            longitud = newLon
+                            radio = newRadio
+                        }
+                    )
+                }
+
+                item {
+                    Button(
+                        onClick = {
+                            val lat = latitud.toDoubleOrNull()
+                            val lon = longitud.toDoubleOrNull()
+                            val rad = radio.toDoubleOrNull()
+                            val lic = licencia.ifEmpty { null }
+
+                            lastAction = if (isUpdating) "update" else "create"
+
+                            if (isUpdating) {
+                                val modosParaActualizar = selectedModes.mapNotNull { uiMode ->
+                                    try {
+                                        VeterinarioDto.ModosAtencion.valueOf(uiMode.name)
+                                    } catch (_: IllegalArgumentException) {
+                                        null
+                                    }
+                                }.toSet()
+
+                                vm.updateMyProfile(
+                                    VeterinarioDto(
+                                        nombreCompleto = nombre,
+                                        numeroLicencia = lic,
+                                        modosAtencion = modosParaActualizar,
+                                        latitud = lat,
+                                        longitud = lon,
+                                        radioCobertura = rad,
+                                        estado = VeterinarioDto.Estado.ONLINE,
+                                        ofreceLogistica = false,
+                                    )
+                                )
+                            } else {
+                                val modosParaRegistrar = selectedModes.mapNotNull { uiMode ->
+                                    try {
+                                        VeterinarioDto.ModosAtencion.valueOf(uiMode.name)
+                                    } catch (_: IllegalArgumentException) {
+                                        null
+                                    }
+
+                                }.toSet()
+
+                                vm.submit(
+                                    VeterinarioDto(
+                                        nombreCompleto = nombre,
+                                        numeroLicencia = lic,
+                                        modosAtencion = modosParaRegistrar,
+                                        latitud = lat,
+                                        longitud = lon,
+                                        radioCobertura = rad,
+                                        estado = VeterinarioDto.Estado.ONLINE,
+                                        ofreceLogistica = false,
+                                    )
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !uiState.isLoading,
+                        shape = buttonShape
+                    ) {
+                        Text(if (isUpdating) "Actualizar Cobertura" else "Registrar")
+                    }
                 }
             }
         }
@@ -326,7 +341,8 @@ private fun ModeSelector(
                 label = { Text(mode.name) },
                 leadingIcon = if (selected) {
                     { Icon(Icons.Filled.Check, contentDescription = null) }
-                } else null
+                } else null,
+                shape = chipShape
             )
         }
     }
@@ -337,12 +353,11 @@ private fun MapaCobertura(
     latStr: String,
     lonStr: String,
     radioStr: String,
-    scope: CoroutineScope, // <-- AÑADIDO
+    scope: CoroutineScope,
     onChange: (latStr: String, lonStr: String, radioStr: String) -> Unit
 ) {
     val context = LocalContext.current
 
-    // Permisos de ubicación
     var hasLocationPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
@@ -350,7 +365,6 @@ private fun MapaCobertura(
         )
     }
 
-    // Valor por defecto: Santiago de Chile
     val defaultLatLng = LatLng(-33.45, -70.66)
     val lat = latStr.toDoubleOrNull() ?: defaultLatLng.latitude
     val lon = lonStr.toDoubleOrNull() ?: defaultLatLng.longitude
@@ -361,14 +375,12 @@ private fun MapaCobertura(
         position = CameraPosition.fromLatLngZoom(markerState.position, if (latStr.toDoubleOrNull() != null) 13f else 10f)
     }
 
-    // --- LÓGICA DE PERMISOS MEJORADA ---
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
         onResult = { result ->
             hasLocationPermission = result[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
                     result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
             if (hasLocationPermission) {
-                // Al aceptar permisos, centra y anima
                 centerOnMyLocation(context) { latLng ->
                     val r = radioStr.toDoubleOrNull() ?: radioKmInit
                     onChange(
@@ -382,11 +394,9 @@ private fun MapaCobertura(
             }
         }
     )
-    // --- FIN LÓGICA PERMISOS ---
 
     var radioKm by remember(radioKmInit) { mutableStateOf(radioKmInit) }
 
-    // Centrar automáticamente una sola vez si hay permisos
     var didCenterOnce by remember { mutableStateOf(false) }
     LaunchedEffect(hasLocationPermission) {
         if (hasLocationPermission && !didCenterOnce) {
@@ -407,7 +417,6 @@ private fun MapaCobertura(
     val mapProperties = remember(hasLocationPermission) { MapProperties(isMyLocationEnabled = hasLocationPermission) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Barra de acciones
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             TextButton(onClick = {
                 if (!hasLocationPermission) {
@@ -418,7 +427,6 @@ private fun MapaCobertura(
                 } else {
                     centerOnMyLocation(context) { latLng ->
                         markerState.position = latLng
-                        // Ajusta cámara para encuadrar el círculo con el radio actual
                         fitCircleInView(cameraPositionState, latLng, radioKm, scope)
                         onChange(
                             String.format(Locale.US, "%.6f", latLng.latitude),
@@ -453,14 +461,13 @@ private fun MapaCobertura(
             )
             Circle(
                 center = markerState.position,
-                radius = (radioKm * 1000.0), // Radio en metros
+                radius = (radioKm * 1000.0),
                 fillColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                 strokeColor = MaterialTheme.colorScheme.primary,
                 strokeWidth = 2f
             )
         }
 
-        // --- SLIDER MEJORADO ---
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Radio: ${String.format(Locale.US, "%.1f", radioKm)} km", style = MaterialTheme.typography.bodyMedium)
             Slider(
@@ -469,7 +476,6 @@ private fun MapaCobertura(
                     radioKm = v.toDouble().coerceIn(0.2, 5.0)
                 },
                 onValueChangeFinished = {
-                    // Actualiza estado principal y encuadra círculo
                     onChange(
                         String.format(Locale.US, "%.6f", markerState.position.latitude),
                         String.format(Locale.US, "%.6f", markerState.position.longitude),
@@ -481,21 +487,17 @@ private fun MapaCobertura(
                 steps = 98
             )
         }
-        // --- FIN SLIDER ---
-
-        // Coordenadas de referencia (solo lectura)
         Text(
             "Lat: ${String.format(Locale.US, "%.6f", markerState.position.latitude)}  |  Lon: ${String.format(Locale.US, "%.6f", markerState.position.longitude)}",
             style = MaterialTheme.typography.bodySmall
         )
-        HorizontalDivider() // <-- CORREGIDO
+        HorizontalDivider()
     }
 }
 
-// Helpers para encuadrar el círculo en el mapa
 private fun circleBounds(center: LatLng, radiusKm: Double): LatLngBounds {
     val latRad = Math.toRadians(center.latitude)
-    val dLat = radiusKm / 111.0 // ~111 km por grado
+    val dLat = radiusKm / 111.0
     val dLng = radiusKm / (111.0 * max(0.0001, cos(latRad)))
     val sw = LatLng(center.latitude - dLat, center.longitude - dLng)
     val ne = LatLng(center.latitude + dLat, center.longitude + dLng)
@@ -530,14 +532,12 @@ private fun centerOnMyLocation(
             if (loc != null) {
                 onLocated(LatLng(loc.latitude, loc.longitude))
             } else {
-                // Fallback a última ubicación conocida
                 fused.lastLocation.addOnSuccessListener { last ->
                     if (last != null) onLocated(LatLng(last.latitude, last.longitude))
                 }
             }
         }
         .addOnFailureListener {
-            // Fallback en caso de fallo
             fused.lastLocation.addOnSuccessListener { last ->
                 if (last != null) onLocated(LatLng(last.latitude, last.longitude))
             }
