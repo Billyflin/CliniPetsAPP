@@ -26,15 +26,24 @@ import cl.clinipets.ui.veterinarios.MiDisponibilidadScreen
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
-@Serializable object LoginRoute
-@Serializable object HomeRoute
-@Serializable object MascotasRoute
-@Serializable object ProfileRoute
-@Serializable object VeterinarianRoute
-@Serializable object MiCatalogoRoute
-@Serializable object MiDisponibilidadRoute
-@Serializable object DiscoveryRoute
-@Serializable object AgendaGestionRoute
+@Serializable
+object LoginRoute
+@Serializable
+object HomeRoute
+@Serializable
+object MascotasRoute
+@Serializable
+object ProfileRoute
+@Serializable
+object VeterinarianRoute
+@Serializable
+object MiCatalogoRoute
+@Serializable
+object MiDisponibilidadRoute
+@Serializable
+object DiscoveryRoute
+@Serializable
+object AgendaGestionRoute
 
 @Serializable
 data class MascotaDetailRoute(val id: String)
@@ -80,13 +89,19 @@ fun AppNavGraph(
     onRefreshProfile: () -> Unit
 ) {
     NavHost(navController = navController, startDestination = LoginRoute) {
-        composable<LoginRoute> { LoginScreen(busy = busy, error = uiState.error, onLoginClick = onLoginClick) }
+        composable<LoginRoute> {
+            LoginScreen(
+                busy = busy,
+                error = uiState.error,
+                onLoginClick = onLoginClick
+            )
+        }
         composable<HomeRoute> {
             HomeScreen(
                 displayName = uiState.displayName,
                 roles = uiState.roles,
                 onNavigateToMascotas = { navController.navigate(MascotasRoute) },
-                onNavigateToProfile = { navController.popBackStack(); navController.navigate(ProfileRoute) },
+                onNavigateToProfile = { navController.navigate(ProfileRoute) },
                 onNavigateToMiCatalogo = { navController.navigate(MiCatalogoRoute) },
                 onNavigateToMiDisponibilidad = { navController.navigate(MiDisponibilidadRoute) },
                 onNavigateToAgenda = { navController.navigate(DiscoveryRoute) },
@@ -96,7 +111,13 @@ fun AppNavGraph(
         composable<MascotasRoute> {
             MascotasScreen(
                 displayName = uiState.displayName,
-                onNavigateToMascotaDetail = { id: UUID -> navController.navigate(MascotaDetailRoute(id.toString())) },
+                onNavigateToMascotaDetail = { id: UUID ->
+                    navController.navigate(
+                        MascotaDetailRoute(
+                            id.toString()
+                        )
+                    )
+                },
                 onBack = { navController.popBackStack() },
                 onNavigateToMascotaForm = { navController.navigate(MascotaFormRoute()) }
             )
