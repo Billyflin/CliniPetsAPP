@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,6 +32,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,7 +50,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -57,6 +63,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -68,10 +76,15 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
-// Formateador para la fecha en la UI (ej: 15-11-2025)
 private val UI_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class) // NUEVO
+private val fieldShape = RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
+private val chipShape = CutCornerShape(topStart = 12.dp, bottomEnd = 12.dp)
+private val buttonShape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
+private val reservaCardShape = RoundedCornerShape(topStart = 8.dp, topEnd = 32.dp, bottomStart = 32.dp, bottomEnd = 8.dp)
+
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun AgendaGestionScreen(
     onBack: () -> Unit,
@@ -80,7 +93,7 @@ fun AgendaGestionScreen(
     vm: AgendaGestionViewModel = hiltViewModel()
 ) {
     val ui by vm.ui.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() } // remember
+    val snackbarHostState = remember { SnackbarHostState() }
     val mostrarFiltros = remember { mutableStateOf(false) }
     val reservaAConfirmarCancelacion = remember { mutableStateOf<Reserva?>(null) }
 
@@ -94,88 +107,113 @@ fun AgendaGestionScreen(
     LaunchedEffect(Unit) { vm.cargar() }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
         topBar = {
             TopAppBar(
-                title = { Text("Gestionar Agendas") }, // Título mejorado
-                // NUEVO: Botón de navegación para volver
+                title = { Text("Gestionar Agendas") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
-        Column(
-            Modifier
+        Surface(
+            modifier = Modifier
                 .padding(padding)
-                .fillMaxSize(), // Quitado padding de 16dp para que la lista use todo el espacio
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .fillMaxSize(),
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
         ) {
-            // Fila de título y filtros (con padding)
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 16.dp), // Padding solo arriba
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Mis reservas", style = MaterialTheme.typography.titleMedium)
-                TextButton(onClick = { mostrarFiltros.value = !mostrarFiltros.value }) {
-                    Text(if (mostrarFiltros.value) "Ocultar filtros" else "Mostrar filtros")
-                }
-            }
-
-            // Panel de filtros animado (con padding)
-            AnimatedVisibility(
-                visible = mostrarFiltros.value,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
-            ) {
-                // El panel de filtros ahora es un Composable separado y mejorado
-                FiltrosPanel(
-                    ui = ui,
-                    onToggleComo = vm::toggleComo,
-                    onToggleEstado = vm::toggleEstado,
-                    onToggleModo = vm::toggleModo,
-                    onSetFecha = vm::setFecha,
-                    onAplicar = vm::cargar
-                )
-            }
-
-            if (ui.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
-
-            ui.error?.let { err ->
-                Surface(
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    modifier = Modifier.padding(horizontal = 16.dp) // Padding para el error
-                ) {
-                    Text(err, Modifier.padding(8.dp), color = MaterialTheme.colorScheme.onErrorContainer)
-                }
-            }
-
-            // CAMBIO: Lista agrupada con Sticky Headers
-            val agrupadas = ui.reservas.groupBy { it.fecha.format(UI_DATE_FORMATTER) }
             LazyColumn(
+                modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp) // Padding para la lista
+                contentPadding = PaddingValues(vertical = 16.dp)
             ) {
-                // Ordenamos por fecha para asegurar el orden
+                item {
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Mis reservas", style = MaterialTheme.typography.titleMedium)
+                        TextButton(onClick = { mostrarFiltros.value = !mostrarFiltros.value }) {
+                            Text(if (mostrarFiltros.value) "Ocultar filtros" else "Mostrar filtros")
+                        }
+                    }
+                }
+
+                item {
+                    AnimatedVisibility(
+                        visible = mostrarFiltros.value,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        FiltrosPanel(
+                            ui = ui,
+                            onToggleComo = vm::toggleComo,
+                            onToggleEstado = vm::toggleEstado,
+                            onToggleModo = vm::toggleModo,
+                            onSetFecha = vm::setFecha,
+                            onAplicar = vm::cargar
+                        )
+                    }
+                }
+
+                if (ui.isLoading) {
+                    item {
+                        LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+                    }
+                }
+
+                ui.error?.let { err ->
+                    item {
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(err, Modifier.padding(8.dp), color = MaterialTheme.colorScheme.onErrorContainer)
+                        }
+                    }
+                }
+
+                val agrupadas = ui.reservas.groupBy { it.fecha.format(UI_DATE_FORMATTER) }
+
+                if (agrupadas.isEmpty() && !ui.isLoading) {
+                    item {
+                        Text(
+                            "No se encontraron reservas con los filtros seleccionados.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
+                }
+
                 agrupadas.entries.sortedBy { it.key }.forEach { (fecha, list) ->
-                    // NUEVO: Cabecera fija
                     stickyHeader {
                         FechaHeader(fecha)
                     }
                     items(list, key = { it.id!! }) { r ->
-                        ReservaItem(r,
-                            onAceptar = { vm.confirmar(r) },
-                            onCancelar = { reservaAConfirmarCancelacion.value = r },
-                            onVerMapa   = { onVerMapa(r.id!!) }
-                            , userId = userId
-                        )
+                        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            ReservaItem(
+                                r = r,
+                                onAceptar = { vm.confirmar(r) },
+                                onCancelar = { reservaAConfirmarCancelacion.value = r },
+                                onVerMapa = { onVerMapa(r.id!!) },
+                                userId = userId
+                            )
+                        }
                     }
                 }
             }
@@ -188,7 +226,6 @@ fun AgendaGestionScreen(
             title = { Text("Cancelar reserva") },
             text = { Text("¿Seguro que deseas cancelar la reserva ${r.procedimientoSku} del ${r.fecha}?") },
             confirmButton = {
-                // CAMBIO: Botón de confirmación con color de error
                 TextButton(
                     onClick = {
                         vm.cancelar(r)
@@ -202,11 +239,10 @@ fun AgendaGestionScreen(
     }
 }
 
-// NUEVO: Composable para la cabecera de fecha
 @Composable
 private fun FechaHeader(fecha: String) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f), // Color para la cabecera
+        color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Text(
@@ -219,7 +255,6 @@ private fun FechaHeader(fecha: String) {
 }
 
 
-// === CAMBIO: Panel de Filtros completamente rediseñado ===
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun FiltrosPanel(
@@ -232,7 +267,6 @@ private fun FiltrosPanel(
 ) {
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
-    // --- Lógica del DatePicker ---
     val selectedDateMillis = remember(ui.fecha) {
         ui.fecha?.atStartOfDay(ZoneId.of("UTC"))?.toInstant()?.toEpochMilli()
     }
@@ -259,7 +293,7 @@ private fun FiltrosPanel(
             },
             dismissButton = {
                 TextButton(onClick = {
-                    onSetFecha(null) // Permite limpiar la fecha
+                    onSetFecha(null)
                     showDatePicker = false
                 }) { Text("Limpiar") }
             }
@@ -267,12 +301,11 @@ private fun FiltrosPanel(
             DatePicker(state = datePickerState)
         }
     }
-    // --- Fin DatePicker ---
 
     Surface(
         modifier = Modifier.padding(horizontal = 16.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -281,33 +314,32 @@ private fun FiltrosPanel(
 
             Text("Filtrar por Rol", style = MaterialTheme.typography.labelLarge)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FiltroChipItem("Cliente", ui.como.contains(MisReservasQuery.Como.CLIENTE)) { onToggleComo(MisReservasQuery.Como.CLIENTE) }
-                FiltroChipItem("Veterinario", ui.como.contains(MisReservasQuery.Como.VETERINARIO)) { onToggleComo(MisReservasQuery.Como.VETERINARIO) }
+                FiltroChipItem("Cliente", ui.como.contains(MisReservasQuery.Como.CLIENTE), chipShape) { onToggleComo(MisReservasQuery.Como.CLIENTE) }
+                FiltroChipItem("Veterinario", ui.como.contains(MisReservasQuery.Como.VETERINARIO), chipShape) { onToggleComo(MisReservasQuery.Como.VETERINARIO) }
             }
 
             Text("Estado", style = MaterialTheme.typography.labelLarge)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FiltroChipItem("Pendiente", ui.estados.contains(MisReservasQuery.Estados.PENDIENTE)) { onToggleEstado(MisReservasQuery.Estados.PENDIENTE) }
-                FiltroChipItem("Confirmada", ui.estados.contains(MisReservasQuery.Estados.CONFIRMADA)) { onToggleEstado(MisReservasQuery.Estados.CONFIRMADA) }
-                FiltroChipItem("Realizada", ui.estados.contains(MisReservasQuery.Estados.REALIZADA)) { onToggleEstado(MisReservasQuery.Estados.REALIZADA) }
+                FiltroChipItem("Pendiente", ui.estados.contains(MisReservasQuery.Estados.PENDIENTE), chipShape) { onToggleEstado(MisReservasQuery.Estados.PENDIENTE) }
+                FiltroChipItem("Confirmada", ui.estados.contains(MisReservasQuery.Estados.CONFIRMADA), chipShape) { onToggleEstado(MisReservasQuery.Estados.CONFIRMADA) }
+                FiltroChipItem("Realizada", ui.estados.contains(MisReservasQuery.Estados.REALIZADA), chipShape) { onToggleEstado(MisReservasQuery.Estados.REALIZADA) }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FiltroChipItem("Cancelada (Cliente)", ui.estados.contains(MisReservasQuery.Estados.CANCELADA_CLIENTE)) { onToggleEstado(MisReservasQuery.Estados.CANCELADA_CLIENTE) }
-                FiltroChipItem("Cancelada (Vet)", ui.estados.contains(MisReservasQuery.Estados.CANCELADA_VETERINARIO)) { onToggleEstado(MisReservasQuery.Estados.CANCELADA_VETERINARIO) }
-                FiltroChipItem("Cancelada (Clínica)", ui.estados.contains(MisReservasQuery.Estados.CANCELADA_CLINICA)) { onToggleEstado(MisReservasQuery.Estados.CANCELADA_CLINICA) }
+                FiltroChipItem("Cancelada (Cliente)", ui.estados.contains(MisReservasQuery.Estados.CANCELADA_CLIENTE), chipShape) { onToggleEstado(MisReservasQuery.Estados.CANCELADA_CLIENTE) }
+                FiltroChipItem("Cancelada (Vet)", ui.estados.contains(MisReservasQuery.Estados.CANCELADA_VETERINARIO), chipShape) { onToggleEstado(MisReservasQuery.Estados.CANCELADA_VETERINARIO) }
+                FiltroChipItem("Cancelada (Clínica)", ui.estados.contains(MisReservasQuery.Estados.CANCELADA_CLINICA), chipShape) { onToggleEstado(MisReservasQuery.Estados.CANCELADA_CLINICA) }
             }
 
             Text("Modo", style = MaterialTheme.typography.labelLarge)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FiltroChipItem("Domicilio", ui.modos.contains(MisReservasQuery.Modos.DOMICILIO)) { onToggleModo(MisReservasQuery.Modos.DOMICILIO) }
-                FiltroChipItem("Clínica", ui.modos.contains(MisReservasQuery.Modos.CLINICA)) { onToggleModo(MisReservasQuery.Modos.CLINICA) }
-                FiltroChipItem("Urgencia", ui.modos.contains(MisReservasQuery.Modos.URGENCIA)) { onToggleModo(MisReservasQuery.Modos.URGENCIA) }
+                FiltroChipItem("Domicilio", ui.modos.contains(MisReservasQuery.Modos.DOMICILIO), chipShape) { onToggleModo(MisReservasQuery.Modos.DOMICILIO) }
+                FiltroChipItem("Clínica", ui.modos.contains(MisReservasQuery.Modos.CLINICA), chipShape) { onToggleModo(MisReservasQuery.Modos.CLINICA) }
+                FiltroChipItem("Urgencia", ui.modos.contains(MisReservasQuery.Modos.URGENCIA), chipShape) { onToggleModo(MisReservasQuery.Modos.URGENCIA) }
             }
 
             Spacer(Modifier.height(8.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Campo de fecha con DatePicker
                 Box(modifier = Modifier
                     .weight(1f)
                     .clickable { showDatePicker = true }
@@ -324,37 +356,35 @@ private fun FiltrosPanel(
                             disabledBorderColor = MaterialTheme.colorScheme.outline,
                             disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         ),
-                        trailingIcon = { Icon(Icons.Default.CalendarToday, "Seleccionar fecha") }
+                        trailingIcon = { Icon(Icons.Default.CalendarToday, "Seleccionar fecha") },
+                        shape = fieldShape
                     )
                 }
-                // Botón aplicar
-                Button(onClick = onAplicar) { Text("Aplicar") }
+                Button(onClick = onAplicar, shape = buttonShape) { Text("Aplicar") }
             }
         }
     }
 }
 
-// NUEVO: Composable reutilizable para los FilterChip
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FiltroChipItem(label: String, selected: Boolean, onToggle: () -> Unit) {
+private fun FiltroChipItem(label: String, selected: Boolean, shape: Shape, onToggle: () -> Unit) {
     FilterChip(
         selected = selected,
         onClick = onToggle,
         label = { Text(label) },
+        shape = shape,
         leadingIcon = {
             if (selected) {
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = "Seleccionado",
-                    modifier = Modifier.size(18.dp) // Tamaño del ícono de check
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
     )
 }
-
-// Composable 'FiltroCheck' eliminado, ya no se usa.
 
 @Composable
 private fun ReservaItem(
@@ -364,10 +394,14 @@ private fun ReservaItem(
     userId: UUID?,
     onVerMapa: () -> Unit
 ) {
-    Surface(tonalElevation = 2.dp, shape = RoundedCornerShape(16.dp)) {
+    Surface(
+        shape = reservaCardShape,
+        color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Text(r.procedimientoSku, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(r.procedimientoSku, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 EstadoBadge(r.estado)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -380,13 +414,13 @@ private fun ReservaItem(
 
             Spacer(Modifier.height(4.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                val puedeAceptar = r.estado == Reserva.Estado.PENDIENTE && (r.clienteId!= userId)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                val puedeAceptar = r.estado == Reserva.Estado.PENDIENTE && (r.clienteId != userId)
                 val puedeCancelar = r.estado != Reserva.Estado.CANCELADA_CLIENTE && r.estado != Reserva.Estado.CANCELADA_VETERINARIO && r.estado != Reserva.Estado.CANCELADA_CLINICA && r.estado != Reserva.Estado.REALIZADA
-                val  puedeVerMapa = r.estado == Reserva.Estado.CONFIRMADA
-                Button(onClick = onAceptar, enabled = puedeAceptar) { Text("Aceptar") }
+                val puedeVerMapa = r.estado == Reserva.Estado.CONFIRMADA
 
-                // CAMBIO: "Cancelar" es ahora un TextButton para menor énfasis y con color de error
+                Button(onClick = onAceptar, enabled = puedeAceptar, shape = buttonShape) { Text("Aceptar") }
+
                 TextButton(
                     onClick = onCancelar,
                     enabled = puedeCancelar,
@@ -401,7 +435,6 @@ private fun ReservaItem(
     }
 }
 
-// Los composables de Badges (EstadoBadge, ModoBadge, SimpleBadge) están perfectos, se dejan igual.
 @Composable
 private fun EstadoBadge(estado: Reserva.Estado) {
     val (bg, fg) = when (estado) {
