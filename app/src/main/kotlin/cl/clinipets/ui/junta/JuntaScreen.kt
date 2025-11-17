@@ -29,7 +29,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -246,17 +245,12 @@ fun JuntaScreen(
                                 Modifier.padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Text("Reserva #${reserva.id}", style = MaterialTheme.typography.titleMedium)
+                                Text("Detalles de la Reserva", style = MaterialTheme.typography.titleMedium)
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                                 Text("Fecha: ${reserva.fecha} ${reserva.horaInicio}-${reserva.horaFin}")
                                 Text("Modo: ${reserva.modoAtencion}")
                                 Text("Estado: ${reserva.estado}")
                                 reserva.direccionTexto?.let { Text("Dirección: $it") }
-                                if (reserva.lat != null && reserva.lng != null) {
-                                    Text("Ubicación reservada: ${"%.5f".format(reserva.lat)} , ${"%.5f".format(reserva.lng)}")
-                                } else {
-                                    Text("Reserva sin coordenadas (lat/lng)")
-                                }
                                 reserva.referencias?.let { Text("Referencias: $it") }
                                 if (reserva.lat != null && reserva.lng != null && vetPosActual != null) {
                                     val dist = distanciaKm(LatLng(reserva.lat, reserva.lng), LatLng(vetPosActual.lat, vetPosActual.lng))
@@ -299,28 +293,6 @@ fun JuntaScreen(
                             }
                         }
                     }
-                }
-
-                item {
-                    Text(
-                        "Últimas posiciones (${ui.ultimasPosiciones.size})",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-
-                items(ui.ultimasPosiciones) { p ->
-                    ListItem(
-                        headlineContent = { Text("${"%.5f".format(p.lat)}, ${"%.5f".format(p.lng)}") },
-                        supportingContent = {
-                            Text(buildString {
-                                p.speed?.let { append("Vel: ${"%.1f".format(it)} km/h  ") }
-                                p.heading?.let { append("Heading: ${"%.0f".format(it)}°  ") }
-                                p.ts?.let { append("ts: $it") }
-                            })
-                        }
-                    )
-                    HorizontalDivider()
                 }
             }
         }
