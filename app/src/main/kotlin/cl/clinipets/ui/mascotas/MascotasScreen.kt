@@ -1,6 +1,7 @@
 package cl.clinipets.ui.mascotas
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 
 import androidx.compose.foundation.Image
@@ -22,6 +23,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -40,7 +43,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -93,7 +95,7 @@ fun MascotasScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNavigateToMascotaForm,
-                shape = FloatingActionButtonDefaults.shape,
+                shape = CircleShape,
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
@@ -172,37 +174,16 @@ fun MascotasScreen(
 
 @Composable
 private fun MascotaCard(mascota: Mascota, onClick: () -> Unit) {
-    val cardShape = RoundedCornerShape(24.dp)
-
-
-    Box(
+    Card(
         modifier = Modifier
             .heightIn(min = 190.dp)
             .fillMaxWidth()
-            .clip(cardShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-            .clickable(onClick = onClick)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        )
     ) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .size(40.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(bottomEnd = 24.dp)
-                )
-        )
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .size(40.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(topStart = 24.dp)
-                )
-        )
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -221,12 +202,11 @@ private fun MascotaCard(mascota: Mascota, onClick: () -> Unit) {
                 contentDescription = mascota.especie.value,
                 modifier = Modifier
                     .size(75.dp)
-                    .padding(top = 8.dp)
             )
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.Start
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = mascota.nombre,
@@ -234,7 +214,7 @@ private fun MascotaCard(mascota: Mascota, onClick: () -> Unit) {
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Start
+                    textAlign = TextAlign.Center
                 )
 
                 val razaNombre = mascota.raza?.nombre?.takeIf { it.isNotBlank() }
@@ -243,7 +223,7 @@ private fun MascotaCard(mascota: Mascota, onClick: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Start
+                    textAlign = TextAlign.Center
                 )
             }
         }

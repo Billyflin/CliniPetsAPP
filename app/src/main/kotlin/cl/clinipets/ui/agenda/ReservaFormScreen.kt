@@ -3,6 +3,7 @@ package cl.clinipets.ui.agenda
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -44,6 +44,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,9 +56,9 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
 
-private val fieldShape = RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
-private val buttonShape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
-private val slotCardShape = RoundedCornerShape(topStart = 8.dp, topEnd = 24.dp, bottomStart = 24.dp, bottomEnd = 8.dp)
+private val fieldShape = RoundedCornerShape(16.dp)
+private val buttonShape = RoundedCornerShape(24.dp)
+private val slotCardShape = RoundedCornerShape(20.dp)
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -160,14 +161,22 @@ fun ReservaFormScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedTextField(
-                            value = ui.fecha,
-                            onValueChange = {},
-                            modifier = Modifier.weight(1f),
-                            readOnly = true,
-                            label = { Text("Fecha") },
-                            shape = fieldShape
-                        )
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(fieldShape)
+                                .clickable { openDatePicker.value = true }
+                        ) {
+                            OutlinedTextField(
+                                value = ui.fecha,
+                                onValueChange = {},
+                                modifier = Modifier.fillMaxWidth(),
+                                readOnly = true,
+                                label = { Text("Fecha") },
+                                shape = fieldShape,
+                                enabled = false
+                            )
+                        }
                         Button(
                             onClick = { openDatePicker.value = true },
                             shape = buttonShape

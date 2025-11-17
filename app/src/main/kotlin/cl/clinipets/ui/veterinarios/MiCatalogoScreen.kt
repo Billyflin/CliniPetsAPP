@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -87,12 +86,12 @@ private fun formatCompatItem(set: Set<Procedimiento.CompatibleCon>): String {
     }
 }
 
-private val fieldShape = RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
-private val chipShape = CutCornerShape(topStart = 12.dp, bottomEnd = 12.dp)
-private val buttonShape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
-private val itemCardShape = RoundedCornerShape(topStart = 32.dp, topEnd = 8.dp, bottomStart = 8.dp, bottomEnd = 32.dp)
-private val pendingCardShape = RoundedCornerShape(topStart = 8.dp, topEnd = 32.dp, bottomStart = 32.dp, bottomEnd = 8.dp)
-private val addCardShape = RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
+private val fieldShape = RoundedCornerShape(16.dp)
+private val chipShape = RoundedCornerShape(12.dp)
+private val buttonShape = RoundedCornerShape(24.dp)
+private val itemCardShape = RoundedCornerShape(28.dp)
+private val pendingCardShape = RoundedCornerShape(28.dp)
+private val addCardShape = RoundedCornerShape(16.dp)
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)

@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.CutCornerShape
+// import androidx.compose.foundation.shape.CutCornerShape // [CAMBIO] Ya no se usa
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
@@ -117,8 +117,10 @@ private fun HomeHeader(
             .padding(horizontal = 16.dp)
             .fillMaxWidth()
             .heightIn(min = 120.dp),
-        shape = RoundedCornerShape(topStart = 40.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 40.dp),
+        // [CAMBIO] Forma simétrica y muy redondeada
+        shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(
+            // Los colores "Container" ya son "pastel" por defecto en M3
             containerColor = MaterialTheme.colorScheme.primaryContainer
         )
     ) {
@@ -144,7 +146,7 @@ private fun HomeHeader(
                     onClick = onNavigateToProfile, modifier = Modifier.size(36.dp)
                 ) {
                     Surface(
-                        shape = CircleShape,
+                        shape = CircleShape, // Mantenemos el círculo
                         color = MaterialTheme.colorScheme.primary
                     ) {
                         Icon(
@@ -173,7 +175,7 @@ private fun HomeHeader(
                     contentDescription = "Logo",
                     modifier = Modifier
                         .size(68.dp)
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(20.dp)) // Redondeado
                 )
             }
         }
@@ -260,10 +262,12 @@ private fun ActionGrid(items: List<ActionItem>) {
 @Composable
 private fun ActionChip(item: ActionItem) {
     Surface(
-        shape = CutCornerShape(topStart = 20.dp, bottomEnd = 20.dp),
+        // [CAMBIO] Forma redondeada en lugar de CutCornerShape
+        shape = RoundedCornerShape(20.dp),
         color = item.color,
         modifier = Modifier
-            .shadow(2.dp, CutCornerShape(topStart = 20.dp, bottomEnd = 20.dp))
+            // [CAMBIO] Sombra también redondeada
+            .shadow(2.dp, RoundedCornerShape(20.dp))
             .clickable { item.onClick() }
     ) {
         Row(
@@ -275,7 +279,8 @@ private fun ActionChip(item: ActionItem) {
         ) {
 
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                // [CAMBIO] Fondo del ícono circular para ser más "tierno"
+                shape = CircleShape,
                 color = MaterialTheme.colorScheme.surface
             ) {
                 Icon(

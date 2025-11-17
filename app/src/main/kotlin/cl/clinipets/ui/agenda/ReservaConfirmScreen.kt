@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -50,8 +49,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.DiscoveryRequest
 import java.util.UUID
 
-private val buttonShape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
-private val summaryCardShape = RoundedCornerShape(topStart = 32.dp, topEnd = 8.dp, bottomStart = 32.dp, bottomEnd = 8.dp)
+private val buttonShape = RoundedCornerShape(24.dp)
+private val summaryCardShape = RoundedCornerShape(28.dp)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

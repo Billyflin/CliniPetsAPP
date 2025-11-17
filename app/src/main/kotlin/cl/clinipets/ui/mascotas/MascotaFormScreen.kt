@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -75,8 +75,8 @@ import java.util.UUID
 
 private val UI_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
 
-private val fieldShape = RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
-private val chipShape = CutCornerShape(topStart = 12.dp, bottomEnd = 12.dp)
+private val fieldShape = RoundedCornerShape(16.dp)
+private val chipShape = RoundedCornerShape(12.dp)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -111,7 +111,6 @@ fun MascotaFormScreen(
 
     val isNombreValido = nombre.isNotBlank()
     val showNombreError = nombreIsDirty && !isNombreValido
-
 
     val handleBack = {
         vm.limpiarSeleccion()
@@ -211,7 +210,6 @@ fun MascotaFormScreen(
         )
     }
 
-
     Scaffold(
         containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
         topBar = {
@@ -281,11 +279,16 @@ fun MascotaFormScreen(
                     }
                     handleBack()
                 },
-                shape = MaterialTheme.shapes.large,
+                shape = CircleShape,
                 containerColor = if (!isNombreValido || cargando) {
                     MaterialTheme.colorScheme.surfaceVariant
                 } else {
-                    MaterialTheme.colorScheme.primaryContainer
+                    MaterialTheme.colorScheme.primary
+                },
+                contentColor = if (!isNombreValido || cargando) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.onPrimary
                 }
             ) {
                 if (cargando && !didPrefill) {

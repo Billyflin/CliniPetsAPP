@@ -3,6 +3,7 @@ package cl.clinipets.ui.profile
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import androidx.compose.ui.draw.clip
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -77,9 +77,9 @@ import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.max
 
-private val fieldShape = RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
-private val chipShape = CutCornerShape(topStart = 12.dp, bottomEnd = 12.dp)
-private val buttonShape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
+private val fieldShape = RoundedCornerShape(16.dp)
+private val chipShape = RoundedCornerShape(12.dp)
+private val buttonShape = RoundedCornerShape(24.dp)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -441,7 +441,8 @@ private fun MapaCobertura(
         GoogleMap(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(240.dp),
+                .height(240.dp)
+                .clip(RoundedCornerShape(16.dp)),
             cameraPositionState = cameraPositionState,
             uiSettings = mapUiSettings,
             properties = mapProperties,

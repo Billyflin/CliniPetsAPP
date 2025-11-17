@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -76,21 +75,20 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
-// Se mantienen las mismas definiciones de forma
 private val UI_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
-private val fieldShape = RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
-private val chipShape = CutCornerShape(topStart = 12.dp, bottomEnd = 12.dp)
-private val buttonShape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
-private val reservaCardShape = RoundedCornerShape(topStart = 8.dp, topEnd = 32.dp, bottomStart = 32.dp, bottomEnd = 8.dp)
+private val fieldShape = RoundedCornerShape(16.dp)
+private val chipShape = RoundedCornerShape(12.dp)
+private val buttonShape = RoundedCornerShape(24.dp)
+private val reservaCardShape = RoundedCornerShape(28.dp)
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
-fun AgendaClienteScreen( // Renombrado
+fun AgendaClienteScreen(
     onBack: () -> Unit,
     onVerMapa: (UUID) -> Unit,
     userId: UUID?,
-    vm: AgendaGestionViewModel = hiltViewModel() // Se usa el mismo VM
+    vm: AgendaGestionViewModel = hiltViewModel()
 ) {
     val ui by vm.ui.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -104,19 +102,14 @@ fun AgendaClienteScreen( // Renombrado
         }
     }
 
-    // [CAMBIO CLAVE]
-    // Al entrar, forzamos el ViewModel al modo "CLIENTE" antes de cargar.
     LaunchedEffect(Unit) {
         val currentState = vm.ui.value.como
-        // 1. Si "VETERINARIO" está activado, lo desactivamos
         if (currentState.contains(MisReservasQuery.Como.VETERINARIO)) {
             vm.toggleComo(MisReservasQuery.Como.VETERINARIO)
         }
-        // 2. Si "CLIENTE" no está activado, lo activamos
         if (!currentState.contains(MisReservasQuery.Como.CLIENTE)) {
             vm.toggleComo(MisReservasQuery.Como.CLIENTE)
         }
-        // 3. Cargamos los datos
         vm.cargar()
     }
 
@@ -124,7 +117,7 @@ fun AgendaClienteScreen( // Renombrado
         containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
         topBar = {
             TopAppBar(
-                title = { Text("Mis Reservas (Cliente)") }, // Título actualizado
+                title = { Text("Mis Reservas") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
@@ -159,7 +152,7 @@ fun AgendaClienteScreen( // Renombrado
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Mis reservas como cliente", style = MaterialTheme.typography.titleMedium) // Título actualizado
+                        Text("Mis reservas como cliente", style = MaterialTheme.typography.titleMedium)
                         TextButton(onClick = { mostrarFiltros.value = !mostrarFiltros.value }) {
                             Text(if (mostrarFiltros.value) "Ocultar filtros" else "Mostrar filtros")
                         }
@@ -172,7 +165,7 @@ fun AgendaClienteScreen( // Renombrado
                         enter = fadeIn() + expandVertically(),
                         exit = fadeOut() + shrinkVertically()
                     ) {
-                        FiltrosPanelCliente( // Panel de filtros modificado
+                        FiltrosPanelCliente(
                             ui = ui,
                             onToggleEstado = vm::toggleEstado,
                             onToggleModo = vm::toggleModo,
@@ -252,8 +245,6 @@ fun AgendaClienteScreen( // Renombrado
     }
 }
 
-// [CAMBIO CLAVE]
-// Se crea un panel de filtros específico que NO incluye el filtro de Rol.
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun FiltrosPanelCliente(
@@ -310,8 +301,6 @@ private fun FiltrosPanelCliente(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
 
-            // Sección "Filtrar por Rol" ELIMINADA
-
             Text("Estado", style = MaterialTheme.typography.labelLarge)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FiltroChipItem("Pendiente", ui.estados.contains(MisReservasQuery.Estados.PENDIENTE), chipShape) { onToggleEstado(MisReservasQuery.Estados.PENDIENTE) }
@@ -360,8 +349,6 @@ private fun FiltrosPanelCliente(
     }
 }
 
-
-// --- Los composables de abajo (FechaHeader, FiltroChipItem, ReservaItem, Badges) son idénticos a AgendaGestionScreen ---
 
 @Composable
 private fun FechaHeader(fecha: String) {

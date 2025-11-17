@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -75,9 +74,8 @@ import cl.clinipets.openapi.models.Veterinario
 import cl.clinipets.ui.auth.LoginViewModel
 import coil.compose.AsyncImage
 
-private val buttonShape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
-private val headerCardShape = RoundedCornerShape(topStart = 32.dp, topEnd = 8.dp, bottomStart = 8.dp, bottomEnd = 32.dp)
-private val sectionCardShape = RoundedCornerShape(topStart = 8.dp, topEnd = 32.dp, bottomStart = 32.dp, bottomEnd = 8.dp)
+private val buttonShape = RoundedCornerShape(24.dp)
+private val cardShape = RoundedCornerShape(28.dp)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -185,7 +183,7 @@ private fun ProfileHeader(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
         ),
-        shape = headerCardShape
+        shape = cardShape
     ) {
         Column(
             modifier = Modifier
@@ -264,7 +262,7 @@ private fun ProfessionalStatusCard(
 ) {
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = sectionCardShape,
+        shape = cardShape,
         colors = CardDefaults.outlinedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
@@ -364,7 +362,7 @@ private fun PersonalizationSection() {
 
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = sectionCardShape,
+        shape = cardShape,
         colors = CardDefaults.outlinedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )

@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -53,9 +52,9 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-private val buttonShape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
-private val itemCardShape = RoundedCornerShape(topStart = 32.dp, topEnd = 8.dp, bottomStart = 8.dp, bottomEnd = 32.dp)
-private val availCardShape = RoundedCornerShape(topStart = 8.dp, topEnd = 24.dp, bottomStart = 24.dp, bottomEnd = 8.dp)
+private val buttonShape = RoundedCornerShape(24.dp)
+private val itemCardShape = RoundedCornerShape(28.dp)
+private val availCardShape = RoundedCornerShape(20.dp)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,7 +118,7 @@ fun MiDisponibilidadScreen(
                             .padding(top = 8.dp)
                     ) {
                         Text(
-                            "$fechaSeleccionada",
+                            fechaSeleccionada.format(DateTimeFormatter.ISO_LOCAL_DATE),
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.weight(1f)
                         )
@@ -154,7 +153,7 @@ fun MiDisponibilidadScreen(
                 }
 
                 item {
-                    Text("Disponibilidad para ${fechaSeleccionada}:", style = MaterialTheme.typography.titleMedium)
+                    Text("Disponibilidad para ${fechaSeleccionada.format(DateTimeFormatter.ISO_LOCAL_DATE)}:", style = MaterialTheme.typography.titleMedium)
                 }
 
                 if (state.disponibilidad.isEmpty()) {
@@ -241,7 +240,7 @@ fun MiDisponibilidadScreen(
                         ),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
                     ) {
-                        Text("Marcar ${fechaSeleccionada} como CERRADO")
+                        Text("Marcar ${fechaSeleccionada.format(DateTimeFormatter.ISO_LOCAL_DATE)} como CERRADO")
                     }
                 }
 

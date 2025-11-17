@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -172,7 +171,7 @@ fun MascotaDetailScreen(
                             item {
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(topStart = 32.dp, topEnd = 8.dp, bottomStart = 8.dp, bottomEnd = 32.dp),
+                                    shape = RoundedCornerShape(28.dp),
                                     colors = CardDefaults.cardColors(
                                         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
                                     )
@@ -214,7 +213,7 @@ fun MascotaDetailScreen(
                             item {
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(topStart = 8.dp, topEnd = 32.dp, bottomStart = 32.dp, bottomEnd = 8.dp),
+                                    shape = RoundedCornerShape(28.dp),
                                     colors = CardDefaults.cardColors(
                                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                                     )
@@ -261,7 +260,7 @@ fun MascotaDetailScreen(
                                 OutlinedButton(
                                     onClick = { showDeleteDialog = true },
                                     modifier = Modifier.fillMaxWidth(),
-                                    shape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp),
+                                    shape = RoundedCornerShape(24.dp),
                                     colors = ButtonDefaults.outlinedButtonColors(
                                         contentColor = MaterialTheme.colorScheme.error
                                     )

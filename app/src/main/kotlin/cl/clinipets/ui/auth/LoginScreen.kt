@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -26,14 +25,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource // <-- ¡IMPORTE CLAVE!
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import cl.clinipets.R // <-- ¡IMPORTE CLAVE!
+import cl.clinipets.R
 import cl.clinipets.core.di.ApiModule.resolveBaseUrl
 
-// Forma expresiva para el botón
-private val buttonShape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
+private val buttonShape = RoundedCornerShape(24.dp)
 
 @Composable
 fun LoginScreen(
@@ -52,7 +50,6 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // --- 1. Sección de Bienvenida (Logo y Título) ---
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -79,12 +76,10 @@ fun LoginScreen(
                 )
             }
 
-            // --- 2. Sección de Acción (Error y Botón) ---
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Mensaje de Error
                 AnimatedVisibility(visible = error != null) {
                     Surface(
                         color = MaterialTheme.colorScheme.errorContainer,
@@ -101,7 +96,6 @@ fun LoginScreen(
                     }
                 }
 
-                // [CAMBIO] Botón actualizado para usar painterResource
                 OutlinedButton(
                     onClick = onLoginClick,
                     enabled = !busy,
@@ -117,19 +111,17 @@ fun LoginScreen(
                             color = MaterialTheme.colorScheme.primary
                         )
                     } else {
-                        // Se usa el nuevo XML de drawable
                         Icon(
                             painter = painterResource(id = R.drawable.ic_google_logo),
                             contentDescription = "Logo de Google",
                             modifier = Modifier.size(24.dp),
-                            tint = Color.Unspecified // ¡Importante para que no se tiña de gris!
+                            tint = Color.Unspecified
                         )
                         Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                         Text("Iniciar sesión con Google")
                     }
                 }
 
-                // Texto de debug (base URL)
                 Text(
                     text = resolveBaseUrl(),
                     style = MaterialTheme.typography.labelSmall,
