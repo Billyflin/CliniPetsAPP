@@ -25,7 +25,7 @@ class ReservaViewModel @Inject constructor(
         val isLoadingSlots: Boolean = false,
         val error: String? = null,
         val fecha: String = LocalDate.now().toString(),
-        val horaInicio: String = "09:00",
+        val horaInicio: String? = null,
         val direccion: String = "",
         val referencias: String = "",
         val modo: DiscoveryRequest.ModoAtencion = DiscoveryRequest.ModoAtencion.DOMICILIO,
@@ -53,9 +53,10 @@ class ReservaViewModel @Inject constructor(
             modo = modo,
             lat = lat,
             lng = lng,
-            veterinarioId = veterinarioId
+            veterinarioId = veterinarioId,
+            horaInicio = null
         )
-        cargarSlots() // carga inicial de slots para la fecha por defecto
+        cargarSlots()
     }
 
     fun setFecha(v: String) {
@@ -77,7 +78,7 @@ class ReservaViewModel @Inject constructor(
         val s = _ui.value
         val fecha = runCatching { LocalDate.parse(s.fecha) }.getOrNull() ?: return
         viewModelScope.launch {
-            _ui.value = s.copy(isLoadingSlots = true, error = null)
+            _ui.value = s.copy(isLoadingSlots = true, error = null, slots = emptyList())
             try {
                 val (tipo, ownerId) = when (s.modo) {
                     DiscoveryRequest.ModoAtencion.CLINICA ->
@@ -99,10 +100,10 @@ class ReservaViewModel @Inject constructor(
                 if (resp.isSuccessful) {
                     val slots = resp.body().orEmpty()
                     _ui.value = _ui.value.copy(isLoadingSlots = false, slots = slots)
-                    // Si la hora seleccionada ya no está, limpiar selección
+
                     if (slots.none { it.inicio == _ui.value.horaInicio }) {
                         _ui.value = _ui.value.copy(
-                            horaInicio = slots.firstOrNull()?.inicio ?: _ui.value.horaInicio
+                            horaInicio = null
                         )
                     }
                 } else {
@@ -124,6 +125,8 @@ class ReservaViewModel @Inject constructor(
     fun crearReserva(onDone: () -> Unit) {
         val s = _ui.value
 
+        val horaInicio = s.horaInicio ?: return
+
         val modoDto = try {
             ReservaCreateDTO.ModoAtencion.valueOf(s.modo.name)
         } catch (_: IllegalArgumentException) {
@@ -134,7 +137,7 @@ class ReservaViewModel @Inject constructor(
             procedimientoSku = s.procedimientoSku,
             modoAtencion = modoDto,
             fecha = LocalDate.parse(s.fecha),
-            horaInicio = s.horaInicio,
+            horaInicio = horaInicio,
             veterinarioId = s.veterinarioId,
             direccionTexto = s.direccion.ifBlank { null },
             lat = s.lat,
