@@ -1,8 +1,9 @@
 package cl.clinipets.ui.home
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background // <-- ¡IMPORT CORREGIDO!
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,9 +13,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,7 +30,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -37,10 +37,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -69,27 +72,60 @@ fun HomeScreen(
     onNavigateToAgendaVeterinario: () -> Unit,
     vm: HomeViewModel = hiltViewModel()
 ) {
-    val uiState by vm.ui.collectAsState()
     val isVeterinarian = roles.contains("VETERINARIO")
 
-    Scaffold { padding ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface
+    ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding), contentPadding = PaddingValues(
-                top = 24.dp, bottom = 32.dp
-            )
+                .padding(padding)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.colorScheme.surface
+                        )
+                    )
+                ),
+            contentPadding = PaddingValues(bottom = 32.dp)
         ) {
+            item { Spacer(Modifier.height(16.dp)) }
+
             item {
-                HomeHeader(
+                CuteHeader(
                     displayName = displayName,
                     fotoUrl = fotoUrl,
                     onNavigateToProfile = onNavigateToProfile
                 )
             }
-            item { Spacer(Modifier.height(12.dp)) }
+
+            item { Spacer(Modifier.height(24.dp)) }
+
             item {
-                QuickActions(
+                WelcomeMessage(isVeterinarian = isVeterinarian)
+            }
+
+            item { Spacer(Modifier.height(24.dp)) }
+
+            item {
+                Text(
+                    text = "¿Qué quieres hacer hoy?",
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            item { Spacer(Modifier.height(16.dp)) }
+
+            item {
+                CuteQuickActions(
                     isVeterinarian = isVeterinarian,
                     onMascotas = onNavigateToMascotas,
                     onAgenda = onNavigateToAgenda,
@@ -98,13 +134,121 @@ fun HomeScreen(
             }
 
             if (isVeterinarian) {
-                item { Spacer(Modifier.height(28.dp)) }
-                item { SectionTitle(title = "Herramientas profesionales") }
+                item { Spacer(Modifier.height(32.dp)) }
+
                 item {
-                    VetToolsCompact(
+                    Row(
+                        modifier = Modifier
+                            .padding(horizontal = 20.dp)
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Store,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Herramientas profesionales",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                item { Spacer(Modifier.height(16.dp)) }
+
+                item {
+                    CuteVetTools(
                         onNavigateToMiCatalogo = onNavigateToMiCatalogo,
                         onNavigateToMiDisponibilidad = onNavigateToMiDisponibilidad,
                         onNavigateToAgendaVeterinario = onNavigateToAgendaVeterinario
+                    )
+                }
+            }
+
+            item { Spacer(Modifier.height(16.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun CuteHeader(
+    displayName: String?,
+    fotoUrl: String?,
+    onNavigateToProfile: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Hola! 👋",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            Text(
+                text = displayName?.split(" ")?.firstOrNull() ?: "Bienvenido",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Spacer(Modifier.width(16.dp))
+
+        Surface(
+            onClick = onNavigateToProfile,
+            modifier = Modifier.size(56.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            tonalElevation = 3.dp
+        ) {
+            if (!fotoUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = fotoUrl,
+                    contentDescription = "Foto de perfil",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Perfil",
+                        modifier = Modifier.size(28.dp),
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -113,219 +257,186 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeHeader(
-    displayName: String?,
-    fotoUrl: String?,
-    onNavigateToProfile: () -> Unit
-) {
-    val name = displayName?.takeIf { it.isNotBlank() }?.split(" ")?.firstOrNull() ?: "Bienvenido"
-
+private fun WelcomeMessage(isVeterinarian: Boolean) {
     Card(
         modifier = Modifier
-            .padding(horizontal = 16.dp)
             .fillMaxWidth()
-            .heightIn(min = 120.dp),
-        shape = RoundedCornerShape(28.dp),
+            .padding(horizontal = 20.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Hola $name 👋",
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp),
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    text = if (isVeterinarian) {
+                        "Gestiona tu consultorio y tus mascotas en un solo lugar"
+                    } else {
+                        "El cuidado de tus mascotas, más fácil que nunca"
+                    },
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 22.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
-
-                IconButton(
-                    onClick = onNavigateToProfile, modifier = Modifier.size(40.dp)
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 2.dp
-                    ) {
-                        if (!fotoUrl.isNullOrBlank()) {
-                            AsyncImage(
-                                model = fotoUrl,
-                                contentDescription = "Foto de perfil",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.radialGradient(
-                                            colors = listOf(
-                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                            )
-                                        )
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = "Perfil",
-                                    modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    }
-                }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Gestiona tu mundo veterinario y tus mascotas.",
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium
-                )
+            Spacer(Modifier.width(12.dp))
 
-                Image(
-                    painter = painterResource(id = R.drawable.logopastel),
-                    contentDescription = "Logo",
-                    modifier = Modifier
-                        .size(68.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                )
-            }
+            Image(
+                painter = painterResource(id = R.drawable.logopastel),
+                contentDescription = "Logo",
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(16.dp))
+            )
         }
     }
 }
 
-@Composable
-private fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        modifier = Modifier.padding(horizontal = 16.dp),
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold
-    )
-}
-
-private data class ActionItem(
-    val icon: ImageVector, val title: String, val color: Color, val onClick: () -> Unit
+private data class CuteActionItem(
+    val icon: ImageVector,
+    val title: String,
+    val subtitle: String,
+    val containerColor: Color,
+    val iconColor: Color,
+    val onClick: () -> Unit
 )
 
 @Composable
-private fun QuickActions(
+private fun CuteQuickActions(
     isVeterinarian: Boolean,
     onMascotas: () -> Unit,
     onAgenda: () -> Unit,
     onNavigateToAgendaCliente: () -> Unit
 ) {
-    val tituloReservas = if (isVeterinarian) "Mis Reservas (Cliente)" else "Mis Reservas"
+    val tituloReservas = if (isVeterinarian) "Mis Reservas" else "Mis Reservas"
+    val subtituloReservas = if (isVeterinarian) "Como cliente" else "Ver citas"
 
-    val items = buildList {
-        add(
-            ActionItem(
-                Icons.Default.Pets,
-                "Mascotas",
-                MaterialTheme.colorScheme.primaryContainer,
-                onMascotas
-            )
-        )
-        add(
-            ActionItem(
-                Icons.AutoMirrored.Filled.Assignment,
-                "Buscar Servicio",
-                MaterialTheme.colorScheme.tertiaryContainer,
-                onAgenda
-            )
-        )
-        add(
-            ActionItem(
-                Icons.AutoMirrored.Filled.EventNote,
-                tituloReservas,
-                MaterialTheme.colorScheme.surfaceContainerHighest,
-                onNavigateToAgendaCliente
-            )
-        )
-    }
-
-    ActionGrid(items)
-}
-
-@Composable
-private fun ActionGrid(items: List<ActionItem>) {
     Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items.chunked(2).forEach { rowItems ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                rowItems.forEach { item ->
-                    Box(modifier = Modifier.weight(1f)) {
-                        ActionChip(item)
-                    }
-                }
-                if (rowItems.size == 1) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
+        CuteActionCard(
+            item = CuteActionItem(
+                icon = Icons.Default.Pets,
+                title = "Mis Mascotas",
+                subtitle = "Ver y gestionar",
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                iconColor = MaterialTheme.colorScheme.primary,
+                onClick = onMascotas
+            )
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                CuteActionCardCompact(
+                    item = CuteActionItem(
+                        icon = Icons.AutoMirrored.Filled.Assignment,
+                        title = "Buscar",
+                        subtitle = "Servicios",
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        iconColor = MaterialTheme.colorScheme.secondary,
+                        onClick = onAgenda
+                    )
+                )
+            }
+
+            Box(modifier = Modifier.weight(1f)) {
+                CuteActionCardCompact(
+                    item = CuteActionItem(
+                        icon = Icons.AutoMirrored.Filled.EventNote,
+                        title = tituloReservas,
+                        subtitle = subtituloReservas,
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        iconColor = MaterialTheme.colorScheme.tertiary,
+                        onClick = onNavigateToAgendaCliente
+                    )
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ActionChip(item: ActionItem) {
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = item.color,
+private fun CuteActionCard(item: CuteActionItem) {
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = tween(durationMillis = 100),
+        label = "scale"
+    )
+
+    Card(
+        onClick = {
+            isPressed = true
+            item.onClick()
+        },
         modifier = Modifier
-            .shadow(2.dp, RoundedCornerShape(20.dp))
-            .clickable { item.onClick() }
+            .fillMaxWidth()
+            .scale(scale),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = item.containerColor
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 6.dp
+        )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-
             Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surface
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.size(56.dp)
             ) {
-                Icon(
-                    imageVector = item.icon,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp),
+                        tint = item.iconColor
+                    )
+                }
             }
+
+            Spacer(Modifier.width(16.dp))
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.title,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Text(
+                    text = item.subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -333,46 +444,130 @@ private fun ActionChip(item: ActionItem) {
 }
 
 @Composable
-private fun VetToolsCompact(
+private fun CuteActionCardCompact(item: CuteActionItem) {
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = tween(durationMillis = 100),
+        label = "scale"
+    )
+
+    Card(
+        onClick = {
+            isPressed = true
+            item.onClick()
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(scale),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = item.containerColor
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 6.dp
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = item.iconColor
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Text(
+                text = item.subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun CuteVetTools(
     onNavigateToMiCatalogo: () -> Unit,
     onNavigateToMiDisponibilidad: () -> Unit,
     onNavigateToAgendaVeterinario: () -> Unit
 ) {
-    val actions = listOf(
-        ActionItem(
-            Icons.Default.Store,
-            "Mi catálogo",
-            MaterialTheme.colorScheme.secondaryContainer,
-            onNavigateToMiCatalogo
-        ), ActionItem(
-            Icons.Default.AccessTime,
-            "Disponibilidad",
-            MaterialTheme.colorScheme.surfaceVariant,
-            onNavigateToMiDisponibilidad
-        ),
-        ActionItem(
-            Icons.AutoMirrored.Filled.EventNote,
-            "Mis Agendas (Vet)",
-            MaterialTheme.colorScheme.tertiaryContainer,
-            onNavigateToAgendaVeterinario
-        )
-    )
-
     Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        actions.chunked(2).forEach { rowItems ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                for (item in rowItems) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        ActionChip(item)
-                    }
-                }
-                if (rowItems.size == 1) Spacer(Modifier.weight(1f))
+        CuteActionCard(
+            item = CuteActionItem(
+                icon = Icons.Default.Store,
+                title = "Mi Catálogo",
+                subtitle = "Gestionar servicios",
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                iconColor = MaterialTheme.colorScheme.secondary,
+                onClick = onNavigateToMiCatalogo
+            )
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                CuteActionCardCompact(
+                    item = CuteActionItem(
+                        icon = Icons.Default.AccessTime,
+                        title = "Horarios",
+                        subtitle = "Disponibilidad",
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        iconColor = MaterialTheme.colorScheme.tertiary,
+                        onClick = onNavigateToMiDisponibilidad
+                    )
+                )
+            }
+
+            Box(modifier = Modifier.weight(1f)) {
+                CuteActionCardCompact(
+                    item = CuteActionItem(
+                        icon = Icons.AutoMirrored.Filled.EventNote,
+                        title = "Mis Agendas",
+                        subtitle = "Como veterinario",
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        iconColor = MaterialTheme.colorScheme.primary,
+                        onClick = onNavigateToAgendaVeterinario
+                    )
+                )
             }
         }
     }
