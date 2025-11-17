@@ -20,6 +20,7 @@ class ReservaViewModel @Inject constructor(
     private val agendaApi: AgendaControllerApi,
     private val horariosApi: HorariosControllerApi
 ) : ViewModel() {
+
     data class Ui(
         val isSubmitting: Boolean = false,
         val isLoadingSlots: Boolean = false,
@@ -33,6 +34,8 @@ class ReservaViewModel @Inject constructor(
         val lat: Double? = null,
         val lng: Double? = null,
         val veterinarioId: UUID? = null,
+        // NUEVO: nombre legible del veterinario
+        val veterinarioNombre: String? = null,
         val slots: List<Intervalo> = emptyList(),
         val usarMiUbicacion: Boolean = true
     )
@@ -47,6 +50,7 @@ class ReservaViewModel @Inject constructor(
         lat: Double?,
         lng: Double?,
         veterinarioId: UUID?,
+        veterinarioNombre: String?
     ) {
         _ui.value = _ui.value.copy(
             procedimientoSku = procedimientoSku,
@@ -54,6 +58,7 @@ class ReservaViewModel @Inject constructor(
             lat = lat,
             lng = lng,
             veterinarioId = veterinarioId,
+            veterinarioNombre = veterinarioNombre,
             horaInicio = null
         )
         cargarSlots()
@@ -63,9 +68,11 @@ class ReservaViewModel @Inject constructor(
         _ui.value = _ui.value.copy(fecha = v)
         cargarSlots()
     }
+
     fun setHoraInicio(v: String) { _ui.value = _ui.value.copy(horaInicio = v) }
     fun setDireccion(v: String) { _ui.value = _ui.value.copy(direccion = v) }
     fun setReferencias(v: String) { _ui.value = _ui.value.copy(referencias = v) }
+
     fun setUsarMiUbicacion(v: Boolean) {
         _ui.value = _ui.value.copy(usarMiUbicacion = v)
     }
@@ -83,7 +90,8 @@ class ReservaViewModel @Inject constructor(
                 val (tipo, ownerId) = when (s.modo) {
                     DiscoveryRequest.ModoAtencion.CLINICA ->
                         HorariosControllerApi.TipoSlots.CLINICA to null
-                    DiscoveryRequest.ModoAtencion.DOMICILIO, DiscoveryRequest.ModoAtencion.URGENCIA -> {
+                    DiscoveryRequest.ModoAtencion.DOMICILIO,
+                    DiscoveryRequest.ModoAtencion.URGENCIA -> {
                         val vetId = s.veterinarioId
                         if (vetId == null) {
                             _ui.value = s.copy(

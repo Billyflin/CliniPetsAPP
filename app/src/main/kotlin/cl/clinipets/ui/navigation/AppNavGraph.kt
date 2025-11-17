@@ -52,7 +52,8 @@ data class ReservaFormRoute(
     val lat: Double? = null,
     val lng: Double? = null,
     val veterinarioId: String? = null,
-    val precioSugerido: Int? = null
+    val precioSugerido: Int? = null,
+    val veterinarioNombre: String? = null
 )
 
 @Serializable
@@ -65,7 +66,8 @@ data class ReservaConfirmRoute(
     val lng: Double? = null,
     val veterinarioId: String? = null,
     val direccion: String? = null,
-    val referencias: String? = null
+    val referencias: String? = null,
+    val veterinarioNombre: String? = null
 )
 
 @Serializable
@@ -159,7 +161,7 @@ fun AppNavGraph(
         composable<DiscoveryRoute> {
             DiscoveryScreen(
                 onBack = { navController.popBackStack() },
-                onContinuarReserva = { mascotaId: UUID, sku: String, modo: DiscoveryRequest.ModoAtencion, lat: Double?, lng: Double?, veterinarioId: UUID?, precioSugerido: Int? ->
+                onContinuarReserva = { mascotaId: UUID, sku: String, modo: DiscoveryRequest.ModoAtencion, lat: Double?, lng: Double?, veterinarioId: UUID?, precioSugerido: Int?, veterinarioNombre: String? ->
                     navController.navigate(
                         ReservaFormRoute(
                             mascotaId = mascotaId.toString(),
@@ -168,7 +170,8 @@ fun AppNavGraph(
                             lat = lat,
                             lng = lng,
                             veterinarioId = veterinarioId?.toString(),
-                            precioSugerido = precioSugerido
+                            precioSugerido = precioSugerido,
+                            veterinarioNombre = veterinarioNombre
                         )
                     )
                 }
@@ -184,6 +187,7 @@ fun AppNavGraph(
                 lng = args.lng,
                 veterinarioId = args.veterinarioId?.let(UUID::fromString),
                 precioSugerido = args.precioSugerido,
+                veterinarioNombre = args.veterinarioNombre,
                 onBack = { navController.popBackStack() },
                 onReservada = { navController.popBackStack(DiscoveryRoute, inclusive = false) },
                 onContinuarConfirmacion = { fecha: String, horaInicio: String, direccion: String?, referencias: String? ->
@@ -197,7 +201,8 @@ fun AppNavGraph(
                             lng = args.lng,
                             veterinarioId = args.veterinarioId,
                             direccion = direccion,
-                            referencias = referencias
+                            referencias = referencias,
+                            veterinarioNombre = args.veterinarioNombre
                         )
                     )
                 }
@@ -213,6 +218,7 @@ fun AppNavGraph(
                 lat = args.lat,
                 lng = args.lng,
                 veterinarioId = args.veterinarioId?.let(UUID::fromString),
+                veterinarioNombre = args.veterinarioNombre,
                 direccion = args.direccion,
                 referencias = args.referencias,
                 onBack = { navController.popBackStack() },

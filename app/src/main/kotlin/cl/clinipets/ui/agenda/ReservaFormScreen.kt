@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -62,7 +63,6 @@ private val fieldShape = RoundedCornerShape(16.dp)
 private val buttonShape = RoundedCornerShape(24.dp)
 private val slotCardShape = RoundedCornerShape(20.dp)
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReservaFormScreen(
@@ -73,6 +73,7 @@ fun ReservaFormScreen(
     lng: Double?,
     veterinarioId: UUID? = null,
     precioSugerido: Int? = null,
+    veterinarioNombre: String? = null,   // ⬅️ NUEVO
     onBack: () -> Unit,
     onReservada: () -> Unit,
     onContinuarConfirmacion: (fecha: String, horaInicio: String, direccion: String?, referencias: String?) -> Unit,
@@ -80,7 +81,17 @@ fun ReservaFormScreen(
 ) {
     val ui by vm.ui.collectAsState()
 
-    LaunchedEffect(Unit) { vm.init(mascotaId, procedimientoSku, modo, lat, lng, veterinarioId) }
+    LaunchedEffect(Unit) {
+        vm.init(
+            mascotaId = mascotaId,
+            procedimientoSku = procedimientoSku,
+            modo = modo,
+            lat = lat,
+            lng = lng,
+            veterinarioId = veterinarioId,
+            veterinarioNombre = veterinarioNombre
+        )
+    }
 
     val openDatePicker = remember { mutableStateOf(false) }
     val pickerState = rememberDatePickerState(
@@ -239,13 +250,13 @@ fun ReservaFormScreen(
                                 Text(
                                     "${slot.inicio} - ${slot.fin}",
                                     modifier = Modifier.weight(1f),
-                                    fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else null
+                                    fontWeight = if (selected) FontWeight.Bold else null
                                 )
                                 if (selected) {
                                     Text(
                                         "(seleccionado)",
                                         color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
@@ -253,7 +264,10 @@ fun ReservaFormScreen(
                     }
                 } else if (!ui.isLoadingSlots) {
                     item {
-                        Text("No hay horarios disponibles para la fecha seleccionada.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "No hay horarios disponibles para la fecha seleccionada.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 
@@ -271,7 +285,10 @@ fun ReservaFormScreen(
                             .padding(vertical = 4.dp)
                     ) {
                         Text("Usar mi ubicación", modifier = Modifier.weight(1f))
-                        Switch(checked = ui.usarMiUbicacion, onCheckedChange = { vm.setUsarMiUbicacion(it) })
+                        Switch(
+                            checked = ui.usarMiUbicacion,
+                            onCheckedChange = { vm.setUsarMiUbicacion(it) }
+                        )
                     }
                 }
 
@@ -307,7 +324,6 @@ fun ReservaFormScreen(
                 }
 
                 item {
-                    // [CAMBIO] La validación ahora comprueba si horaInicio NO es nulo.
                     val isTimeSlotSelected = ui.horaInicio != null
                     val isFormValid = !ui.isSubmitting && isTimeSlotSelected
 
@@ -315,7 +331,7 @@ fun ReservaFormScreen(
                         onClick = {
                             onContinuarConfirmacion(
                                 ui.fecha,
-                                ui.horaInicio!!, // <-- CAMBIO: Se usa !! (es seguro por la validación)
+                                ui.horaInicio!!,
                                 ui.direccion.ifBlank { null },
                                 ui.referencias.ifBlank { null }
                             )
