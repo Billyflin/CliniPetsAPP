@@ -1,4 +1,3 @@
-// ui/navigation/NavGraph.kt — NavHost usando rutas tipadas (Compose Navigation 2.8+)
 package cl.clinipets.ui.navigation
 
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -8,11 +7,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import cl.clinipets.openapi.models.DiscoveryRequest
-
-// Nuevas importaciones
 import cl.clinipets.ui.agenda.AgendaClienteScreen
 import cl.clinipets.ui.agenda.AgendaVeterinarioScreen
-// import cl.clinipets.ui.agenda.AgendaGestionScreen // Ya no se usa
 import cl.clinipets.ui.agenda.ReservaConfirmScreen
 import cl.clinipets.ui.agenda.ReservaFormScreen
 import cl.clinipets.ui.auth.LoginScreen
@@ -39,10 +35,8 @@ import java.util.UUID
 @Serializable object MiDisponibilidadRoute
 @Serializable object DiscoveryRoute
 
-// Nuevas Rutas
 @Serializable object AgendaClienteRoute
 @Serializable object AgendaVeterinarioRoute
-// @Serializable object AgendaGestionRoute // Ya no se usa
 
 @Serializable
 data class MascotaDetailRoute(val id: String)
@@ -87,21 +81,22 @@ fun AppNavGraph(
     onLogout: () -> Unit,
     onRefreshProfile: () -> Unit
 ) {
-    NavHost(navController = navController, startDestination = LoginRoute) {
-        composable<LoginRoute> {
-            LoginScreen(
-                busy = busy,
-                error = uiState.error,
-                onLoginClick = onLoginClick
-            )
+    val isLoggedIn = uiState.me != null
+
+    NavHost(navController = navController, startDestination = if (isLoggedIn) HomeRoute else LoginRoute) {
+        if (!isLoggedIn) {
+            composable<LoginRoute> {
+                LoginScreen(
+                    busy = busy,
+                    error = uiState.error,
+                    onLoginClick = onLoginClick
+                )
+            }
         }
         composable<HomeRoute> {
             HomeScreen(
                 displayName = uiState.displayName,
-                // --- ¡CAMBIO AQUÍ! ---
-                // Se pasa el fotoUrl desde el uiState
                 fotoUrl = uiState.me?.fotoUrl,
-                // --- FIN DEL CAMBIO ---
                 roles = uiState.roles,
                 onNavigateToMascotas = { navController.navigate(MascotasRoute) },
                 onNavigateToProfile = { navController.navigate(ProfileRoute) },

@@ -42,9 +42,11 @@ class LoginViewModel @Inject constructor(
                     hasRequestedProfile = false
                 }
 
+                val shouldStillCheck = hasToken && !hasRequestedProfile
+
                 _ui.update { current ->
                     current.copy(
-                        isCheckingSession = false,
+                        isCheckingSession = shouldStillCheck,
                         ok = hasToken && (current.me?.authenticated != false),
                         roles = snapshot.roles,
                         displayName = snapshot.displayName,
@@ -103,22 +105,24 @@ class LoginViewModel @Inject constructor(
                                 me = body,
                                 roles = body.roles.orEmpty(),
                                 displayName = body.nombre,
-                                error = null
+                                error = null,
+                                isCheckingSession = false
                             )
                         }
                     } else {
-                        _ui.update { it.copy(ok = false, error = "Perfil vacío") }
+                        _ui.update { it.copy(ok = false, error = "Perfil vacío", isCheckingSession = false) }
                     }
                 } else {
                     _ui.update {
                         it.copy(
                             ok = false,
-                            error = "HTTP ${response.code()}: ${response.errorBody()?.string()}"
+                            error = "HTTP ${response.code()}: ${response.errorBody()?.string()}",
+                            isCheckingSession = false
                         )
                     }
                 }
             }.onFailure { throwable ->
-                _ui.update { it.copy(ok = false, error = throwable.message ?: "Error inesperado") }
+                _ui.update { it.copy(ok = false, error = throwable.message ?: "Error inesperado", isCheckingSession = false) }
             }
         }
     }
