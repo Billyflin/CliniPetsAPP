@@ -1,4 +1,3 @@
-// ui/navigation/NavGraph.kt — NavHost usando rutas tipadas (Compose Navigation 2.8+)
 package cl.clinipets.ui.navigation
 
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -8,11 +7,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import cl.clinipets.openapi.models.DiscoveryRequest
-
-// Nuevas importaciones
 import cl.clinipets.ui.agenda.AgendaClienteScreen
 import cl.clinipets.ui.agenda.AgendaVeterinarioScreen
-// import cl.clinipets.ui.agenda.AgendaGestionScreen // Ya no se usa
 import cl.clinipets.ui.agenda.ReservaConfirmScreen
 import cl.clinipets.ui.agenda.ReservaFormScreen
 import cl.clinipets.ui.auth.LoginScreen
@@ -39,10 +35,8 @@ import java.util.UUID
 @Serializable object MiDisponibilidadRoute
 @Serializable object DiscoveryRoute
 
-// Nuevas Rutas
 @Serializable object AgendaClienteRoute
 @Serializable object AgendaVeterinarioRoute
-// @Serializable object AgendaGestionRoute // Ya no se usa
 
 @Serializable
 data class MascotaDetailRoute(val id: String)
@@ -58,7 +52,8 @@ data class ReservaFormRoute(
     val lat: Double? = null,
     val lng: Double? = null,
     val veterinarioId: String? = null,
-    val precioSugerido: Int? = null
+    val precioSugerido: Int? = null,
+    val veterinarioNombre: String? = null
 )
 
 @Serializable
@@ -71,7 +66,8 @@ data class ReservaConfirmRoute(
     val lng: Double? = null,
     val veterinarioId: String? = null,
     val direccion: String? = null,
-    val referencias: String? = null
+    val referencias: String? = null,
+    val veterinarioNombre: String? = null
 )
 
 @Serializable
@@ -98,10 +94,7 @@ fun AppNavGraph(
         composable<HomeRoute> {
             HomeScreen(
                 displayName = uiState.displayName,
-                // --- ¡CAMBIO AQUÍ! ---
-                // Se pasa el fotoUrl desde el uiState
                 fotoUrl = uiState.me?.fotoUrl,
-                // --- FIN DEL CAMBIO ---
                 roles = uiState.roles,
                 onNavigateToMascotas = { navController.navigate(MascotasRoute) },
                 onNavigateToProfile = { navController.navigate(ProfileRoute) },
@@ -164,7 +157,7 @@ fun AppNavGraph(
         composable<DiscoveryRoute> {
             DiscoveryScreen(
                 onBack = { navController.popBackStack() },
-                onContinuarReserva = { mascotaId: UUID, sku: String, modo: DiscoveryRequest.ModoAtencion, lat: Double?, lng: Double?, veterinarioId: UUID?, precioSugerido: Int? ->
+                onContinuarReserva = { mascotaId: UUID, sku: String, modo: DiscoveryRequest.ModoAtencion, lat: Double?, lng: Double?, veterinarioId: UUID?, precioSugerido: Int?, veterinarioNombre: String? ->
                     navController.navigate(
                         ReservaFormRoute(
                             mascotaId = mascotaId.toString(),
@@ -173,7 +166,8 @@ fun AppNavGraph(
                             lat = lat,
                             lng = lng,
                             veterinarioId = veterinarioId?.toString(),
-                            precioSugerido = precioSugerido
+                            precioSugerido = precioSugerido,
+                            veterinarioNombre = veterinarioNombre
                         )
                     )
                 }
@@ -189,6 +183,7 @@ fun AppNavGraph(
                 lng = args.lng,
                 veterinarioId = args.veterinarioId?.let(UUID::fromString),
                 precioSugerido = args.precioSugerido,
+                veterinarioNombre = args.veterinarioNombre,
                 onBack = { navController.popBackStack() },
                 onReservada = { navController.popBackStack(DiscoveryRoute, inclusive = false) },
                 onContinuarConfirmacion = { fecha: String, horaInicio: String, direccion: String?, referencias: String? ->
@@ -202,7 +197,8 @@ fun AppNavGraph(
                             lng = args.lng,
                             veterinarioId = args.veterinarioId,
                             direccion = direccion,
-                            referencias = referencias
+                            referencias = referencias,
+                            veterinarioNombre = args.veterinarioNombre
                         )
                     )
                 }
@@ -218,6 +214,7 @@ fun AppNavGraph(
                 lat = args.lat,
                 lng = args.lng,
                 veterinarioId = args.veterinarioId?.let(UUID::fromString),
+                veterinarioNombre = args.veterinarioNombre,
                 direccion = args.direccion,
                 referencias = args.referencias,
                 onBack = { navController.popBackStack() },

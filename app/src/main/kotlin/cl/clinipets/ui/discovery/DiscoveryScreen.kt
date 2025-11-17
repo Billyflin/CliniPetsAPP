@@ -63,7 +63,6 @@ private val chipShape = RoundedCornerShape(12.dp)
 private val buttonShape = RoundedCornerShape(24.dp)
 private val resultCardShape = RoundedCornerShape(28.dp)
 
-
 private fun DiscoveryRequest.ModoAtencion.toFriendlyString(): String {
     return this.name.split('_').joinToString(" ") {
         it.lowercase().replaceFirstChar { char ->
@@ -82,7 +81,16 @@ private enum class SortType {
 @Composable
 fun DiscoveryScreen(
     onBack: () -> Unit,
-    onContinuarReserva: (mascotaId: UUID, procedimientoSku: String, modo: DiscoveryRequest.ModoAtencion, lat: Double?, lng: Double?, veterinarioId: UUID?, precioSugerido: Int?) -> Unit,
+    onContinuarReserva: (
+        mascotaId: UUID,
+        procedimientoSku: String,
+        modo: DiscoveryRequest.ModoAtencion,
+        lat: Double?,
+        lng: Double?,
+        veterinarioId: UUID?,
+        precioSugerido: Int?,
+        veterinarioNombre: String?
+    ) -> Unit,
     vm: DiscoveryViewModel = hiltViewModel()
 ) {
     val ui by vm.ui.collectAsState()
@@ -234,6 +242,7 @@ fun DiscoveryScreen(
                                         ui.latitud,
                                         ui.longitud,
                                         null,
+                                        null,
                                         null
                                     )
                                 }
@@ -276,13 +285,19 @@ fun DiscoveryScreen(
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     FilterChip(
                                         selected = sortType == SortType.DISTANCE,
-                                        onClick = { sortType = if (sortType == SortType.DISTANCE) SortType.NONE else SortType.DISTANCE },
+                                        onClick = {
+                                            sortType =
+                                                if (sortType == SortType.DISTANCE) SortType.NONE else SortType.DISTANCE
+                                        },
                                         label = { Text("Distancia") },
                                         shape = chipShape
                                     )
                                     FilterChip(
                                         selected = sortType == SortType.PRICE,
-                                        onClick = { sortType = if (sortType == SortType.PRICE) SortType.NONE else SortType.PRICE },
+                                        onClick = {
+                                            sortType =
+                                                if (sortType == SortType.PRICE) SortType.NONE else SortType.PRICE
+                                        },
                                         label = { Text("Precio") },
                                         shape = chipShape
                                     )
@@ -344,7 +359,8 @@ fun DiscoveryScreen(
                                                                 ui.latitud,
                                                                 ui.longitud,
                                                                 v.id,
-                                                                v.precio
+                                                                v.precio,
+                                                                v.nombreCompleto
                                                             )
                                                         }
                                                     },
@@ -356,7 +372,12 @@ fun DiscoveryScreen(
                                 }
                             }
                         } else if (!ui.isLoading && !ui.isSubmitting && ui.resultados.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(
                                     "No se encontraron veterinarios con esos criterios.",
                                     style = MaterialTheme.typography.bodyMedium,

@@ -62,6 +62,7 @@ fun ReservaConfirmScreen(
     lat: Double?,
     lng: Double?,
     veterinarioId: UUID?,
+    veterinarioNombre: String?,     // ⬅️ NUEVO
     direccion: String?,
     referencias: String?,
     onBack: () -> Unit,
@@ -77,7 +78,8 @@ fun ReservaConfirmScreen(
             modo = modo,
             lat = lat,
             lng = lng,
-            veterinarioId = veterinarioId
+            veterinarioId = veterinarioId,
+            veterinarioNombre = veterinarioNombre
         )
         vm.setFecha(fecha)
         vm.setHoraInicio(horaInicio)
@@ -137,9 +139,15 @@ fun ReservaConfirmScreen(
                             InfoItem(Icons.Default.CalendarToday, "Fecha", fecha)
                             InfoItem(Icons.Default.Schedule, "Hora", horaInicio)
 
-                            veterinarioId?.let {
-                                InfoItem(Icons.Default.Person, "Veterinario", it.toString())
+                            veterinarioId?.let { vetId ->
+                                val textoVet = ui.veterinarioNombre
+                                    ?.takeIf { it.isNotBlank() }
+                                    ?: veterinarioNombre?.takeIf { it.isNotBlank() }
+                                    ?: vetId.toString()
+
+                                InfoItem(Icons.Default.Person, "Veterinario", textoVet)
                             }
+
                             direccion?.let {
                                 if (it.isNotBlank()) InfoItem(Icons.Default.LocationOn, "Dirección", it)
                             }
@@ -165,7 +173,6 @@ fun ReservaConfirmScreen(
                         }
                     }
                 }
-
 
                 Column(
                     modifier = Modifier.padding(top = 16.dp),
@@ -203,12 +210,10 @@ fun ReservaConfirmScreen(
                         Text("Volver")
                     }
                 }
-
             }
         }
     }
 }
-
 
 @Composable
 private fun InfoItem(
