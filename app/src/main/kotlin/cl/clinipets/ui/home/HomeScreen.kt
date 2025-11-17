@@ -1,6 +1,7 @@
 package cl.clinipets.ui.home
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background // <-- ¡IMPORT CORREGIDO!
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-// import androidx.compose.foundation.shape.CutCornerShape // [CAMBIO] Ya no se usa
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
@@ -41,8 +41,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,11 +52,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.R
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     displayName: String?,
+    fotoUrl: String?,
     roles: List<String>,
     onNavigateToMascotas: () -> Unit,
     onNavigateToProfile: () -> Unit,
@@ -78,7 +82,9 @@ fun HomeScreen(
         ) {
             item {
                 HomeHeader(
-                    displayName = displayName, onNavigateToProfile = onNavigateToProfile
+                    displayName = displayName,
+                    fotoUrl = fotoUrl,
+                    onNavigateToProfile = onNavigateToProfile
                 )
             }
             item { Spacer(Modifier.height(12.dp)) }
@@ -108,7 +114,9 @@ fun HomeScreen(
 
 @Composable
 private fun HomeHeader(
-    displayName: String?, onNavigateToProfile: () -> Unit
+    displayName: String?,
+    fotoUrl: String?,
+    onNavigateToProfile: () -> Unit
 ) {
     val name = displayName?.takeIf { it.isNotBlank() }?.split(" ")?.firstOrNull() ?: "Bienvenido"
 
@@ -117,10 +125,8 @@ private fun HomeHeader(
             .padding(horizontal = 16.dp)
             .fillMaxWidth()
             .heightIn(min = 120.dp),
-        // [CAMBIO] Forma simétrica y muy redondeada
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(
-            // Los colores "Container" ya son "pastel" por defecto en M3
             containerColor = MaterialTheme.colorScheme.primaryContainer
         )
     ) {
@@ -143,18 +149,42 @@ private fun HomeHeader(
                 )
 
                 IconButton(
-                    onClick = onNavigateToProfile, modifier = Modifier.size(36.dp)
+                    onClick = onNavigateToProfile, modifier = Modifier.size(40.dp)
                 ) {
                     Surface(
-                        shape = CircleShape, // Mantenemos el círculo
-                        color = MaterialTheme.colorScheme.primary
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 2.dp
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Perfil",
-                            modifier = Modifier.padding(6.dp),
-                            tint = MaterialTheme.colorScheme.onPrimary
-                        )
+                        if (!fotoUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = fotoUrl,
+                                contentDescription = "Foto de perfil",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.radialGradient(
+                                            colors = listOf(
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                            )
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "Perfil",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -175,7 +205,7 @@ private fun HomeHeader(
                     contentDescription = "Logo",
                     modifier = Modifier
                         .size(68.dp)
-                        .clip(RoundedCornerShape(20.dp)) // Redondeado
+                        .clip(RoundedCornerShape(20.dp))
                 )
             }
         }
@@ -262,11 +292,9 @@ private fun ActionGrid(items: List<ActionItem>) {
 @Composable
 private fun ActionChip(item: ActionItem) {
     Surface(
-        // [CAMBIO] Forma redondeada en lugar de CutCornerShape
         shape = RoundedCornerShape(20.dp),
         color = item.color,
         modifier = Modifier
-            // [CAMBIO] Sombra también redondeada
             .shadow(2.dp, RoundedCornerShape(20.dp))
             .clickable { item.onClick() }
     ) {
@@ -279,7 +307,6 @@ private fun ActionChip(item: ActionItem) {
         ) {
 
             Surface(
-                // [CAMBIO] Fondo del ícono circular para ser más "tierno"
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.surface
             ) {

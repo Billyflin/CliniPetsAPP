@@ -1,3 +1,4 @@
+// ui/navigation/NavGraph.kt — NavHost usando rutas tipadas (Compose Navigation 2.8+)
 package cl.clinipets.ui.navigation
 
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -97,13 +98,16 @@ fun AppNavGraph(
         composable<HomeRoute> {
             HomeScreen(
                 displayName = uiState.displayName,
+                // --- ¡CAMBIO AQUÍ! ---
+                // Se pasa el fotoUrl desde el uiState
+                fotoUrl = uiState.me?.fotoUrl,
+                // --- FIN DEL CAMBIO ---
                 roles = uiState.roles,
                 onNavigateToMascotas = { navController.navigate(MascotasRoute) },
-                onNavigateToProfile = { navController.navigate(ProfileRoute) }, // Corregido
+                onNavigateToProfile = { navController.navigate(ProfileRoute) },
                 onNavigateToMiCatalogo = { navController.navigate(MiCatalogoRoute) },
                 onNavigateToMiDisponibilidad = { navController.navigate(MiDisponibilidadRoute) },
                 onNavigateToAgenda = { navController.navigate(DiscoveryRoute) },
-                // --- CAMBIO AQUÍ ---
                 onNavigateToAgendaCliente = { navController.navigate(AgendaClienteRoute) },
                 onNavigateToAgendaVeterinario = { navController.navigate(AgendaVeterinarioRoute) }
             )
@@ -221,9 +225,6 @@ fun AppNavGraph(
             )
         }
 
-        // --- CAMBIO AQUÍ ---
-        // composable<AgendaGestionRoute> { ... } // Ruta antigua eliminada
-
         composable<AgendaClienteRoute> {
             AgendaClienteScreen(
                 onBack = { navController.popBackStack() },
@@ -238,7 +239,6 @@ fun AppNavGraph(
                 userId = uiState.me?.id
             )
         }
-        // --- FIN DEL CAMBIO ---
 
         composable<JuntaRoute> { backStackEntry ->
             val args = backStackEntry.toRoute<JuntaRoute>()
