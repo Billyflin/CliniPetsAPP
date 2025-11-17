@@ -38,18 +38,22 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import cl.clinipets.R
 import cl.clinipets.openapi.models.Mascota
 import java.util.UUID
@@ -67,7 +71,22 @@ fun MascotasScreen(
     val cargando by vm.cargando.collectAsState()
     val error by vm.error.collectAsState()
 
-    LaunchedEffect(Unit) { vm.cargar() }
+    // --- ¡CAMBIO AQUÍ! ---
+    // Se elimina el LaunchedEffect(Unit) y se reemplaza por un observador de ciclo de vida.
+    // Esto llama a vm.cargar() CADA VEZ que la pantalla se muestra (incluso al volver).
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                vm.cargar()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
@@ -138,7 +157,7 @@ fun MascotasScreen(
                         }
                     }
 
-                    mascotas.isEmpty() -> {
+                    mascotas.isEmpty() && !cargando -> { // Se añade !cargando para evitar que se muestre brevemente
                         Text(
                             text = displayName?.let { "No hay mascotas registradas para $it." }
                                 ?: "Aún no tienes mascotas registradas.",
