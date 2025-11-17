@@ -28,6 +28,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -54,6 +55,7 @@ import cl.clinipets.openapi.models.Intervalo
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 private val fieldShape = RoundedCornerShape(16.dp)
@@ -305,38 +307,23 @@ fun ReservaFormScreen(
                 }
 
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Button(
-                            onClick = {
-                                onContinuarConfirmacion(
-                                    ui.fecha,
-                                    ui.horaInicio,
-                                    ui.direccion.ifBlank { null },
-                                    ui.referencias.ifBlank { null }
-                                )
-                            },
-                            enabled = !ui.isSubmitting,
-                            modifier = Modifier.weight(1f),
-                            shape = buttonShape
-                        ) { Text("Revisar y confirmar") }
+                    // [CAMBIO] La validación ahora comprueba si horaInicio NO es nulo.
+                    val isTimeSlotSelected = ui.horaInicio != null
+                    val isFormValid = !ui.isSubmitting && isTimeSlotSelected
 
-                        Button(
-                            onClick = { vm.crearReserva(onReservada) },
-                            enabled = !ui.isSubmitting,
-                            modifier = Modifier.weight(1f),
-                            shape = buttonShape
-                        ) {
-                            if (ui.isSubmitting) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier
-                                        .padding(end = 8.dp)
-                                        .size(18.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            }
-                            Text(if (ui.isSubmitting) "Creando..." else "Confirmar ahora")
-                        }
-                    }
+                    Button(
+                        onClick = {
+                            onContinuarConfirmacion(
+                                ui.fecha,
+                                ui.horaInicio!!, // <-- CAMBIO: Se usa !! (es seguro por la validación)
+                                ui.direccion.ifBlank { null },
+                                ui.referencias.ifBlank { null }
+                            )
+                        },
+                        enabled = isFormValid,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = buttonShape
+                    ) { Text("Revisar y confirmar") }
                 }
             }
         }
