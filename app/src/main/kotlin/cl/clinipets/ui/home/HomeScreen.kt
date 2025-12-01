@@ -1,5 +1,6 @@
 package cl.clinipets.ui.home
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,14 +31,49 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.ServicioMedicoDto
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TopAppBar
+
+import androidx.compose.material.icons.filled.Event
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onLogout: () -> Unit,
+    onLogout: () -> Unit, // Deprecated in favor of ProfileScreen, but kept for signature compatibility
+    onServiceClick: (String) -> Unit,
+    onProfileClick: () -> Unit,
+    onMyReservationsClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Scaffold { padding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("CliniPets") },
+                actions = {
+                    IconButton(onClick = onMyReservationsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Event,
+                            contentDescription = "Mis Reservas",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    IconButton(onClick = onProfileClick) {
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = "Perfil",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            )
+        }
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -74,10 +110,6 @@ fun HomeScreen(
                         Button(onClick = { viewModel.cargarDatosIniciales() }) {
                             Text("Reintentar")
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = onLogout) {
-                            Text("Cerrar Sesión")
-                        }
                     }
                 }
                 is HomeUiState.Success -> {
@@ -88,7 +120,7 @@ fun HomeScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(24.dp)
+                                .padding(horizontal = 24.dp, vertical = 16.dp)
                         ) {
                             Text(
                                 text = "Hola, ${state.nombreUsuario} 👋",
@@ -109,19 +141,12 @@ fun HomeScreen(
                             modifier = Modifier.weight(1f)
                         ) {
                             items(state.servicios) { servicio ->
-                                ServiceCard(servicio = servicio)
+                                ServiceCard(
+                                    servicio = servicio,
+                                    onClick = { onServiceClick(servicio.id.toString()) }
+                                )
                             }
-                            
-                            item {
-                                Spacer(Modifier.height(16.dp))
-                                Button(
-                                    onClick = onLogout,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text("Cerrar Sesión")
-                                }
-                                Spacer(Modifier.height(16.dp))
-                            }
+                            item { Spacer(Modifier.height(16.dp)) }
                         }
                     }
                 }
@@ -131,9 +156,11 @@ fun HomeScreen(
 }
 
 @Composable
-fun ServiceCard(servicio: ServicioMedicoDto) {
+fun ServiceCard(servicio: ServicioMedicoDto, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -154,13 +181,7 @@ fun ServiceCard(servicio: ServicioMedicoDto) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = servicio.descripcion ?: "Sin descripción",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "$ ${servicio.precioBase ?: 0}",
+                    text = "$ ${servicio.precioBase}",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold

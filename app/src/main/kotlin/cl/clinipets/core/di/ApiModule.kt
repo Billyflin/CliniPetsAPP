@@ -4,7 +4,9 @@ import android.content.Context
 import android.util.Log
 import cl.clinipets.BuildConfig
 import cl.clinipets.openapi.apis.AuthControllerApi
+import cl.clinipets.openapi.apis.DisponibilidadControllerApi
 import cl.clinipets.openapi.apis.MascotaControllerApi
+import cl.clinipets.openapi.apis.ReservaControllerApi
 import cl.clinipets.openapi.apis.ServicioMedicoControllerApi
 import cl.clinipets.openapi.infrastructure.ApiClient
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -58,6 +60,16 @@ object ApiModule {
     @Singleton
     fun provideServiciosApi(apiClient: ApiClient): ServicioMedicoControllerApi =
         apiClient.createService(ServicioMedicoControllerApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideDisponibilidadApi(apiClient: ApiClient): DisponibilidadControllerApi =
+        apiClient.createService(DisponibilidadControllerApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideReservaApi(apiClient: ApiClient): ReservaControllerApi =
+        apiClient.createService(ReservaControllerApi::class.java)
 
 
 

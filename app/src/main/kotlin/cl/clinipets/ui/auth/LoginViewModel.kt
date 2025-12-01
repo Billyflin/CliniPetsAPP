@@ -49,25 +49,24 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    fun loginWithGoogleIdToken(idToken: String) {
-        viewModelScope.launch {
-            _ui.update { it.copy(isAuthenticating = true, error = null) }
-            try {
-                                    // 1. Exchange Google ID Token for App Token
-                                val loginResponse = authApi.google(GoogleLoginRequest(idToken))
-                                
-                                if (loginResponse.isSuccessful) {
-                                    val token = loginResponse.body()?.accessToken
-                                    if (!token.isNullOrBlank()) {
-                                        // 2. Set token in SessionManager (updates API client & DataStore)
-                                        session.setAndPersist(token)
-                
-                                        // 3. Fetch Profile immediately to complete login
-                                        // We call this directly instead of relying on 'fetchProfile' helper to keep flow atomic/clear
-                                        val profileResponse = authApi.me()
-                                        
-                                        if (profileResponse.isSuccessful) {
-                                            val me = profileResponse.body()
+        fun loginWithGoogleIdToken(idToken: String) {
+            viewModelScope.launch {
+                _ui.update { it.copy(isAuthenticating = true, error = null) }
+                try {
+                    // 1. Exchange Google ID Token for App Token
+                    val loginResponse = authApi.loginGoogle(GoogleLoginRequest(idToken))
+                    
+                    if (loginResponse.isSuccessful) {
+                        val token = loginResponse.body()?.accessToken
+                        if (!token.isNullOrBlank()) {
+                            // 2. Set token in SessionManager (updates API client & DataStore)
+                            session.setAndPersist(token)
+    
+                            // 3. Fetch Profile immediately to complete login
+                            // We call this directly instead of relying on 'fetchProfile' helper to keep flow atomic/clear
+                            val profileResponse = authApi.getProfile()
+                            
+                            if (profileResponse.isSuccessful) {                                            val me = profileResponse.body()
                                             if (me != null) {
                                                 _ui.update {
                                                     it.copy(
@@ -106,7 +105,7 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _ui.update { it.copy(isCheckingSession = true) }
             try {
-                val response = authApi.me()
+                val response = authApi.getProfile()
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body != null) {

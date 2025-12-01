@@ -41,7 +41,7 @@ class HomeViewModel @Inject constructor(
             try {
                 // Fetch user profile and services in parallel or sequentially
                 // Sequential for simplicity and safety first
-                val profileResponse = withContext(Dispatchers.IO) { authApi.me() }
+                val profileResponse = withContext(Dispatchers.IO) { authApi.getProfile() }
                 val serviciosResponse = withContext(Dispatchers.IO) { serviciosApi.listarServicios() }
 
                 if (profileResponse.isSuccessful && serviciosResponse.isSuccessful) {
