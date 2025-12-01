@@ -33,18 +33,19 @@ import cl.clinipets.openapi.models.ServicioMedicoDto
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TopAppBar
-
-import androidx.compose.material.icons.filled.Event
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onLogout: () -> Unit, // Deprecated in favor of ProfileScreen, but kept for signature compatibility
     onServiceClick: (String) -> Unit,
+    onMyPetsClick: () -> Unit,
     onProfileClick: () -> Unit,
     onMyReservationsClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
@@ -60,6 +61,13 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.Event,
                             contentDescription = "Mis Reservas",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    IconButton(onClick = onMyPetsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Pets,
+                            contentDescription = "Mis Mascotas",
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }

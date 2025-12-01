@@ -1,0 +1,296 @@
+package cl.clinipets.ui.mascotas
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import cl.clinipets.openapi.models.CitaDetalladaResponse
+import cl.clinipets.openapi.models.MascotaResponse
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PetDetailScreen(
+    onBack: () -> Unit,
+    onEdit: (String) -> Unit,
+    onBookAppointment: (String) -> Unit,
+    viewModel: PetDetailViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Perfil de mascota") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        when {
+            uiState.isLoading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            uiState.error != null || uiState.pet == null -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(uiState.error ?: "No pudimos cargar la mascota")
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(onClick = { viewModel.refresh() }) {
+                            Text("Reintentar")
+                        }
+                    }
+                }
+            }
+
+            else -> {
+                uiState.pet?.let { pet ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        PetHeader(pet)
+                        ActionButtons(
+                            onEdit = { onEdit(pet.id.toString()) },
+                            onBook = { onBookAppointment(pet.id.toString()) }
+                        )
+                        PetHistory(
+                            history = uiState.history,
+                            speciesColor = speciesColor(pet.especie)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PetHeader(pet: MascotaResponse) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(CircleShape)
+                    .background(speciesColor(pet.especie).copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.EventAvailable,
+                    contentDescription = null,
+                    tint = speciesColor(pet.especie),
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+            Text(
+                text = pet.nombre,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Peso: ${pet.pesoActual.toPlainString()} kg",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActionButtons(
+    onEdit: () -> Unit,
+    onBook: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        OutlinedButton(
+            onClick = onEdit,
+            modifier = Modifier.weight(1f)
+        ) {
+            Icon(Icons.Default.Edit, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Editar perfil")
+        }
+        Button(
+            onClick = onBook,
+            modifier = Modifier.weight(1f)
+        ) {
+            Icon(Icons.Default.CalendarToday, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Agendar cita")
+        }
+    }
+}
+
+@Composable
+private fun PetHistory(
+    history: List<CitaDetalladaResponse>,
+    speciesColor: Color
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = "Historial médico",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+
+        if (history.isEmpty()) {
+            Text(
+                text = "Aún no hay atenciones registradas.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            history.forEachIndexed { index, cita ->
+                TimelineItem(
+                    cita = cita,
+                    speciesColor = speciesColor,
+                    isLast = index == history.lastIndex
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimelineItem(
+    cita: CitaDetalladaResponse,
+    speciesColor: Color,
+    isLast: Boolean
+) {
+    val formatter = DateTimeFormatter.ofPattern("dd MMM", Locale("es", "ES"))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.width(72.dp),
+            horizontalAlignment = Alignment.End
+        ) {
+            Text(
+                text = cita.fechaHoraInicio.toLocalDate().format(formatter),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(speciesColor)
+            )
+            if (!isLast) {
+                Box(
+                    modifier = Modifier
+                        .width(2.dp)
+                        .height(48.dp)
+                        .background(MaterialTheme.colorScheme.outline)
+                )
+            }
+        }
+        Card(
+            modifier = Modifier.weight(1f),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = cita.nombreServicio,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                AssistChip(
+                    onClick = { },
+                    enabled = false,
+                    label = { Text(cita.estado.name) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.EventAvailable,
+                            contentDescription = null,
+                            tint = speciesColor
+                        )
+                    }
+                )
+            }
+        }
+    }
+}

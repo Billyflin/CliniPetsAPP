@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.MascotaCreateRequest
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 import androidx.compose.material.icons.filled.CalendarToday
 import java.time.Instant
@@ -25,6 +24,7 @@ import java.time.ZoneId
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MascotaFormScreen(
+    petId: String? = null,
     onBack: () -> Unit,
     onSuccess: () -> Unit,
     viewModel: MascotaFormViewModel = hiltViewModel()
@@ -41,16 +41,29 @@ fun MascotaFormScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState()
 
+    LaunchedEffect(petId) {
+        if (petId != null) {
+            viewModel.cargarMascota(petId)
+        }
+    }
+
+    LaunchedEffect(uiState.pet) {
+        uiState.pet?.let { pet ->
+            nombre = pet.nombre
+            especie = MascotaCreateRequest.Especie.valueOf(pet.especie.name)
+            peso = pet.pesoActual.toPlainString()
+            fechaNacimientoStr = pet.fechaNacimiento.toLocalDate().toString()
+        }
+    }
+
     LaunchedEffect(uiState) {
-        when (uiState) {
-            is MascotaFormUiState.Success -> {
-                Toast.makeText(context, "Mascota creada con éxito", Toast.LENGTH_SHORT).show()
-                onSuccess()
-            }
-            is MascotaFormUiState.Error -> {
-                Toast.makeText(context, (uiState as MascotaFormUiState.Error).message, Toast.LENGTH_LONG).show()
-            }
-            else -> {}
+        if (uiState.success) {
+            val message = if (uiState.isEdit) "Mascota actualizada con éxito" else "Mascota creada con éxito"
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            onSuccess()
+        }
+        uiState.error?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
         }
     }
     
@@ -79,7 +92,7 @@ fun MascotaFormScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Agregar Mascota") },
+                title = { Text(if (uiState.isEdit) "Editar Mascota" else "Agregar Mascota") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
@@ -155,12 +168,12 @@ fun MascotaFormScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = uiState !is MascotaFormUiState.Loading
+                enabled = !uiState.isLoading
             ) {
-                if (uiState is MascotaFormUiState.Loading) {
+                if (uiState.isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                 } else {
-                    Text("Guardar Mascota")
+                    Text(if (uiState.isEdit) "Actualizar Mascota" else "Guardar Mascota")
                 }
             }
         }

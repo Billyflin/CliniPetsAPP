@@ -41,7 +41,8 @@ import androidx.compose.material.icons.filled.Check
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun BookingScreen(
-    serviceId: String,
+    serviceId: String?,
+    preselectedPetId: String? = null,
     onBack: () -> Unit,
     onAddPet: () -> Unit,
     onSuccess: (CitaResponse) -> Unit,
@@ -69,6 +70,13 @@ fun BookingScreen(
             viewModel.clearError()
         }
     }
+    LaunchedEffect(uiState.pets, preselectedPetId) {
+        if (preselectedPetId != null && uiState.pets.isNotEmpty()) {
+            uiState.pets.firstOrNull { it.id.toString() == preselectedPetId }?.let { pet ->
+                viewModel.selectPet(pet)
+            }
+        }
+    }
 
     if (showDatePicker) {
         DatePickerDialog(
@@ -79,7 +87,7 @@ fun BookingScreen(
                         val date = java.time.Instant.ofEpochMilli(millis)
                             .atZone(java.time.ZoneId.systemDefault())
                             .toLocalDate()
-                        viewModel.selectDate(date, serviceId)
+                        serviceId?.let { viewModel.selectDate(date, it) }
                     }
                     showDatePicker = false
                 }) {
@@ -160,17 +168,24 @@ fun BookingScreen(
 
                 // 2. Select Date
                 SectionTitle("2. Elige una fecha")
-                OutlinedButton(
-                    onClick = { showDatePicker = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Icon(Icons.Default.CalendarToday, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
+                if (serviceId == null) {
                     Text(
-                        text = uiState.selectedDate?.format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy", Locale("es", "ES")))
-                            ?: "Seleccionar Fecha"
+                        text = "Selecciona un servicio para habilitar la agenda.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                } else {
+                    OutlinedButton(
+                        onClick = { showDatePicker = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.CalendarToday, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = uiState.selectedDate?.format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy", Locale("es", "ES")))
+                                ?: "Seleccionar Fecha"
+                        )
+                    }
                 }
 
                 // 3. Select Slot
@@ -206,11 +221,11 @@ fun BookingScreen(
                 
                 // Confirm Button
                 Button(
-                    onClick = { viewModel.createReservation(serviceId) },
+                    onClick = { serviceId?.let { viewModel.createReservation(it) } },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    enabled = uiState.selectedPet != null && uiState.selectedDate != null && uiState.selectedSlot != null
+                    enabled = serviceId != null && uiState.selectedPet != null && uiState.selectedDate != null && uiState.selectedSlot != null
                 ) {
                     Text("Confirmar Reserva")
                 }

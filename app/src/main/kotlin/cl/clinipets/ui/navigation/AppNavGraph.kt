@@ -12,11 +12,13 @@ import kotlinx.serialization.Serializable
 
 @Serializable object LoginRoute
 @Serializable object HomeRoute
-@Serializable object MascotaFormRoute
-@Serializable data class BookingRoute(val serviceId: String)
+@Serializable data class MascotaFormRoute(val petId: String? = null)
+@Serializable data class BookingRoute(val serviceId: String? = null, val petId: String? = null)
 @Serializable data class PaymentRoute(val paymentUrl: String?, val price: Int)
 @Serializable object ProfileRoute
 @Serializable object MyReservationsRoute
+@Serializable object MyPetsRoute
+@Serializable data class PetDetailRoute(val petId: String)
 
 
 @Serializable
@@ -44,16 +46,17 @@ fun AppNavGraph(
         }
         
         composable<HomeRoute> {
-             cl.clinipets.ui.home.HomeScreen(
+            cl.clinipets.ui.home.HomeScreen(
                  onLogout = onLogout, // Kept for safety, but HomeScreen might hide it if Profile is used
                  onServiceClick = { serviceId ->
-                     navController.navigate(BookingRoute(serviceId))
+                     navController.navigate(BookingRoute(serviceId = serviceId))
                  },
-                 onProfileClick = {
-                     navController.navigate(ProfileRoute)
-                 },
-                 onMyReservationsClick = {
-                     navController.navigate(MyReservationsRoute)
+                onMyPetsClick = { navController.navigate(MyPetsRoute) },
+                onProfileClick = {
+                    navController.navigate(ProfileRoute)
+                },
+                onMyReservationsClick = {
+                    navController.navigate(MyReservationsRoute)
                  }
              )
         }
@@ -76,8 +79,33 @@ fun AppNavGraph(
             )
         }
 
+        composable<MyPetsRoute> {
+            cl.clinipets.ui.mascotas.MyPetsScreen(
+                onBack = { navController.popBackStack() },
+                onAddPet = { navController.navigate(MascotaFormRoute()) },
+                onPetClick = { pet ->
+                    navController.navigate(PetDetailRoute(pet.id.toString()))
+                },
+                onEditPet = { pet ->
+                    navController.navigate(MascotaFormRoute(pet.id.toString()))
+                }
+            )
+        }
+
+        composable<PetDetailRoute> {
+            cl.clinipets.ui.mascotas.PetDetailScreen(
+                onBack = { navController.popBackStack() },
+                onEdit = { navController.navigate(MascotaFormRoute(it)) },
+                onBookAppointment = { petId ->
+                    navController.navigate(BookingRoute(serviceId = null, petId = petId))
+                }
+            )
+        }
+
         composable<MascotaFormRoute> {
+            val route = it.toRoute<MascotaFormRoute>()
             cl.clinipets.ui.mascotas.MascotaFormScreen(
+                petId = route.petId,
                 onBack = { navController.popBackStack() },
                 onSuccess = { navController.popBackStack() }
             )
@@ -87,8 +115,9 @@ fun AppNavGraph(
             val route = backStackEntry.toRoute<BookingRoute>()
             cl.clinipets.ui.agenda.BookingScreen(
                 serviceId = route.serviceId,
+                preselectedPetId = route.petId,
                 onBack = { navController.popBackStack() },
-                onAddPet = { navController.navigate(MascotaFormRoute) },
+                onAddPet = { navController.navigate(MascotaFormRoute()) },
                 onSuccess = { cita -> 
                     navController.navigate(PaymentRoute(cita.paymentUrl, cita.precioFinal))
                 }
