@@ -3,28 +3,27 @@ package cl.clinipets.ui.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.core.session.SessionManager
-import cl.clinipets.openapi.apis.AutenticacinApi
+import cl.clinipets.openapi.apis.AuthControllerApi
 import cl.clinipets.openapi.models.GoogleLoginRequest
-import cl.clinipets.openapi.models.MeResponse
+import cl.clinipets.openapi.models.ProfileResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val authApi: AutenticacinApi,
+    private val authApi: AuthControllerApi,
     private val session: SessionManager
 ) : ViewModel() {
 
     data class UiState(
         val isCheckingSession: Boolean = true,
         val isAuthenticating: Boolean = false,
-        val me: MeResponse? = null,
-        val roles: List<String> = emptyList(),
-        val displayName: String? = null,
+        val me: ProfileResponse? = null,
         val error: String? = null,
         val ok: Boolean = false
     )
@@ -32,32 +31,20 @@ class LoginViewModel @Inject constructor(
     private val _ui = MutableStateFlow(UiState())
     val ui = _ui.asStateFlow()
 
-    private var hasRequestedProfile = false
-
     init {
         viewModelScope.launch {
-            session.sessionFlow.collect { snapshot ->
-                val hasToken = !snapshot.token.isNullOrBlank()
-                if (!hasToken) {
-                    hasRequestedProfile = false
-                }
+            // Restore session from DataStore on app launch
+            val snapshot = session.sessionFlow.first()
+            val token = snapshot.token
 
-                val shouldStillCheck = hasToken && !hasRequestedProfile
-
-                _ui.update { current ->
-                    current.copy(
-                        isCheckingSession = shouldStillCheck,
-                        ok = hasToken && (current.me?.authenticated != false),
-                        roles = snapshot.roles,
-                        displayName = snapshot.displayName,
-                        error = if (hasToken) current.error else null
-                    )
-                }
-
-                if (hasToken && !hasRequestedProfile) {
-                    hasRequestedProfile = true
-                    fetchProfile()
-                }
+            if (!token.isNullOrBlank()) {
+                // Token exists, restore it in API client
+                session.restoreIfAny()
+                // Fetch profile to validate session and get user info
+                fetchProfile()
+            } else {
+                // No token, we are ready for login
+                _ui.update { it.copy(isCheckingSession = false) }
             }
         }
     }
@@ -66,81 +53,108 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _ui.update { it.copy(isAuthenticating = true, error = null) }
             try {
-                val r = authApi.authLoginGoogle(GoogleLoginRequest(idToken))
-                if (r.isSuccessful) {
-                    val token = r.body()?.token.orEmpty()
-                    if (token.isNotBlank()) {
-                        hasRequestedProfile = false
-                        session.setAndPersist(token)
+                                    // 1. Exchange Google ID Token for App Token
+                                val loginResponse = authApi.google(GoogleLoginRequest(idToken))
+                                
+                                if (loginResponse.isSuccessful) {
+                                    val token = loginResponse.body()?.accessToken
+                                    if (!token.isNullOrBlank()) {
+                                        // 2. Set token in SessionManager (updates API client & DataStore)
+                                        session.setAndPersist(token)
+                
+                                        // 3. Fetch Profile immediately to complete login
+                                        // We call this directly instead of relying on 'fetchProfile' helper to keep flow atomic/clear
+                                        val profileResponse = authApi.me()
+                                        
+                                        if (profileResponse.isSuccessful) {
+                                            val me = profileResponse.body()
+                                            if (me != null) {
+                                                _ui.update {
+                                                    it.copy(
+                                                        ok = true,                                        me = me,
+                                        isAuthenticating = false,
+                                        isCheckingSession = false,
+                                        error = null
+                                    )
+                                }
+                            } else {
+                                throw Exception("Perfil de usuario vacío")
+                            }
+                        } else {
+                            throw Exception("Error al obtener perfil: ${profileResponse.code()}")
+                        }
                     } else {
-                        _ui.update { it.copy(error = "Token vacío") }
+                        throw Exception("Token de sesión inválido")
                     }
                 } else {
-                    _ui.update {
-                        it.copy(
-                            error = "HTTP ${r.code()}: ${r.errorBody()?.string()}"
-                        )
-                    }
+                    val errorBody = loginResponse.errorBody()?.string()
+                    throw Exception("Falló autenticación: ${loginResponse.code()} $errorBody")
                 }
             } catch (e: Exception) {
-                _ui.update { it.copy(error = e.message ?: "Error inesperado") }
-            } finally {
-                _ui.update { it.copy(isAuthenticating = false) }
+                session.clear() // Clean up if anything failed
+                _ui.update { 
+                    it.copy(
+                        isAuthenticating = false, 
+                        error = e.message ?: "Error durante el inicio de sesión"
+                    ) 
+                }
             }
         }
     }
 
     fun fetchProfile() {
-        hasRequestedProfile = true
         viewModelScope.launch {
-            val result = runCatching { authApi.authMe() }
-            result.onSuccess { response ->
+            _ui.update { it.copy(isCheckingSession = true) }
+            try {
+                val response = authApi.me()
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body != null) {
-                        session.persistProfile(body)
                         _ui.update {
                             it.copy(
-                                ok = body.authenticated,
+                                ok = true,
                                 me = body,
-                                roles = body.roles.orEmpty(),
-                                displayName = body.nombre,
-                                error = null,
-                                isCheckingSession = false
+                                isCheckingSession = false,
+                                error = null
                             )
                         }
                     } else {
-                        _ui.update { it.copy(ok = false, error = "Perfil vacío", isCheckingSession = false) }
+                        // Token might be stale or invalid if profile is null
+                        handleSessionError("Sesión inválida")
                     }
                 } else {
-                    _ui.update {
-                        it.copy(
-                            ok = false,
-                            error = "HTTP ${response.code()}: ${response.errorBody()?.string()}",
-                            isCheckingSession = false
-                        )
-                    }
+                    handleSessionError("Error de sesión: ${response.code()}")
                 }
-            }.onFailure { throwable ->
-                _ui.update { it.copy(ok = false, error = throwable.message ?: "Error inesperado", isCheckingSession = false) }
+            } catch (e: Exception) {
+                handleSessionError("Error de conexión")
             }
+        }
+    }
+
+    private suspend fun handleSessionError(message: String) {
+        session.clear()
+        _ui.update { 
+            it.copy(
+                ok = false, 
+                me = null, 
+                isCheckingSession = false, 
+                // Only show error if we were explicitly authenticating, otherwise just logout silently
+                error = null 
+            ) 
         }
     }
 
     fun logout() {
         viewModelScope.launch {
             session.clear()
-            hasRequestedProfile = false
             _ui.update { UiState(isCheckingSession = false) }
         }
     }
 
     fun refreshProfile() {
-        hasRequestedProfile = false
         fetchProfile()
     }
 
-    // --- Utilidades mínimas para la UI ---
     fun setError(message: String?) {
         _ui.update { it.copy(error = message) }
     }

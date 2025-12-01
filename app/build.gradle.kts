@@ -1,5 +1,8 @@
 // app/build.gradle.kts
 
+import java.net.URI
+import java.net.URL
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -67,11 +70,36 @@ secrets {
     defaultPropertiesFileName = "secrets.defaults.properties"
 }
 
+val openApiSpecFile = layout.buildDirectory.file("openapi-spec.json")
+
+// 2. Create a task to download the file from your Home Server
+tasks.register("downloadOpenApiJson") {
+    // We declare the URL as an input so Gradle knows if it changes (optional but good practice)
+    inputs.property("url", "http://homeserver.local:8080/v3/api-docs")
+    // We declare the file as an output so Gradle caches it
+    outputs.file(openApiSpecFile)
+
+    doLast {
+        println("⬇️ Downloading OpenAPI Spec from Home Server...")
+        val url = URI("http://homeserver.local:8080/v3/api-docs").toURL()
+        // Use outputs.files.singleFile to avoid capturing the outer 'openApiSpecFile' variable
+        val file = outputs.files.singleFile
+        
+        url.openStream().use { input ->
+            file.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+        println("✅ Download complete: ${file.absolutePath}")
+    }
+}
+tasks.named("openApiGenerate") {
+    dependsOn("downloadOpenApiJson")
+}
 // Configuración de generación OpenAPI
 openApiGenerate {
     generatorName.set("kotlin")
-    inputSpec.set(project.file("$rootDir/backend-openapi.yaml").toURI().toString())
-    // La salida real utilizada por el generador en tu entorno
+    inputSpec.set(openApiSpecFile.get().asFile.absolutePath)
     outputDir.set(layout.buildDirectory.dir("generate-resources/main").get().asFile.absolutePath)
     apiPackage.set("cl.clinipets.openapi.apis")
     modelPackage.set("cl.clinipets.openapi.models")
