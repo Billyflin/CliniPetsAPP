@@ -16,10 +16,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.MascotaCreateRequest
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 import androidx.compose.material.icons.filled.CalendarToday
-import java.time.Instant
-import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +52,7 @@ fun MascotaFormScreen(
             nombre = pet.nombre
             especie = MascotaCreateRequest.Especie.valueOf(pet.especie.name)
             peso = pet.pesoActual.toPlainString()
-            fechaNacimientoStr = pet.fechaNacimiento.toLocalDate().toString()
+            fechaNacimientoStr = pet.fechaNacimiento.toString()
         }
     }
 
@@ -73,9 +73,11 @@ fun MascotaFormScreen(
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let { millis ->
-                        val date = Instant.ofEpochMilli(millis)
-                            .atZone(ZoneId.of("UTC"))
-                            .toLocalDate()
+                        val date = LocalDateTime.ofEpochSecond(
+                            millis / 1000,
+                            0,
+                            ZoneOffset.UTC
+                        ).toLocalDate()
                         fechaNacimientoStr = date.toString()
                     }
                     showDatePicker = false
@@ -121,7 +123,8 @@ fun MascotaFormScreen(
                     FilterChip(
                         selected = especie == option,
                         onClick = { especie = option },
-                        label = { Text(option.name) }
+                        label = { Text(option.name) },
+                        enabled = !uiState.isEdit
                     )
                 }
             }
@@ -140,14 +143,18 @@ fun MascotaFormScreen(
                 label = { Text("Fecha Nacimiento") },
                 placeholder = { Text("Selecciona una fecha") },
                 readOnly = true,
+                enabled = !uiState.isEdit,
                 trailingIcon = {
-                    IconButton(onClick = { showDatePicker = true }) {
+                    IconButton(
+                        onClick = { showDatePicker = true },
+                        enabled = !uiState.isEdit
+                    ) {
                         Icon(Icons.Default.CalendarToday, contentDescription = "Seleccionar fecha")
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { showDatePicker = true }
+                    .clickable(enabled = !uiState.isEdit) { showDatePicker = true }
             )
 
             Spacer(modifier = Modifier.weight(1f))
@@ -162,7 +169,7 @@ fun MascotaFormScreen(
                     }
 
                     if (nombre.isNotBlank() && pesoVal != null && fechaVal != null) {
-                        viewModel.crearMascota(nombre, especie, pesoVal, fechaVal)
+                        viewModel.guardarMascota(petId, nombre, especie, pesoVal, fechaVal)
                     } else {
                         Toast.makeText(context, "Datos inválidos", Toast.LENGTH_SHORT).show()
                     }

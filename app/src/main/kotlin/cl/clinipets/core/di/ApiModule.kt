@@ -11,6 +11,7 @@ import cl.clinipets.openapi.apis.ServicioMedicoControllerApi
 import cl.clinipets.openapi.infrastructure.ApiClient
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonPrimitive
@@ -25,9 +26,8 @@ import javax.inject.Singleton
 
 import cl.clinipets.openapi.infrastructure.AuthInterceptor
 import cl.clinipets.openapi.infrastructure.registerTypeAdapterFactoryForAllModels
-import java.time.Instant
 import java.time.LocalDate
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 @Module
@@ -38,11 +38,9 @@ object ApiModule {
     @Singleton
     fun provideApiClient(authInterceptor: AuthInterceptor): ApiClient {
         val baseUrl = resolveBaseUrl()
-        val gsonBuilder = provideIsoGsonBuilder()
 
         val apiClient = ApiClient(
-            baseUrl = baseUrl,
-            serializerBuilder = gsonBuilder
+            baseUrl = baseUrl
         )
         
         // Add Bearer Token Interceptor
@@ -93,39 +91,6 @@ object ApiModule {
     fun provideFusedLocationClient(@ApplicationContext context: Context): FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(context)
 
-    private fun provideIsoGsonBuilder(): GsonBuilder {
-        val instantAdapter = object : JsonSerializer<Instant>, JsonDeserializer<Instant> {
-            override fun serialize(src: Instant?, typeOfSrc: java.lang.reflect.Type?, context: com.google.gson.JsonSerializationContext?) =
-                JsonPrimitive(src?.toString())
-
-            override fun deserialize(json: com.google.gson.JsonElement?, typeOfT: java.lang.reflect.Type?, context: com.google.gson.JsonDeserializationContext?) =
-                json?.asString?.let { Instant.parse(it) }
-        }
-
-        val localDateAdapter = object : JsonSerializer<LocalDate>, JsonDeserializer<LocalDate> {
-            override fun serialize(src: LocalDate?, typeOfSrc: java.lang.reflect.Type?, context: com.google.gson.JsonSerializationContext?) =
-                JsonPrimitive(src?.format(DateTimeFormatter.ISO_LOCAL_DATE))
-
-            override fun deserialize(json: com.google.gson.JsonElement?, typeOfT: java.lang.reflect.Type?, context: com.google.gson.JsonDeserializationContext?) =
-                json?.asString?.let { LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE) }
-        }
-
-        val offsetDateTimeAdapter = object : JsonSerializer<OffsetDateTime>, JsonDeserializer<OffsetDateTime> {
-            override fun serialize(src: OffsetDateTime?, typeOfSrc: java.lang.reflect.Type?, context: com.google.gson.JsonSerializationContext?) =
-                JsonPrimitive(src?.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
-
-            override fun deserialize(json: com.google.gson.JsonElement?, typeOfT: java.lang.reflect.Type?, context: com.google.gson.JsonDeserializationContext?) =
-                json?.asString?.let { OffsetDateTime.parse(it) }
-        }
-
-        return registerTypeAdapterFactoryForAllModels(
-            GsonBuilder()
-                .registerTypeAdapter(Instant::class.java, instantAdapter)
-                .registerTypeAdapter(LocalDate::class.java, localDateAdapter)
-                .registerTypeAdapter(OffsetDateTime::class.java, offsetDateTimeAdapter)
-        )
-    }
-
     fun resolveBaseUrl(): String {
         fun read(field: String): String? = runCatching {
             BuildConfig::class.java.getField(field).get(null) as? String
@@ -133,7 +98,6 @@ object ApiModule {
         //
         val candidates = listOf(
             read("BASE_URL_RELEASE"),
-            read("BASE_URL_VPS"),
             read("BASE_URL_DEBUG"),
         )
         val chosen = candidates.firstOrNull { !it.isNullOrBlank() } ?: "BASE_URL_DEBUG"

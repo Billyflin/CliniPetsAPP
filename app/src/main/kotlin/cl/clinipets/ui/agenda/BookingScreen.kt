@@ -2,6 +2,8 @@ package cl.clinipets.ui.agenda
 
 import cl.clinipets.openapi.models.CitaResponse
 import cl.clinipets.openapi.models.MascotaResponse
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -12,9 +14,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -30,7 +29,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,6 +48,7 @@ fun BookingScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
     
     // Date Picker State
     var showDatePicker by remember { mutableStateOf(false) }
@@ -84,9 +83,11 @@ fun BookingScreen(
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let { millis ->
-                        val date = java.time.Instant.ofEpochMilli(millis)
-                            .atZone(java.time.ZoneId.systemDefault())
-                            .toLocalDate()
+                        val date = LocalDateTime.ofEpochSecond(
+                            millis / 1000,
+                            0,
+                            ZoneOffset.UTC
+                        ).toLocalDate()
                         serviceId?.let { viewModel.selectDate(date, it) }
                     }
                     showDatePicker = false
@@ -182,7 +183,7 @@ fun BookingScreen(
                         Icon(Icons.Default.CalendarToday, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = uiState.selectedDate?.format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy", Locale("es", "ES")))
+                            text = uiState.selectedDate?.format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy", Locale.forLanguageTag("es-ES")))
                                 ?: "Seleccionar Fecha"
                         )
                     }
@@ -207,7 +208,7 @@ fun BookingScreen(
                                 FilterChip(
                                     selected = uiState.selectedSlot == slot,
                                     onClick = { viewModel.selectSlot(slot) },
-                                    label = { Text(slot) },
+                                    label = { Text(slot.format(timeFormatter)) },
                                     leadingIcon = if (uiState.selectedSlot == slot) {
                                         { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
                                     } else null

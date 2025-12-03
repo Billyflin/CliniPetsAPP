@@ -111,7 +111,6 @@ openApiGenerate {
     configOptions.set(
         mapOf(
             "library" to "jvm-retrofit2",
-            "dateLibrary" to "java8",
             "serializationLibrary" to "gson",
             "generateOneOfAnyOfWrappers" to "true",
             "idea" to "true",

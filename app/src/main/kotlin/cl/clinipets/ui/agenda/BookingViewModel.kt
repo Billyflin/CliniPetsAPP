@@ -15,7 +15,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
 
@@ -48,7 +50,7 @@ class BookingViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val response = mascotaApi.listarMascotas()
+                val response = mascotaApi.listarMascotas() // Nombre limpio
                 if (response.isSuccessful) {
                     val pets = response.body() ?: emptyList()
                     _uiState.update { it.copy(isLoading = false, pets = pets) }
@@ -77,19 +79,24 @@ class BookingViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                // Convert LocalDate to OffsetDateTime using system default zone
-                val dateTime = date.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime()
-                val response = disponibilidadApi.obtenerDisponibilidad(dateTime, UUID.fromString(serviceId))
-                
+                // CORRECCIÓN 1: Enviar OffsetDateTime
+                // Tomamos el inicio del día en la zona del usuario y lo pasamos a OffsetDateTime
+                val offsetDateTime = date.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime()
+
+                val response = disponibilidadApi.obtenerDisponibilidad(offsetDateTime, UUID.fromString(serviceId))
+
                 if (response.isSuccessful) {
                     val availability = response.body()
-                    // Map OffsetDateTime slots to String (HH:mm)
-                    val formatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
-                    val slots = availability?.slots?.map { it.format(formatter) } ?: emptyList()
-                    
+
+                    // CORRECCIÓN 2: Formatear OffsetDateTime a Hora Local (String)
+                    val formatter = DateTimeFormatter.ofPattern("HH:mm")
+                    val slots = availability?.slots?.map { slotTime ->
+                        slotTime.toLocalTime().format(formatter)
+                    } ?: emptyList()
+
                     _uiState.update { it.copy(isLoading = false, availableSlots = slots) }
                 } else {
-                    _uiState.update { it.copy(isLoading = false, error = "Error al obtener disponibilidad") }
+                    _uiState.update { it.copy(isLoading = false, error = "Error: ${response.code()}") }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message) }
@@ -111,7 +118,7 @@ class BookingViewModel @Inject constructor(
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true) }
                 try {
-                    // Parse slot time (HH:mm) and combine with date using system default zone
+                    // CORRECCIÓN 3: Crear OffsetDateTime para la reserva
                     val time = LocalTime.parse(slot)
                     val startDateTime = date.atTime(time).atZone(ZoneId.systemDefault()).toOffsetDateTime()
 
@@ -127,7 +134,7 @@ class BookingViewModel @Inject constructor(
                         val cita = response.body()
                         _uiState.update { it.copy(isLoading = false, bookingResult = cita) }
                     } else {
-                        _uiState.update { it.copy(isLoading = false, error = "Error al crear reserva: ${response.code()}") }
+                        _uiState.update { it.copy(isLoading = false, error = "Error: ${response.code()}") }
                     }
                 } catch (e: Exception) {
                     _uiState.update { it.copy(isLoading = false, error = e.message) }
@@ -135,12 +142,12 @@ class BookingViewModel @Inject constructor(
             }
         }
     }
-    
+
     fun clearError() {
         _uiState.update { it.copy(error = null) }
     }
-    
+
     fun resetBookingState() {
-         _uiState.update { it.copy(bookingResult = null) }
+        _uiState.update { it.copy(bookingResult = null) }
     }
 }

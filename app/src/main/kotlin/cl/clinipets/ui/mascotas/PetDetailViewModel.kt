@@ -19,7 +19,8 @@ data class PetDetailUiState(
     val isLoading: Boolean = true,
     val pet: MascotaResponse? = null,
     val history: List<CitaDetalladaResponse> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
+    val isDeleted: Boolean = false
 )
 
 @HiltViewModel
@@ -40,6 +41,25 @@ class PetDetailViewModel @Inject constructor(
 
     fun refresh() {
         petId?.let { loadPet(it) }
+    }
+
+    fun eliminarMascota() {
+        val id = petId ?: return
+        val uuid = runCatching { UUID.fromString(id) }.getOrNull() ?: return
+        
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val response = mascotaApi.eliminarMascota(uuid)
+                if (response.isSuccessful) {
+                    _uiState.update { it.copy(isLoading = false, isDeleted = true) }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, error = "Error al eliminar mascota: ${response.code()}") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error desconocido al eliminar") }
+            }
+        }
     }
 
     private fun loadPet(id: String) {
