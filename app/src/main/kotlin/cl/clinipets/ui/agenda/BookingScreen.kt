@@ -1,14 +1,8 @@
 package cl.clinipets.ui.agenda
 
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -16,7 +10,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,7 +19,6 @@ import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.OutlinedTextFieldDefaults
 
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.platform.LocalContext
@@ -37,10 +29,7 @@ import java.util.Locale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import cl.clinipets.openapi.models.CitaResponse
-import cl.clinipets.openapi.models.MascotaResponse
-import cl.clinipets.openapi.models.ServicioMedicoDto
-import cl.clinipets.ui.agenda.BookingViewModel
-import cl.clinipets.ui.agenda.CartItem
+import java.time.ZoneId
 
 @Composable
 fun SectionTitle(text: String) {
@@ -55,7 +44,6 @@ fun SectionTitle(text: String) {
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun BookingScreen(
-    serviceId: String?, // Deprecated/Optional now, can be used to pre-select
     preselectedPetId: String? = null,
     onBack: () -> Unit,
     onAddPet: () -> Unit,
@@ -181,34 +169,42 @@ fun BookingScreen(
                         }
 
                         // Service Selector
-                        var expandedService by remember { mutableStateOf(false) }
-                        ExposedDropdownMenuBox(
-                            expanded = expandedService,
-                            onExpandedChange = { expandedService = !expandedService }
-                        ) {
-                            OutlinedTextField(
-                                value = uiState.selectedService?.nombre ?: "Selecciona un servicio",
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Servicio") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedService) },
-                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                                modifier = Modifier.fillMaxWidth().menuAnchor()
-                            )
-                            ExposedDropdownMenu(expanded = expandedService, onDismissRequest = { expandedService = false }) {
-                                uiState.services.forEach { service ->
-                                    DropdownMenuItem(
-                                        text = { 
-                                            Column {
-                                                Text(service.nombre, style = MaterialTheme.typography.bodyLarge)
-                                                Text("${service.precioBase}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-                                            }
-                                        },
-                                        onClick = {
-                                            viewModel.selectService(service)
-                                            expandedService = false
-                                        }
+                        if (uiState.selectedPet != null) {
+                            if (uiState.services.isEmpty()) {
+                                Text(
+                                    "No hay servicios disponibles para esta mascota.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            } else {
+                                var expandedService by remember { mutableStateOf(false) }
+                                ExposedDropdownMenuBox(
+                                    expanded = expandedService,
+                                    onExpandedChange = { expandedService = !expandedService }
+                                ) {
+                                    OutlinedTextField(
+                                        value = uiState.selectedService?.nombre ?: "Selecciona un servicio",
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        label = { Text("Servicio") },
+                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedService) },
+                                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                                        modifier = Modifier.fillMaxWidth().menuAnchor()
                                     )
+                                    ExposedDropdownMenu(expanded = expandedService, onDismissRequest = { expandedService = false }) {
+                                        uiState.services.forEach { service ->
+                                            DropdownMenuItem(
+                                                text = { 
+                                                    // Simple display: Name ($Price)
+                                                    Text("${service.nombre} ($${service.precioBase})")
+                                                },
+                                                onClick = {
+                                                    viewModel.selectService(service)
+                                                    expandedService = false
+                                                }
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -248,7 +244,7 @@ fun BookingScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "Total: ${uiState.totalPrice}",
+                                text = "Total: $${uiState.totalPrice}",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -285,10 +281,15 @@ fun BookingScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 uiState.availableSlots.forEach { slot ->
+                                    // Convert Instant (UTC) to Local Time for display
+                                    val slotTyped: java.time.OffsetDateTime = slot
+                                    val localTime = slotTyped.atZoneSameInstant(ZoneId.systemDefault()).toLocalTime()
+                                    val formattedTime = localTime.format(timeFormatter)
+                                    
                                     FilterChip(
                                         selected = uiState.selectedSlot == slot,
                                         onClick = { viewModel.selectSlot(slot) },
-                                        label = { Text(slot.format(timeFormatter)) },
+                                        label = { Text(formattedTime) },
                                         leadingIcon = if (uiState.selectedSlot == slot) {
                                             { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
                                         } else null
@@ -304,7 +305,7 @@ fun BookingScreen(
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         enabled = uiState.selectedDate != null && uiState.selectedSlot != null
                     ) {
-                        Text("Confirmar Reserva (${uiState.totalPrice})")
+                        Text("Confirmar Reserva ($${uiState.totalPrice})")
                     }
                 } else {
                     Text(
@@ -334,7 +335,7 @@ fun CartItemCard(item: CartItem, onRemove: () -> Unit) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.servicio.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text("${item.mascota.nombre} (${item.mascota.especie})", style = MaterialTheme.typography.bodyMedium)
-                Text("${item.precio}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text("$${item.precio}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             }
             IconButton(onClick = onRemove) {
                 Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)

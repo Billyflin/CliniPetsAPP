@@ -13,7 +13,7 @@ import kotlinx.serialization.Serializable
 @Serializable object LoginRoute
 @Serializable object HomeRoute
 @Serializable data class MascotaFormRoute(val petId: String? = null)
-@Serializable data class BookingRoute(val serviceId: String? = null, val petId: String? = null)
+@Serializable data class BookingRoute(val petId: String? = null)
 @Serializable data class PaymentRoute(val paymentUrl: String?, val price: Int)
 @Serializable object ProfileRoute
 @Serializable object MyReservationsRoute
@@ -48,8 +48,9 @@ fun AppNavGraph(
         composable<HomeRoute> {
             cl.clinipets.ui.home.HomeScreen(
                  onLogout = onLogout, // Kept for safety, but HomeScreen might hide it if Profile is used
-                 onServiceClick = { serviceId ->
-                     navController.navigate(BookingRoute(serviceId = serviceId))
+                 onServiceClick = { _ ->
+                     // Service click now just opens booking, service selection is done inside
+                     navController.navigate(BookingRoute())
                  },
                 onMyPetsClick = { navController.navigate(MyPetsRoute) },
                 onProfileClick = {
@@ -97,7 +98,7 @@ fun AppNavGraph(
                 onBack = { navController.popBackStack() },
                 onEdit = { navController.navigate(MascotaFormRoute(it)) },
                 onBookAppointment = { petId ->
-                    navController.navigate(BookingRoute(serviceId = null, petId = petId))
+                    navController.navigate(BookingRoute(petId = petId))
                 }
             )
         }
@@ -114,7 +115,6 @@ fun AppNavGraph(
         composable<BookingRoute> { backStackEntry ->
             val route = backStackEntry.toRoute<BookingRoute>()
             cl.clinipets.ui.agenda.BookingScreen(
-                serviceId = route.serviceId,
                 preselectedPetId = route.petId,
                 onBack = { navController.popBackStack() },
                 onAddPet = { navController.navigate(MascotaFormRoute()) },
@@ -126,16 +126,17 @@ fun AppNavGraph(
 
         composable<PaymentRoute> { backStackEntry ->
             val route = backStackEntry.toRoute<PaymentRoute>()
-            // Construct a partial CitaResponse for display
-            // In a real app, you might pass ID and refetch, or use a shared ViewModel
+            // TEMPORARY PLACEHOLDER due to CitaResponse constructor issues
+            androidx.compose.material3.Text("Payment Screen - Price: ${route.price}")
+            /*
             val citaStub = cl.clinipets.openapi.models.CitaResponse(
-                id = java.util.UUID.randomUUID(), // Dummy, not needed for display
-                fechaHoraInicio = java.time.OffsetDateTime.now(), // Dummy
-                fechaHoraFin = java.time.OffsetDateTime.now(), // Dummy
+                id = java.util.UUID.randomUUID(),
+                fechaHoraInicio = java.time.OffsetDateTime.now(),
+                fechaHoraFin = java.time.OffsetDateTime.now(),
                 estado = cl.clinipets.openapi.models.CitaResponse.Estado.PENDIENTE_PAGO,
                 precioFinal = route.price,
-                detalles = emptyList(), // Dummy
-                tutorId = java.util.UUID.randomUUID(), // Dummy
+                detalles = emptyList(),
+                tutorId = java.util.UUID.randomUUID(),
                 origen = cl.clinipets.openapi.models.CitaResponse.Origen.APP,
                 paymentUrl = route.paymentUrl
             )
@@ -148,6 +149,7 @@ fun AppNavGraph(
                     }
                 }
             )
+            */
         }
     }
 }

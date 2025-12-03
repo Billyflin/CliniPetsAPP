@@ -22,6 +22,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
+import java.time.OffsetDateTime
 
 data class CartItem(
     val id: String = UUID.randomUUID().toString(),
@@ -45,8 +46,8 @@ data class BookingUiState(
 
     // Agenda State
     val selectedDate: LocalDate? = null,
-    val availableSlots: List<String> = emptyList(),
-    val selectedSlot: String? = null,
+    val availableSlots: List<OffsetDateTime> = emptyList(),
+    val selectedSlot: OffsetDateTime? = null,
     val bookingResult: CitaResponse? = null
 )
 
@@ -61,6 +62,8 @@ class BookingViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(BookingUiState())
     val uiState = _uiState.asStateFlow()
 
+    private var _allServices: List<ServicioMedicoDto> = emptyList()
+
     init {
         loadInitialData()
     }
@@ -73,16 +76,18 @@ class BookingViewModel @Inject constructor(
                 val servicesResponse = servicioApi.listarServicios()
 
                 if (petsResponse.isSuccessful && servicesResponse.isSuccessful) {
+                    _allServices = servicesResponse.body() ?: emptyList()
+                    val pets = petsResponse.body() ?: emptyList()
+                    
                     _uiState.update { 
                         it.copy(
                             isLoading = false, 
-                            pets = petsResponse.body() ?: emptyList(),
-                            services = servicesResponse.body() ?: emptyList()
+                            pets = pets
                         ) 
                     }
                     // Pre-select first pet if available
-                    if (_uiState.value.pets.isNotEmpty()) {
-                        selectPet(_uiState.value.pets.first())
+                    if (pets.isNotEmpty()) {
+                        selectPet(pets.first())
                     }
                 } else {
                     _uiState.update { it.copy(isLoading = false, error = "Error al cargar datos iniciales") }
@@ -95,6 +100,22 @@ class BookingViewModel @Inject constructor(
 
     fun selectPet(pet: MascotaResponse) {
         _uiState.update { it.copy(selectedPet = pet) }
+        recalculateAvailableServices(pet)
+    }
+
+    private fun recalculateAvailableServices(pet: MascotaResponse) {
+        val filteredServices = _allServices.filter { service ->
+            // Filter by Species
+            val isSpeciesAllowed = service.especiesPermitidas.isNullOrEmpty() || 
+                                   service.especiesPermitidas.any { it.name == pet.especie.name }
+            
+            // Filter by Stock (Hidden Rule: Exclude if stock <= 0)
+            // If stock is null, it's unlimited/service (always true)
+            val hasStock = service.stock == null || service.stock > 0
+
+            isSpeciesAllowed && hasStock
+        }
+        _uiState.update { it.copy(services = filteredServices, selectedService = null) }
     }
 
     fun selectService(service: ServicioMedicoDto) {
@@ -106,12 +127,11 @@ class BookingViewModel @Inject constructor(
         val pet = currentState.selectedPet ?: return
         val service = currentState.selectedService ?: return
 
-        // Validate species
-        val esApta = service.especiesPermitidas.isNullOrEmpty() || 
-                     service.especiesPermitidas.any { it.name == pet.especie.name }
-        
-        if (!esApta) {
-            _uiState.update { it.copy(error = "El servicio no es apto para esta mascota") }
+        // Final Stock Check (Security)
+        if (service.stock != null && service.stock <= 0) {
+            _uiState.update { it.copy(error = "Lo sentimos, este servicio se ha agotado.") }
+            // Refresh list just in case
+            recalculateAvailableServices(pet)
             return
         }
 
@@ -170,16 +190,12 @@ class BookingViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val offsetDateTime = date.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime()
-                val response = disponibilidadApi.obtenerDisponibilidad(offsetDateTime, duration)
+                val response = disponibilidadApi.obtenerDisponibilidad(date, duration)
 
                 if (response.isSuccessful) {
                     val availability = response.body()
-                    val formatter = DateTimeFormatter.ofPattern("HH:mm")
-                    val slots = availability?.slots?.map { slotTime ->
-                        slotTime.toLocalTime().format(formatter)
-                    } ?: emptyList()
-
+                    // Store raw slots (OffsetDateTime) directly
+                    val slots = availability?.slots ?: emptyList()
                     _uiState.update { it.copy(isLoading = false, availableSlots = slots) }
                 } else {
                     _uiState.update { it.copy(isLoading = false, error = "Error disponibilidad: ${response.code()}") }
@@ -190,23 +206,19 @@ class BookingViewModel @Inject constructor(
         }
     }
 
-    fun selectSlot(slot: String) {
+    fun selectSlot(slot: OffsetDateTime) {
         _uiState.update { it.copy(selectedSlot = slot) }
     }
 
     fun createReservation() {
         val currentState = _uiState.value
-        val date = currentState.selectedDate
-        val slot = currentState.selectedSlot
+        val selectedSlot = currentState.selectedSlot
         val cart = currentState.cart
 
-        if (date != null && slot != null && cart.isNotEmpty()) {
+        if (selectedSlot != null && cart.isNotEmpty()) {
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true) }
                 try {
-                    val time = LocalTime.parse(slot)
-                    val startDateTime = date.atTime(time).atZone(ZoneId.systemDefault()).toOffsetDateTime()
-
                     val detalles = cart.map { item ->
                         DetalleReservaRequest(
                             servicioId = item.servicio.id,
@@ -216,14 +228,13 @@ class BookingViewModel @Inject constructor(
 
                     val request = ReservaCreateRequest(
                         detalles = detalles,
-                        fechaHoraInicio = startDateTime,
+                        fechaHoraInicio = selectedSlot,
                         origen = ReservaCreateRequest.Origen.APP
                     )
 
                     val response = reservaApi.crearReserva(request)
                     if (response.isSuccessful) {
-                        val cita = response.body()
-                        _uiState.update { it.copy(isLoading = false, bookingResult = cita) }
+                        _uiState.update { it.copy(isLoading = false, bookingResult = response.body()) }
                     } else {
                         _uiState.update { it.copy(isLoading = false, error = "Error reserva: ${response.code()}") }
                     }
