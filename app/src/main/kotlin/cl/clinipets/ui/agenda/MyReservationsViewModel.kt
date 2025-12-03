@@ -17,7 +17,15 @@ class MyReservationsViewModel @Inject constructor(
 ) : ViewModel() {
     private val _reservas = MutableStateFlow<List<CitaDetalladaResponse>>(emptyList())
     val reservas = _reservas.asStateFlow()
+
+    // Estado de carga general de la pantalla
     val isLoading = MutableStateFlow(false)
+
+    // Estado de acción en progreso por item (por ahora un único ID)
+    val actionInProgressId = MutableStateFlow<UUID?>(null)
+
+    // Mensaje de error simple para mostrar en UI
+    val errorMessage = MutableStateFlow<String?>(null)
 
     init {
         loadReservas()
@@ -30,10 +38,12 @@ class MyReservationsViewModel @Inject constructor(
                 val response = reservaApi.listarReservas()
                 if (response.isSuccessful) {
                     _reservas.value = response.body() ?: emptyList()
-
+                } else {
+                    errorMessage.value = "Error al cargar reservas: ${response.code()}"
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                errorMessage.value = e.message ?: "Error desconocido al cargar reservas"
             } finally {
                 isLoading.value = false
             }
@@ -46,21 +56,27 @@ class MyReservationsViewModel @Inject constructor(
 
     fun cancelReservation(citaId: UUID) {
         viewModelScope.launch {
-            isLoading.value = true
+            // Marcamos la acción en progreso para este ID
+            actionInProgressId.value = citaId
             try {
                 val response = reservaApi.cancelarReserva(citaId)
                 if (response.isSuccessful) {
                     // Tras cancelar, recargamos la lista para reflejar cambios
                     loadReservas()
                 } else {
-                    // Si falla, simplemente dejamos trazado; podrías exponer un error si luego se requiere
-                    println("Error al cancelar reserva: ${response.code()} ${response.message()}")
-                    isLoading.value = false
+                    errorMessage.value = "Error al cancelar reserva: ${response.code()}"
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                isLoading.value = false
+                errorMessage.value = e.message ?: "Error desconocido al cancelar"
+            } finally {
+                // Limpiamos la acción en progreso
+                actionInProgressId.value = null
             }
         }
+    }
+
+    fun clearError() {
+        errorMessage.value = null
     }
 }

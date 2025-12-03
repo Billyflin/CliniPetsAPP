@@ -28,6 +28,18 @@ fun MyReservationsScreen(
 ) {
     val reservas by viewModel.reservas.collectAsState()
     val loading by viewModel.isLoading.collectAsState()
+    val actionInProgressId by viewModel.actionInProgressId.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Mostrar Snackbar cuando haya error
+    LaunchedEffect(errorMessage) {
+        if (!errorMessage.isNullOrBlank()) {
+            snackbarHostState.showSnackbar(errorMessage!!)
+            viewModel.clearError()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -39,9 +51,10 @@ fun MyReservationsScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
-        if (loading) {
+        if (loading && reservas.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
@@ -61,17 +74,21 @@ fun MyReservationsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(reservas) { cita ->
+                    val isBusy = actionInProgressId == cita.id
                     ReservationCard(
                         cita = cita,
                         onPay = { url ->
-                            if (!url.isNullOrBlank()) {
+                            if (!url.isNullOrBlank() && !isBusy) {
                                 onPay(url)
                             }
                         },
                         onCancel = { id ->
-                            onCancel(id)
-                            viewModel.cancelReservation(id)
-                        }
+                            if (!isBusy) {
+                                onCancel(id)
+                                viewModel.cancelReservation(id)
+                            }
+                        },
+                        isBusy = isBusy
                     )
                 }
             }
@@ -84,10 +101,11 @@ fun ReservationCard(
     cita: CitaDetalladaResponse,
     onPay: (String?) -> Unit,
     onCancel: (UUID) -> Unit,
+    isBusy: Boolean,
 ) {
-    val isPendingPago = cita.estado?.name == "PENDIENTE_PAGO"
-    val isConfirmada = cita.estado?.name == "CONFIRMADA"
-    val isCancelada = cita.estado?.name == "CANCELADA"
+    val isPendingPago = cita.estado.name == "PENDIENTE_PAGO"
+    val isConfirmada = cita.estado.name == "CONFIRMADA"
+    val isCancelada = cita.estado.name == "CANCELADA"
 
     val cardAlpha = if (isCancelada) 0.5f else 1f
 
@@ -105,7 +123,7 @@ fun ReservationCard(
                 Spacer(Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "Cita #${cita.id.toString().take(4)}", // ID corto pal estilo
+                        text = "Cita #${cita.id.toString().take(4)}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -135,12 +153,25 @@ fun ReservationCard(
                 when {
                     isPendingPago -> {
                         // Botón Pagar
-                        TextButton(onClick = { onPay(cita.paymentUrl) }) {
-                            Text("Pagar")
+                        TextButton(
+                            onClick = { onPay(cita.paymentUrl) },
+                            enabled = !isBusy && !cita.paymentUrl.isNullOrBlank()
+                        ) {
+                            if (isBusy) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("Pagar")
+                            }
                         }
                         Spacer(Modifier.width(8.dp))
                         // Botón/ícono Cancelar
-                        IconButton(onClick = { cita.id?.let { onCancel(it) } }) {
+                        IconButton(
+                            onClick = { onCancel(cita.id) },
+                            enabled = !isBusy
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.Cancel,
                                 contentDescription = "Cancelar",
@@ -150,7 +181,6 @@ fun ReservationCard(
                     }
 
                     isConfirmada -> {
-                        // Solo texto o botón de cancelar opcional; por ahora, solo texto
                         Text(
                             text = "Confirmada",
                             style = MaterialTheme.typography.bodyMedium,
@@ -167,9 +197,8 @@ fun ReservationCard(
                     }
 
                     else -> {
-                        // Otros estados: por ahora solo mostramos el estado como texto
                         Text(
-                            text = cita.estado?.name ?: "Estado desconocido",
+                            text = cita.estado.name,
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
