@@ -33,12 +33,17 @@ import cl.clinipets.openapi.models.ServicioMedicoDto
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -181,7 +186,30 @@ fun ServiceCard(servicio: ServicioMedicoDto, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            // Icon based on category
+            val icon = when (servicio.categoria) {
+                ServicioMedicoDto.Categoria.CONSULTA -> Icons.Default.MedicalServices
+                ServicioMedicoDto.Categoria.VACUNA -> Icons.Default.Vaccines // Or LocalHospital if Vaccines not available, sticking to request
+                ServicioMedicoDto.Categoria.CIRUGIA -> Icons.Default.ContentCut
+                else -> Icons.Default.Pets
+            }
+
             Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = icon, 
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = servicio.categoria.name,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = servicio.nombre,
                     style = MaterialTheme.typography.titleMedium,
@@ -191,7 +219,7 @@ fun ServiceCard(servicio: ServicioMedicoDto, onClick: () -> Unit) {
                 Text(
                     text = "$ ${servicio.precioBase}",
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.secondary,
                     fontWeight = FontWeight.Bold
                 )
             }

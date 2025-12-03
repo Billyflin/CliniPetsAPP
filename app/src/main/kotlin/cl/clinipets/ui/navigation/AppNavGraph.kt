@@ -134,8 +134,7 @@ fun AppNavGraph(
                 fechaHoraFin = java.time.OffsetDateTime.now(), // Dummy
                 estado = cl.clinipets.openapi.models.CitaResponse.Estado.PENDIENTE_PAGO,
                 precioFinal = route.price,
-                servicioId = java.util.UUID.randomUUID(), // Dummy
-                mascotaId = java.util.UUID.randomUUID(), // Dummy
+                detalles = emptyList(), // Dummy
                 tutorId = java.util.UUID.randomUUID(), // Dummy
                 origen = cl.clinipets.openapi.models.CitaResponse.Origen.APP,
                 paymentUrl = route.paymentUrl

@@ -3,6 +3,7 @@ package cl.clinipets.ui.mascotas
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.openapi.apis.MascotaControllerApi
+import cl.clinipets.openapi.apis.MaestrosControllerApi
 import cl.clinipets.openapi.models.MascotaCreateRequest
 import cl.clinipets.openapi.models.MascotaResponse
 import cl.clinipets.openapi.models.MascotaUpdateRequest
@@ -22,16 +23,35 @@ data class MascotaFormUiState(
     val error: String? = null,
     val success: Boolean = false,
     val pet: MascotaResponse? = null,
-    val isEdit: Boolean = false
+    val isEdit: Boolean = false,
+    val razasDisponibles: List<String> = emptyList()
 )
 
 @HiltViewModel
 class MascotaFormViewModel @Inject constructor(
-    private val mascotaApi: MascotaControllerApi
+    private val mascotaApi: MascotaControllerApi,
+    private val maestrosApi: MaestrosControllerApi
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MascotaFormUiState())
     val uiState = _uiState.asStateFlow()
+
+    fun cargarRazas(especie: MascotaCreateRequest.Especie) {
+        viewModelScope.launch {
+            try {
+                // Mapear el enum local al enum del endpoint si es necesario, o usar string
+                // El endpoint espera MaestrosControllerApi.EspecieListarRazas
+                val especieApi = MaestrosControllerApi.EspecieListarRazas.valueOf(especie.name)
+                val response = maestrosApi.listarRazas(especieApi)
+                if (response.isSuccessful) {
+                    _uiState.update { it.copy(razasDisponibles = response.body() ?: emptyList()) }
+                }
+            } catch (e: Exception) {
+                // Silently fail or log
+                _uiState.update { it.copy(razasDisponibles = emptyList()) }
+            }
+        }
+    }
 
     fun cargarMascota(id: String) {
         val uuid = runCatching { UUID.fromString(id) }.getOrNull()
@@ -55,15 +75,36 @@ class MascotaFormViewModel @Inject constructor(
         }
     }
 
-    fun guardarMascota(id: String?, nombre: String, especie: MascotaCreateRequest.Especie, peso: Double, fechaNacimiento: LocalDate) {
+    fun guardarMascota(
+        id: String?,
+        nombre: String,
+        especie: MascotaCreateRequest.Especie,
+        peso: Double,
+        fechaNacimiento: LocalDate,
+        raza: String,
+        sexo: MascotaCreateRequest.Sexo,
+        esterilizado: Boolean,
+        temperamento: MascotaCreateRequest.Temperamento,
+        chip: String?
+    ) {
         if (id != null) {
-            actualizarMascota(id, nombre, peso)
+            actualizarMascota(id, nombre, peso, raza, sexo, esterilizado, temperamento, chip)
         } else {
-            crearMascota(nombre, especie, peso, fechaNacimiento)
+            crearMascota(nombre, especie, peso, fechaNacimiento, raza, sexo, esterilizado, temperamento, chip)
         }
     }
 
-    private fun crearMascota(nombre: String, especie: MascotaCreateRequest.Especie, peso: Double, fechaNacimiento: LocalDate) {
+    private fun crearMascota(
+        nombre: String,
+        especie: MascotaCreateRequest.Especie,
+        peso: Double,
+        fechaNacimiento: LocalDate,
+        raza: String,
+        sexo: MascotaCreateRequest.Sexo,
+        esterilizado: Boolean,
+        temperamento: MascotaCreateRequest.Temperamento,
+        chip: String?
+    ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, success = false) }
             try {
@@ -71,7 +112,12 @@ class MascotaFormViewModel @Inject constructor(
                     nombre = nombre,
                     especie = especie,
                     pesoActual = BigDecimal.valueOf(peso),
-                    fechaNacimiento = fechaNacimiento
+                    fechaNacimiento = fechaNacimiento,
+                    raza = raza,
+                    sexo = sexo,
+                    esterilizado = esterilizado,
+                    temperamento = temperamento,
+                    chipIdentificador = chip.takeIf { !it.isNullOrBlank() }
                 )
                 val response = mascotaApi.crearMascota(request)
                 if (response.isSuccessful) {
@@ -85,7 +131,16 @@ class MascotaFormViewModel @Inject constructor(
         }
     }
 
-    private fun actualizarMascota(id: String, nombre: String, peso: Double) {
+    private fun actualizarMascota(
+        id: String,
+        nombre: String,
+        peso: Double,
+        raza: String,
+        sexo: MascotaCreateRequest.Sexo,
+        esterilizado: Boolean,
+        temperamento: MascotaCreateRequest.Temperamento,
+        chip: String?
+    ) {
         val uuid = runCatching { UUID.fromString(id) }.getOrNull()
         if (uuid == null) {
             _uiState.update { it.copy(error = "ID de mascota inválido") }
@@ -95,9 +150,18 @@ class MascotaFormViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, success = false) }
             try {
+                // Map CreateRequest Enums to UpdateRequest Enums
+                val updateSexo = MascotaUpdateRequest.Sexo.valueOf(sexo.name)
+                val updateTemperamento = MascotaUpdateRequest.Temperamento.valueOf(temperamento.name)
+
                 val request = MascotaUpdateRequest(
                     nombre = nombre,
-                    pesoActual = BigDecimal.valueOf(peso)
+                    pesoActual = BigDecimal.valueOf(peso),
+                    raza = raza,
+                    sexo = updateSexo,
+                    esterilizado = esterilizado,
+                    temperamento = updateTemperamento,
+                    chipIdentificador = chip.takeIf { !it.isNullOrBlank() }
                 )
                 val response = mascotaApi.actualizarMascota(uuid, request)
                 if (response.isSuccessful) {

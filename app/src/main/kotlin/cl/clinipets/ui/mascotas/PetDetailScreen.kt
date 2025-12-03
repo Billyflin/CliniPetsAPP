@@ -34,6 +34,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -203,12 +204,84 @@ private fun PetHeader(pet: MascotaResponse) {
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
+            
+            // Raza y Especie
             Text(
-                text = "Peso: ${pet.pesoActual.toPlainString()} kg",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "${pet.especie.name} • ${pet.raza}",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
+
+            // Detalles: Sexo, Peso, Esterilizado
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                DetailChip(label = pet.sexo.name)
+                DetailChip(label = "${pet.pesoActual.toPlainString()} kg")
+                if (pet.esterilizado) {
+                    DetailChip(label = "Esterilizado")
+                }
+            }
+
+            // Chip
+            if (!pet.chipIdentificador.isNullOrBlank()) {
+                Text(
+                    text = "Chip: ${pet.chipIdentificador}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Temperamento Warning
+            if (pet.temperamento == MascotaResponse.Temperamento.NERVIOSO || 
+                pet.temperamento == MascotaResponse.Temperamento.AGRESIVO) {
+                
+                val color = if (pet.temperamento == MascotaResponse.Temperamento.AGRESIVO) 
+                    MaterialTheme.colorScheme.error 
+                else 
+                    MaterialTheme.colorScheme.tertiary
+
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, color)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.EventAvailable, // TODO: Use Warning icon if available
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "CUIDADO: ${pet.temperamento.name}",
+                            color = color,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun DetailChip(label: String) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+        )
     }
 }
 
@@ -320,11 +393,15 @@ private fun TimelineItem(
                 modifier = Modifier.padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    text = cita.nombreServicio,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                // Display all services in the appointment
+                cita.detalles.forEach { detalle ->
+                    Text(
+                        text = detalle.nombreServicio,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
                 AssistChip(
                     onClick = { },
                     enabled = false,

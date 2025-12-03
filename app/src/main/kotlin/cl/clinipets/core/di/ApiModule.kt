@@ -5,6 +5,7 @@ import android.util.Log
 import cl.clinipets.BuildConfig
 import cl.clinipets.openapi.apis.AuthControllerApi
 import cl.clinipets.openapi.apis.DisponibilidadControllerApi
+import cl.clinipets.openapi.apis.MaestrosControllerApi
 import cl.clinipets.openapi.apis.MascotaControllerApi
 import cl.clinipets.openapi.apis.ReservaControllerApi
 import cl.clinipets.openapi.apis.ServicioMedicoControllerApi
@@ -80,7 +81,10 @@ object ApiModule {
     fun provideReservaApi(apiClient: ApiClient): ReservaControllerApi =
         apiClient.createService(ReservaControllerApi::class.java)
 
-
+    @Provides
+    @Singleton
+    fun provideMaestrosApi(apiClient: ApiClient): MaestrosControllerApi =
+        apiClient.createService(MaestrosControllerApi::class.java)
 
     @Provides
     @Named("GoogleClientId")
