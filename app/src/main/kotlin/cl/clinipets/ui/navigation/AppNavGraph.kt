@@ -5,9 +5,12 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
 import cl.clinipets.ui.auth.LoginScreen
 import cl.clinipets.ui.auth.LoginViewModel
+import cl.clinipets.ui.agenda.PaymentResultScreen
+import cl.clinipets.ui.agenda.PaymentScreen
 import kotlinx.serialization.Serializable
 
 @Serializable object LoginRoute
@@ -15,6 +18,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class MascotaFormRoute(val petId: String? = null)
 @Serializable data class BookingRoute(val petId: String? = null)
 @Serializable data class PaymentRoute(val paymentUrl: String?, val price: Int)
+@Serializable data class PaymentResultRoute(val status: String? = null)
 @Serializable object ProfileRoute
 @Serializable object MyReservationsRoute
 @Serializable object MyPetsRoute
@@ -76,7 +80,14 @@ fun AppNavGraph(
         
         composable<MyReservationsRoute> {
             cl.clinipets.ui.agenda.MyReservationsScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onPay = { url ->
+                    // Abrimos el navegador con la paymentUrl
+                    val context = navController.context
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                    context.startActivity(intent)
+                },
+                onCancel = { /* El ViewModel ya maneja la cancelación; callback dejado por si se quiere mostrar un diálogo de confirmación */ }
             )
         }
 
@@ -126,30 +137,42 @@ fun AppNavGraph(
 
         composable<PaymentRoute> { backStackEntry ->
             val route = backStackEntry.toRoute<PaymentRoute>()
-            // TEMPORARY PLACEHOLDER due to CitaResponse constructor issues
-            androidx.compose.material3.Text("Payment Screen - Price: ${route.price}")
-            /*
-            val citaStub = cl.clinipets.openapi.models.CitaResponse(
-                id = java.util.UUID.randomUUID(),
-                fechaHoraInicio = java.time.OffsetDateTime.now(),
-                fechaHoraFin = java.time.OffsetDateTime.now(),
-                estado = cl.clinipets.openapi.models.CitaResponse.Estado.PENDIENTE_PAGO,
-                precioFinal = route.price,
-                detalles = emptyList(),
-                tutorId = java.util.UUID.randomUUID(),
-                origen = cl.clinipets.openapi.models.CitaResponse.Origen.APP,
-                paymentUrl = route.paymentUrl
-            )
-            
-            cl.clinipets.ui.agenda.PaymentScreen(
-                cita = citaStub,
-                onHomeClick = { 
+            PaymentScreen(
+                cita = cl.clinipets.openapi.models.CitaResponse(
+                    id = java.util.UUID.randomUUID(),
+                    fechaHoraInicio = java.time.OffsetDateTime.now(),
+                    fechaHoraFin = java.time.OffsetDateTime.now(),
+                    estado = cl.clinipets.openapi.models.CitaResponse.Estado.PENDIENTE_PAGO,
+                    precioFinal = route.price,
+                    detalles = emptyList(),
+                    tutorId = java.util.UUID.randomUUID(),
+                    origen = cl.clinipets.openapi.models.CitaResponse.Origen.APP,
+                    paymentUrl = route.paymentUrl
+                ),
+                onHomeClick = {
                     navController.navigate(HomeRoute) {
                         popUpTo(HomeRoute) { inclusive = true }
                     }
                 }
             )
-            */
+        }
+
+        composable<PaymentResultRoute>(
+            deepLinks = listOf(
+                navDeepLink {
+                    uriPattern = "clinipets://payment-result?status={status}"
+                }
+            )
+        ) { backStackEntry ->
+            val route = backStackEntry.toRoute<PaymentResultRoute>()
+            PaymentResultScreen(
+                status = route.status,
+                onHomeClick = {
+                    navController.navigate(HomeRoute) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }

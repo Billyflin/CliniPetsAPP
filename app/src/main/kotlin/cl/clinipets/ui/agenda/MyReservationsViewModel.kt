@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -41,5 +42,25 @@ class MyReservationsViewModel @Inject constructor(
 
     fun refresh() {
         loadReservas()
+    }
+
+    fun cancelReservation(citaId: UUID) {
+        viewModelScope.launch {
+            isLoading.value = true
+            try {
+                val response = reservaApi.cancelarReserva(citaId)
+                if (response.isSuccessful) {
+                    // Tras cancelar, recargamos la lista para reflejar cambios
+                    loadReservas()
+                } else {
+                    // Si falla, simplemente dejamos trazado; podrías exponer un error si luego se requiere
+                    println("Error al cancelar reserva: ${response.code()} ${response.message()}")
+                    isLoading.value = false
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                isLoading.value = false
+            }
+        }
     }
 }

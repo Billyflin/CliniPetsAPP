@@ -235,6 +235,7 @@ class BookingViewModel @Inject constructor(
                     val response = reservaApi.crearReserva(request)
                     if (response.isSuccessful) {
                         _uiState.update { it.copy(isLoading = false, bookingResult = response.body()) }
+                        // El carrito y los slots se limpiarán explícitamente desde la UI
                     } else {
                         _uiState.update { it.copy(isLoading = false, error = "Error reserva: ${response.code()}") }
                     }
@@ -251,5 +252,23 @@ class BookingViewModel @Inject constructor(
 
     fun resetBookingState() {
         _uiState.update { it.copy(bookingResult = null) }
+    }
+
+    /**
+     * Limpia por completo el estado del carrito y de la reserva.
+     * Llamar cuando la UI ya consumió el evento de éxito (ej. después
+     * de navegar a la pantalla de pago o mostrar confirmación).
+     */
+    fun clearCart() {
+        _uiState.update {
+            it.copy(
+                cart = emptyList(),
+                totalPrice = 0,
+                totalDuration = 0,
+                selectedSlot = null,
+                availableSlots = emptyList(),
+                bookingResult = null
+            )
+        }
     }
 }
