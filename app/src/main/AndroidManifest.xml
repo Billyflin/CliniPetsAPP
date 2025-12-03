@@ -41,12 +41,22 @@
                 <data android:scheme="https" android:host="www.clinipets.cl" />
             </intent-filter>
 
-            <!-- Deep Links con esquema propio (fallback) -->
+            <!-- Deep Links con esquema propio (fallback) general -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="clinipets" />
+            </intent-filter>
+
+            <!-- Deep Link específico para resultado de pago -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="clinipets"
+                    android:host="payment-result" />
             </intent-filter>
         </activity>
 
