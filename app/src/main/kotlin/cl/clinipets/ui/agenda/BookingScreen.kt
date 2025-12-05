@@ -32,6 +32,7 @@ import java.util.Locale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import cl.clinipets.openapi.models.CitaResponse
+import cl.clinipets.ui.features.booking.CartItem
 import java.time.ZoneId
 
 @Composable

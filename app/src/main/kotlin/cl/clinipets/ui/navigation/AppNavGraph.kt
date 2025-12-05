@@ -181,8 +181,9 @@ fun AppNavGraph(
                 preselectedPetId = route.petId,
                 onBack = { navController.popBackStack() },
                 onAddPet = { navController.navigate(MascotaFormRoute()) },
-                onSuccess = { cita -> 
-                    navController.navigate(PaymentRoute(cita.paymentUrl, cita.montoAbono))
+                onSuccess = { cita ->
+                    // Navigate with the new PaymentRoute that only needs the ID
+                    navController.navigate(PaymentRoute(citaId = cita.id.toString()))
                 }
             )
         }
@@ -190,20 +191,13 @@ fun AppNavGraph(
         composable<PaymentRoute> { backStackEntry ->
             val route = backStackEntry.toRoute<PaymentRoute>()
             PaymentScreen(
-                cita = cl.clinipets.openapi.models.CitaResponse(
-                    id = java.util.UUID.randomUUID(),
-                    fechaHoraInicio = java.time.OffsetDateTime.now(),
-                    fechaHoraFin = java.time.OffsetDateTime.now(),
-                    estado = cl.clinipets.openapi.models.CitaResponse.Estado.PENDIENTE_PAGO,
-                    precioFinal = route.price,
-                    detalles = emptyList(),
-                    tutorId = java.util.UUID.randomUUID(),
-                    origen = cl.clinipets.openapi.models.CitaResponse.Origen.APP,
-                    paymentUrl = route.paymentUrl,
-                    montoAbono = 0,
-                    saldoPendiente = route.price,
-                    tipoAtencion = cl.clinipets.openapi.models.CitaResponse.TipoAtencion.CLINICA
-                ),
+                citaId = route.citaId,
+                citaResponse = null, // The ViewModel will fetch the details
+                onPaymentConfirmed = {
+                    navController.navigate(PaymentResultRoute(status = "success")) {
+                        popUpTo(HomeRoute) // Pop back to home after payment success
+                    }
+                },
                 onHomeClick = {
                     navController.navigate(HomeRoute) {
                         popUpTo(HomeRoute) { inclusive = true }

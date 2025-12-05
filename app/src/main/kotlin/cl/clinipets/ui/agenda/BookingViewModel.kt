@@ -11,25 +11,18 @@ import cl.clinipets.openapi.models.DetalleReservaRequest
 import cl.clinipets.openapi.models.MascotaResponse
 import cl.clinipets.openapi.models.ReservaCreateRequest
 import cl.clinipets.openapi.models.ServicioMedicoDto
+import cl.clinipets.ui.features.booking.CartItem
+import cl.clinipets.ui.features.booking.CartManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.UUID
-import javax.inject.Inject
 import java.time.OffsetDateTime
-
-data class CartItem(
-    val id: String = UUID.randomUUID().toString(),
-    val mascota: MascotaResponse,
-    val servicio: ServicioMedicoDto,
-    val precio: Int
-)
+import javax.inject.Inject
 
 data class BookingUiState(
     val isLoading: Boolean = false,
@@ -58,7 +51,8 @@ class BookingViewModel @Inject constructor(
     private val mascotaApi: MascotaControllerApi,
     private val disponibilidadApi: DisponibilidadControllerApi,
     private val reservaApi: ReservaControllerApi,
-    private val servicioApi: ServicioMedicoControllerApi
+    private val servicioApi: ServicioMedicoControllerApi,
+    private val cartManager: CartManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BookingUiState())
@@ -68,6 +62,31 @@ class BookingViewModel @Inject constructor(
 
     init {
         loadInitialData()
+        observeCart()
+    }
+
+    private fun observeCart() {
+        cartManager.cartState
+            .onEach { cartState ->
+                val needsAvailabilityUpdate = _uiState.value.totalDuration != cartState.totalDuration && _uiState.value.selectedDate != null
+
+                _uiState.update {
+                    it.copy(
+                        cart = cartState.cart,
+                        totalDuration = cartState.totalDuration,
+                        totalPrice = cartState.totalPrice,
+                        minDeposit = cartState.minDeposit,
+                        // Reset slot selection if cart changes, forcing user to re-select
+                        selectedSlot = if (needsAvailabilityUpdate) null else it.selectedSlot,
+                        availableSlots = if (needsAvailabilityUpdate) emptyList() else it.availableSlots
+                    )
+                }
+
+                if (needsAvailabilityUpdate) {
+                    _uiState.value.selectedDate?.let { fetchAvailability(it) }
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     fun loadInitialData() {
@@ -129,55 +148,21 @@ class BookingViewModel @Inject constructor(
         val pet = currentState.selectedPet ?: return
         val service = currentState.selectedService ?: return
 
-        // Final Stock Check (Security)
-        if (service.stock != null && service.stock <= 0) {
-            _uiState.update { it.copy(error = "Lo sentimos, este servicio se ha agotado.") }
-            // Refresh list just in case
-            recalculateAvailableServices(pet)
-            return
-        }
+        // Delegate to CartManager
+        cartManager.addToCart(pet, service)
 
-        // Calculate Price
-        var precio = service.precioBase
-        service.reglas?.let { reglas ->
-            val peso = pet.pesoActual
-            val reglaAplicable = reglas.find { regla ->
-                peso >= regla.pesoMin && peso <= regla.pesoMax
-            }
-            if (reglaAplicable != null) {
-                precio = reglaAplicable.precio
-            }
+        // The stock check is now inside CartManager. If it fails, it won't add the item.
+        // We might want to expose an error state from CartManager in the future.
+        // For now, we can check if the cart actually changed.
+        val serviceInCart = cartManager.cartState.value.cart.any { it.servicio.id == service.id && it.mascota.id == pet.id }
+        if (!serviceInCart && service.stock != null && service.stock <= 0) {
+             _uiState.update { it.copy(error = "Lo sentimos, este servicio se ha agotado.") }
+             recalculateAvailableServices(pet) // Refresh list
         }
-
-        val item = CartItem(mascota = pet, servicio = service, precio = precio)
-        val newCart = currentState.cart + item
-        
-        updateCartState(newCart)
     }
 
     fun removeFromCart(item: CartItem) {
-        val newCart = _uiState.value.cart - item
-        updateCartState(newCart)
-    }
-
-    private fun updateCartState(newCart: List<CartItem>) {
-        val totalDuration = newCart.sumOf { it.servicio.duracionMinutos }
-        val totalPrice = newCart.sumOf { it.precio }
-        // Use max deposit logic as requested
-        val minDeposit = newCart.mapNotNull { it.servicio.precioAbono }.maxOrNull() ?: 0
-        
-        _uiState.update { 
-            it.copy(
-                cart = newCart,
-                totalDuration = totalDuration,
-                totalPrice = totalPrice,
-                minDeposit = minDeposit,
-                selectedSlot = null, // Reset slot if duration changes
-                availableSlots = emptyList() // Force re-fetch or clear
-            ) 
-        }
-        // Re-fetch availability if date is selected
-        _uiState.value.selectedDate?.let { selectDate(it) }
+        cartManager.removeFromCart(item)
     }
 
     fun selectDate(date: LocalDate) {
@@ -271,11 +256,9 @@ class BookingViewModel @Inject constructor(
      * de navegar a la pantalla de pago o mostrar confirmación).
      */
     fun clearCart() {
+        cartManager.clearCart()
         _uiState.update {
             it.copy(
-                cart = emptyList(),
-                totalPrice = 0,
-                totalDuration = 0,
                 selectedSlot = null,
                 availableSlots = emptyList(),
                 bookingResult = null

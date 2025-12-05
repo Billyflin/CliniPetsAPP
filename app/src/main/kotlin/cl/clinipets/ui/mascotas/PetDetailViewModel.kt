@@ -3,9 +3,11 @@ package cl.clinipets.ui.mascotas
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cl.clinipets.openapi.apis.FichaClinicaControllerApi
 import cl.clinipets.openapi.apis.MascotaControllerApi
 import cl.clinipets.openapi.apis.ReservaControllerApi
 import cl.clinipets.openapi.models.CitaDetalladaResponse
+import cl.clinipets.openapi.models.FichaResponse
 import cl.clinipets.openapi.models.MascotaResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +21,7 @@ data class PetDetailUiState(
     val isLoading: Boolean = true,
     val pet: MascotaResponse? = null,
     val history: List<CitaDetalladaResponse> = emptyList(),
+    val clinicalRecords: List<FichaResponse> = emptyList(),
     val error: String? = null,
     val isDeleted: Boolean = false
 )
@@ -27,6 +30,7 @@ data class PetDetailUiState(
 class PetDetailViewModel @Inject constructor(
     private val mascotaApi: MascotaControllerApi,
     private val reservaApi: ReservaControllerApi,
+    private val fichaApi: FichaClinicaControllerApi,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -75,6 +79,7 @@ class PetDetailViewModel @Inject constructor(
                 val mascotaResponse = mascotaApi.obtenerMascota(uuid)
                 // Use optimized endpoint for pet history
                 val historyResponse = reservaApi.historialMascota(uuid)
+                val clinicalHistoryResponse = fichaApi.obtenerHistorial(uuid)
 
                 if (mascotaResponse.isSuccessful) {
                     val pet = mascotaResponse.body()
@@ -84,12 +89,19 @@ class PetDetailViewModel @Inject constructor(
                     } else {
                         emptyList()
                     }
+                    val clinicalHistory = if (clinicalHistoryResponse.isSuccessful) {
+                        clinicalHistoryResponse.body().orEmpty()
+                            .sortedByDescending { it.fechaAtencion }
+                    } else {
+                        emptyList()
+                    }
 
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             pet = pet,
-                            history = history
+                            history = history,
+                            clinicalRecords = clinicalHistory
                         )
                     }
                 } else {

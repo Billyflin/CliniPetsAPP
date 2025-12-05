@@ -17,8 +17,12 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,6 +82,25 @@ fun ProfileScreen(
                     }
                 }
                 is ProfileUiState.Success -> {
+                    var showEditDialog by remember { mutableStateOf(false) }
+                    var name by remember(state.profile) { mutableStateOf(state.profile.name.orEmpty()) }
+                    var phone by remember(state.profile) { mutableStateOf(state.profile.phone.orEmpty()) }
+                    var address by remember(state.profile) { mutableStateOf(state.profile.address.orEmpty()) }
+                    var submitted by remember { mutableStateOf(false) }
+
+                    LaunchedEffect(state.profile) {
+                        name = state.profile.name.orEmpty()
+                        phone = state.profile.phone.orEmpty()
+                        address = state.profile.address.orEmpty()
+                        if (submitted && showEditDialog && !state.isUpdating && state.updateError == null) {
+                            showEditDialog = false
+                            submitted = false
+                        }
+                        if (state.updateError != null) {
+                            submitted = false
+                        }
+                    }
+
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -124,14 +147,15 @@ fun ProfileScreen(
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                                 ProfileItem(icon = Icons.Default.VerifiedUser, label = "Rol", value = state.profile.role?.toString() ?: "-")
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                                // Placeholder Editar
                                 Row(
-                                    modifier = Modifier.fillMaxWidth().clickable { /* TODO: Navegar a Editar Perfil */ },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { showEditDialog = true },
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary)
                                     Spacer(modifier = Modifier.width(16.dp))
-                                    Text("Editar Datos (Próximamente)", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                                    Text("Editar Datos", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                                 }
                             }
                         }
@@ -190,6 +214,85 @@ fun ProfileScreen(
                         ) {
                             Text("Cerrar Sesión")
                         }
+                    }
+
+                    if (showEditDialog) {
+                        AlertDialog(
+                            onDismissRequest = {
+                                if (!state.isUpdating) {
+                                    showEditDialog = false
+                                    submitted = false
+                                }
+                            },
+                            confirmButton = {
+                                Button(
+                                    onClick = {
+                                        submitted = true
+                                        profileViewModel.updateProfile(
+                                            name = name,
+                                            phone = phone,
+                                            address = address
+                                        )
+                                    },
+                                    enabled = !state.isUpdating
+                                ) {
+                                    if (state.isUpdating) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                    }
+                                    Text("Guardar")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(
+                                    onClick = {
+                                        if (!state.isUpdating) {
+                                            showEditDialog = false
+                                            submitted = false
+                                        }
+                                    },
+                                    enabled = !state.isUpdating
+                                ) {
+                                    Text("Cancelar")
+                                }
+                            },
+                            title = { Text("Editar datos") },
+                            text = {
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    OutlinedTextField(
+                                        value = name,
+                                        onValueChange = { name = it },
+                                        label = { Text("Nombre") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true
+                                    )
+                                    OutlinedTextField(
+                                        value = phone,
+                                        onValueChange = { phone = it },
+                                        label = { Text("Teléfono") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true
+                                    )
+                                    OutlinedTextField(
+                                        value = address,
+                                        onValueChange = { address = it },
+                                        label = { Text("Dirección") },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    state.updateError?.let { error ->
+                                        Text(
+                                            text = error,
+                                            color = MaterialTheme.colorScheme.error,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                            }
+                        )
                     }
                 }
             }

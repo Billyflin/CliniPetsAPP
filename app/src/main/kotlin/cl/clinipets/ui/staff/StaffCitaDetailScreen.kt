@@ -21,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.CitaDetalladaResponse
-import java.time.format.DateTimeFormatter
+import cl.clinipets.ui.util.toLocalHour
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -157,7 +157,7 @@ private fun Content(
                 Icon(Icons.Default.CalendarToday, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = cita.fechaHoraInicio.format(DateTimeFormatter.ofPattern("HH:mm")) + " hrs",
+                    text = "${cita.fechaHoraInicio.toLocalHour()} hrs",
                     style = MaterialTheme.typography.bodyLarge
                 )
             }

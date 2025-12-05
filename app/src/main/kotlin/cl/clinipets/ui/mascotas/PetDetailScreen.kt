@@ -18,18 +18,20 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -53,9 +55,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.CitaDetalladaResponse
+import cl.clinipets.openapi.models.FichaResponse
 import cl.clinipets.openapi.models.MascotaResponse
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import cl.clinipets.ui.util.toLocalDateStr
+import cl.clinipets.ui.util.toLocalHour
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -150,6 +153,9 @@ fun PetDetailScreen(
 
             else -> {
                 uiState.pet?.let { pet ->
+                    val tabTitles = listOf("Citas", "Fichas Médicas")
+                    var selectedTab by remember { mutableStateOf(0) }
+
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -159,14 +165,29 @@ fun PetDetailScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         PetHeader(pet)
+                        TabRow(selectedTabIndex = selectedTab) {
+                            tabTitles.forEachIndexed { index, title ->
+                                Tab(
+                                    selected = selectedTab == index,
+                                    onClick = { selectedTab = index },
+                                    text = { Text(title) }
+                                )
+                            }
+                        }
                         ActionButtons(
                             onEdit = { onEdit(pet.id.toString()) },
                             onBook = { onBookAppointment(pet.id.toString()) }
                         )
-                        PetHistory(
-                            history = uiState.history,
-                            speciesColor = speciesColor(pet.especie)
-                        )
+                        when (selectedTab) {
+                            0 -> PetHistory(
+                                history = uiState.history,
+                                speciesColor = speciesColor(pet.especie)
+                            )
+
+                            else -> ClinicalHistory(
+                                records = uiState.clinicalRecords
+                            )
+                        }
                     }
                 }
             }
@@ -323,7 +344,7 @@ private fun PetHistory(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "Historial médico",
+            text = "Historial de citas",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
@@ -346,12 +367,82 @@ private fun PetHistory(
 }
 
 @Composable
+private fun ClinicalHistory(records: List<FichaResponse>) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = "Fichas médicas",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+
+        if (records.isEmpty()) {
+            Text(
+                text = "Aún no hay fichas clínicas registradas.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            records.forEach { record ->
+                ClinicalRecordCard(record = record)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClinicalRecordCard(record: FichaResponse) {
+    val dateText = record.fechaAtencion.toLocalDateStr()
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = dateText,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = record.motivoConsulta,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            record.diagnostico?.takeIf { it.isNotBlank() }?.let { diagnostico ->
+                Text(
+                    text = "Diagnóstico: $diagnostico",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            record.tratamiento?.takeIf { it.isNotBlank() }?.let { tratamiento ->
+                Text(
+                    text = "Tratamiento: $tratamiento",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            Text(
+                text = "Veterinario",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
 private fun TimelineItem(
     cita: CitaDetalladaResponse,
     speciesColor: Color,
     isLast: Boolean
 ) {
-    val formatter = DateTimeFormatter.ofPattern("dd MMM", Locale.forLanguageTag("es-ES"))
+    val dateText = cita.fechaHoraInicio.toLocalDateStr()
+    val hourText = cita.fechaHoraInicio.toLocalHour()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -361,9 +452,14 @@ private fun TimelineItem(
             horizontalAlignment = Alignment.End
         ) {
             Text(
-                text = cita.fechaHoraInicio.format(formatter),
+                text = dateText,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = hourText,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Column(

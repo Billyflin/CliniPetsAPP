@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import cl.clinipets.BuildConfig
 import cl.clinipets.openapi.apis.AuthControllerApi
+import cl.clinipets.openapi.apis.BloqueoControllerApi
 import cl.clinipets.openapi.apis.DisponibilidadControllerApi
 import cl.clinipets.openapi.apis.FichaClinicaControllerApi
 import cl.clinipets.openapi.apis.MaestrosControllerApi
@@ -91,6 +92,11 @@ object ApiModule {
     @Singleton
     fun provideMaestrosApi(apiClient: ApiClient): MaestrosControllerApi =
         apiClient.createService(MaestrosControllerApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideBloqueoApi(apiClient: ApiClient): BloqueoControllerApi =
+        apiClient.createService(BloqueoControllerApi::class.java)
 
     @Provides
     @Named("GoogleClientId")
