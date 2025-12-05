@@ -7,6 +7,7 @@ import cl.clinipets.openapi.apis.ReservaControllerApi
 import cl.clinipets.openapi.models.BloqueoAgenda
 import cl.clinipets.openapi.models.BloqueoCreateRequest
 import cl.clinipets.openapi.models.CitaDetalladaResponse
+import cl.clinipets.openapi.models.ResumenDiarioResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,7 +43,8 @@ class StaffAgendaViewModel @Inject constructor(
         val date: LocalDate = LocalDate.now(),
         val agendaItems: List<AgendaItem> = emptyList(),
         val isLoading: Boolean = false,
-        val error: String? = null
+        val error: String? = null,
+        val resumen: ResumenDiarioResponse? = null
     )
 
     private val _uiState = MutableStateFlow(UiState())
@@ -73,9 +75,11 @@ class StaffAgendaViewModel @Inject constructor(
             try {
                 val citasDeferred = async { reservaApi.obtenerAgendaDiaria(date) }
                 val bloqueosDeferred = async { bloqueoApi.listarBloqueos(date) }
+                val resumenDeferred = async { reservaApi.obtenerResumenDiario(date) }
 
                 val citasResponse = citasDeferred.await()
                 val bloqueosResponse = bloqueosDeferred.await()
+                val resumenResponse = resumenDeferred.await()
 
                 val citas = if (citasResponse.isSuccessful) {
                     citasResponse.body().orEmpty().filter { it.estado in VALID_STATES }
@@ -88,13 +92,16 @@ class StaffAgendaViewModel @Inject constructor(
                 val items = (citas.map { ItemCita(it) } + bloqueos.map { ItemBloqueo(it) })
                     .sortedBy { it.hora }
 
+                val resumen = resumenResponse.takeIf { it.isSuccessful }?.body()
+
                 val errorMsg = when {
                     !citasResponse.isSuccessful -> "Error al cargar citas: ${citasResponse.code()}"
                     !bloqueosResponse.isSuccessful -> "Error al cargar bloqueos: ${bloqueosResponse.code()}"
+                    !resumenResponse.isSuccessful -> "Error al cargar resumen diario: ${resumenResponse.code()}"
                     else -> null
                 }
 
-                _uiState.update { it.copy(agendaItems = items, isLoading = false, error = errorMsg) }
+                _uiState.update { it.copy(agendaItems = items, isLoading = false, error = errorMsg, resumen = resumen) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error desconocido") }
             }

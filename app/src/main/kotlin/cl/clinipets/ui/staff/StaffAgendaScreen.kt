@@ -55,10 +55,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.BloqueoAgenda
 import cl.clinipets.openapi.models.CitaDetalladaResponse
+import cl.clinipets.openapi.models.ResumenDiarioResponse
 import cl.clinipets.ui.util.toLocalHour
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,7 +122,7 @@ fun StaffAgendaScreen(
                 state.error?.let { error ->
                     Text(
                         text = error,
-                        color = MaterialTheme.colorScheme.error,
+                        color = colorScheme.error,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -142,6 +144,11 @@ fun StaffAgendaScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        state.resumen?.let { resumen ->
+                            item {
+                                DailySummaryCard(resumen = resumen)
+                            }
+                        }
                         items(state.agendaItems) { item ->
                             when (item) {
                                 is ItemCita -> AppointmentItem(item.data, onClick = { onCitaClick(item.data.id.toString()) })
@@ -233,6 +240,66 @@ fun StatusChip(estado: CitaDetalladaResponse.Estado) {
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun DailySummaryCard(resumen: ResumenDiarioResponse) {
+    val currencyFormat = remember {
+        NumberFormat.getCurrencyInstance(Locale("es", "CL"))
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.primaryContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Resumen Diario",
+                style = MaterialTheme.typography.titleMedium,
+                color = colorScheme.onPrimaryContainer,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                SummaryItem(
+                    label = "Citas",
+                    value = resumen.totalCitas.toString(),
+                    highlight = false
+                )
+                SummaryItem(
+                    label = "Online",
+                    value = currencyFormat.format(resumen.recaudacionOnline),
+                    highlight = false
+                )
+                SummaryItem(
+                    label = "En Caja",
+                    value = currencyFormat.format(resumen.recaudacionMostrador),
+                    highlight = true
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SummaryItem(label: String, value: String, highlight: Boolean) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = if (highlight) FontWeight.Bold else FontWeight.Medium,
+            color = if (highlight) colorScheme.onPrimaryContainer else colorScheme.onPrimaryContainer
         )
     }
 }

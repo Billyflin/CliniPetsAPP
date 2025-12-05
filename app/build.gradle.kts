@@ -12,6 +12,8 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.secrets.gradle.plugin)
     kotlin("kapt")
+    alias(libs.plugins.google.services)
+    alias(libs.plugins.google.firebase.crashlytics)
 }
 
 android {
@@ -180,6 +182,9 @@ dependencies {
     implementation(libs.hilt)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.runtime.saveable)
+    implementation(libs.firebase.crashlytics)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
     kapt(libs.hilt.compiler)
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0") // TODO: Check for latest version
 

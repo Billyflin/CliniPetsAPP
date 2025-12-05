@@ -5,6 +5,7 @@ import android.util.Log
 import cl.clinipets.BuildConfig
 import cl.clinipets.openapi.apis.AuthControllerApi
 import cl.clinipets.openapi.apis.BloqueoControllerApi
+import cl.clinipets.openapi.apis.DeviceTokenControllerApi
 import cl.clinipets.openapi.apis.DisponibilidadControllerApi
 import cl.clinipets.openapi.apis.FichaClinicaControllerApi
 import cl.clinipets.openapi.apis.MaestrosControllerApi
@@ -12,13 +13,9 @@ import cl.clinipets.openapi.apis.MascotaControllerApi
 import cl.clinipets.openapi.apis.ReservaControllerApi
 import cl.clinipets.openapi.apis.ServicioMedicoControllerApi
 import cl.clinipets.openapi.infrastructure.ApiClient
+import cl.clinipets.openapi.infrastructure.AuthInterceptor
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonDeserializer
-import com.google.gson.JsonPrimitive
-import com.google.gson.JsonSerializer
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -26,12 +23,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Named
 import javax.inject.Singleton
-
-import cl.clinipets.openapi.infrastructure.AuthInterceptor
-import cl.clinipets.openapi.infrastructure.registerTypeAdapterFactoryForAllModels
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -97,6 +88,11 @@ object ApiModule {
     @Singleton
     fun provideBloqueoApi(apiClient: ApiClient): BloqueoControllerApi =
         apiClient.createService(BloqueoControllerApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideDeviceTokenApi(apiClient: ApiClient): DeviceTokenControllerApi =
+        apiClient.createService(DeviceTokenControllerApi::class.java)
 
     @Provides
     @Named("GoogleClientId")
