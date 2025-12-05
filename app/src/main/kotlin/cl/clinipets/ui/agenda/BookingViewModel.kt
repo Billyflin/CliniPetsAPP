@@ -39,6 +39,8 @@ data class BookingUiState(
     val cart: List<CartItem> = emptyList(),
     val totalDuration: Int = 0,
     val totalPrice: Int = 0,
+    val minDeposit: Int = 0,
+    val isFullPayment: Boolean = false,
     
     // Selection State for building order
     val selectedPet: MascotaResponse? = null,
@@ -161,12 +163,15 @@ class BookingViewModel @Inject constructor(
     private fun updateCartState(newCart: List<CartItem>) {
         val totalDuration = newCart.sumOf { it.servicio.duracionMinutos }
         val totalPrice = newCart.sumOf { it.precio }
+        // Use max deposit logic as requested
+        val minDeposit = newCart.mapNotNull { it.servicio.precioAbono }.maxOrNull() ?: 0
         
         _uiState.update { 
             it.copy(
                 cart = newCart,
                 totalDuration = totalDuration,
                 totalPrice = totalPrice,
+                minDeposit = minDeposit,
                 selectedSlot = null, // Reset slot if duration changes
                 availableSlots = emptyList() // Force re-fetch or clear
             ) 
@@ -210,6 +215,10 @@ class BookingViewModel @Inject constructor(
         _uiState.update { it.copy(selectedSlot = slot) }
     }
 
+    fun setFullPayment(isFull: Boolean) {
+        _uiState.update { it.copy(isFullPayment = isFull) }
+    }
+
     fun createReservation() {
         val currentState = _uiState.value
         val selectedSlot = currentState.selectedSlot
@@ -230,7 +239,8 @@ class BookingViewModel @Inject constructor(
                         detalles = detalles,
                         fechaHoraInicio = selectedSlot,
                         origen = ReservaCreateRequest.Origen.APP,
-                        tipoAtencion = ReservaCreateRequest.TipoAtencion.CLINICA
+                        tipoAtencion = ReservaCreateRequest.TipoAtencion.CLINICA,
+                        pagoTotal = currentState.isFullPayment
                     )
 
                     val response = reservaApi.crearReserva(request)

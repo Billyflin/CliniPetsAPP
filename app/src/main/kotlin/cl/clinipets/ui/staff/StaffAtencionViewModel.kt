@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.openapi.apis.FichaClinicaControllerApi
 import cl.clinipets.openapi.apis.ReservaControllerApi
+import cl.clinipets.openapi.models.CitaDetalladaResponse
 import cl.clinipets.openapi.models.FichaCreateRequest
+import cl.clinipets.openapi.models.FinalizarCitaRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +27,9 @@ class StaffAtencionViewModel @Inject constructor(
         val isLoading: Boolean = false,
         val error: String? = null,
         val success: Boolean = false,
+        val cita: CitaDetalladaResponse? = null,
+        val showPaymentDialog: Boolean = false,
+        val paymentLinkToShare: String? = null,
         
         // Campos del formulario
         val peso: String = "",
@@ -40,6 +45,19 @@ class StaffAtencionViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState = _uiState.asStateFlow()
+
+    fun cargarCita(citaId: String) {
+        viewModelScope.launch {
+            try {
+                val response = reservaApi.obtenerReserva(UUID.fromString(citaId))
+                if (response.isSuccessful) {
+                    _uiState.update { it.copy(cita = response.body()) }
+                }
+            } catch (e: Exception) {
+                // Silently fail or log
+            }
+        }
+    }
 
     fun onPesoChanged(value: String) {
         _uiState.update { it.copy(peso = value) }
@@ -69,7 +87,27 @@ class StaffAtencionViewModel @Inject constructor(
         _uiState.update { it.copy(fechaProximoControl = date) }
     }
 
-    fun guardarFicha(citaId: String, mascotaId: String) {
+    fun iniciarFinalizacion() {
+        val saldo = _uiState.value.cita?.saldoPendiente ?: 0
+        if (saldo > 0) {
+            _uiState.update { it.copy(showPaymentDialog = true) }
+        } else {
+            // Si no hay deuda, finalizamos directo
+            val citaId = _uiState.value.cita?.id?.toString()
+            val mascotaId = _uiState.value.cita?.detalles?.firstOrNull()?.mascotaId?.toString()
+            
+            if (citaId != null && mascotaId != null) {
+                guardarFicha(citaId, mascotaId, null)
+            }
+        }
+    }
+    
+    fun onPaymentMethodSelected(method: FinalizarCitaRequest.MetodoPago, citaId: String, mascotaId: String) {
+        _uiState.update { it.copy(showPaymentDialog = false) }
+        guardarFicha(citaId, mascotaId, method)
+    }
+
+    fun guardarFicha(citaId: String, mascotaId: String, metodoPago: FinalizarCitaRequest.MetodoPago? = null) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
@@ -103,12 +141,30 @@ class StaffAtencionViewModel @Inject constructor(
                 val fichaResponse = fichaApi.crearFicha(request)
                 
                 if (fichaResponse.isSuccessful) {
-                    // Si se creó la ficha, finalizamos la reserva
-                    val reservaResponse = reservaApi.finalizarCita(UUID.fromString(citaId))
-                    if (reservaResponse.isSuccessful) {
-                        _uiState.update { it.copy(isLoading = false, success = true) }
-                    } else {
-                         _uiState.update { it.copy(isLoading = false, error = "Ficha guardada, pero error al finalizar cita: ${reservaResponse.code()}") }
+                    // Si se creó la ficha, finalizamos la reserva con el método de pago
+                    // Usamos EFECTIVO como fallback si es nulo (caso deuda 0 o cierre simple)
+                    val metodoPagoSeguro = metodoPago ?: FinalizarCitaRequest.MetodoPago.EFECTIVO
+                    val finalizarRequest = FinalizarCitaRequest(metodoPago = metodoPagoSeguro)
+                    
+                    try {
+                        val reservaResponse = reservaApi.finalizarCita(UUID.fromString(citaId), finalizarRequest)
+                        
+                        if (reservaResponse.isSuccessful) {
+                            val citaUpdated = reservaResponse.body()
+                            if (metodoPago == FinalizarCitaRequest.MetodoPago.MERCADO_PAGO_LINK && !citaUpdated?.paymentUrl.isNullOrBlank()) {
+                                // Caso especial: Mostrar link
+                                _uiState.update { it.copy(isLoading = false, paymentLinkToShare = citaUpdated?.paymentUrl, success = false) }
+                            } else {
+                                // Caso normal: Cerrar
+                                _uiState.update { it.copy(isLoading = false, success = true) }
+                            }
+                        } else {
+                             _uiState.update { it.copy(isLoading = false, error = "Ficha guardada, pero error al finalizar cita: ${reservaResponse.code()}") }
+                        }
+                    } catch (e: IllegalArgumentException) {
+                        _uiState.update { it.copy(isLoading = false, error = "Error de sincronización con el servidor: ${e.message}") }
+                    } catch (e: Exception) {
+                        _uiState.update { it.copy(isLoading = false, error = "Error al finalizar cita: ${e.message}") }
                     }
                 } else {
                     _uiState.update { it.copy(isLoading = false, error = "Error al guardar ficha: ${fichaResponse.code()}") }

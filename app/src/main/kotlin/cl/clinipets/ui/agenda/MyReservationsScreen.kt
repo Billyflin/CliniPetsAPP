@@ -136,10 +136,30 @@ fun ReservationCard(
                             else -> MaterialTheme.colorScheme.secondary
                         }
                     )
-                    Text(
-                        text = "Precio: $${cita.precioFinal}",
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    if (isPendingPago) {
+                        Text(
+                            text = "Total Servicio: $${cita.precioFinal}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "Abono a Pagar: $${cita.montoAbono}",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        if ((cita.saldoPendiente ?: 0) > 0) {
+                            Text(
+                                text = "Saldo en clínica: $${cita.saldoPendiente}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "Precio: $${cita.precioFinal}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
             }
 
@@ -163,7 +183,7 @@ fun ReservationCard(
                                     strokeWidth = 2.dp
                                 )
                             } else {
-                                Text("Pagar")
+                                Text("Pagar $${cita.montoAbono}")
                             }
                         }
                         Spacer(Modifier.width(8.dp))

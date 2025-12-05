@@ -1,6 +1,7 @@
 package cl.clinipets.ui.staff
 
 import android.app.DatePickerDialog
+import android.content.Intent
 import android.widget.DatePicker
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,7 +20,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Money
 import androidx.compose.material.icons.filled.MonitorWeight
+import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
@@ -32,17 +38,20 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import cl.clinipets.openapi.models.FinalizarCitaRequest
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
@@ -59,10 +68,65 @@ fun StaffAtencionScreen(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    LaunchedEffect(citaId) {
+        viewModel.cargarCita(citaId)
+    }
+
     LaunchedEffect(state.success) {
         if (state.success) {
             onSuccess()
         }
+    }
+
+    LaunchedEffect(state.paymentLinkToShare) {
+        state.paymentLinkToShare?.let { link ->
+            val sendIntent = Intent().apply {
+                action = Intent.ACTION_SEND
+                putExtra(Intent.EXTRA_TEXT, "Hola! Aquí tienes el link para pagar el saldo de tu atención en Clinipets: $link")
+                type = "text/plain"
+            }
+            val shareIntent = Intent.createChooser(sendIntent, "Enviar link de pago")
+            context.startActivity(shareIntent)
+            // Finalizamos el flujo tras lanzar el intent
+            onSuccess()
+        }
+    }
+
+    if (state.showPaymentDialog) {
+        AlertDialog(
+            onDismissRequest = { /* No dismissal to force selection or back */ },
+            title = { Text("Cobrar Saldo Pendiente: $${state.cita?.saldoPendiente}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PaymentMethodButton(
+                        text = "Efectivo",
+                        icon = Icons.Default.Money,
+                        onClick = { viewModel.onPaymentMethodSelected(FinalizarCitaRequest.MetodoPago.EFECTIVO, citaId, mascotaId) }
+                    )
+                    PaymentMethodButton(
+                        text = "Transferencia",
+                        icon = Icons.Default.PhoneAndroid,
+                        onClick = { viewModel.onPaymentMethodSelected(FinalizarCitaRequest.MetodoPago.TRANSFERENCIA, citaId, mascotaId) }
+                    )
+                    PaymentMethodButton(
+                        text = "Tarjeta (POS)",
+                        icon = Icons.Default.CreditCard,
+                        onClick = { viewModel.onPaymentMethodSelected(FinalizarCitaRequest.MetodoPago.TARJETA_POS, citaId, mascotaId) }
+                    )
+                    PaymentMethodButton(
+                        text = "Generar Link de Pago",
+                        icon = Icons.Default.Link,
+                        onClick = { viewModel.onPaymentMethodSelected(FinalizarCitaRequest.MetodoPago.MERCADO_PAGO_LINK, citaId, mascotaId) }
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { /* Optional: Close dialog logic if needed */ }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -79,7 +143,7 @@ fun StaffAtencionScreen(
         bottomBar = {
             Column(Modifier.padding(16.dp)) {
                 Button(
-                    onClick = { viewModel.guardarFicha(citaId, mascotaId) },
+                    onClick = { viewModel.iniciarFinalizacion() },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !state.isLoading
                 ) {
@@ -220,5 +284,17 @@ fun StaffAtencionScreen(
             
             Spacer(Modifier.height(64.dp)) // Espacio extra para que el botón no tape contenido
         }
+    }
+}
+
+@Composable
+fun PaymentMethodButton(text: String, icon: ImageVector, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Icon(icon, contentDescription = null)
+        Spacer(Modifier.width(8.dp))
+        Text(text)
     }
 }

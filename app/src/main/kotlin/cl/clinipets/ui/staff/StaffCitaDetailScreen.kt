@@ -225,14 +225,25 @@ private fun Content(
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 
+                val isPendientePago = cita.estado == CitaDetalladaResponse.Estado.PENDIENTE_PAGO
+                
                 FinancialRow(label = "Precio Total", amount = cita.precioFinal)
-                FinancialRow(label = "Abonado", amount = cita.montoAbono)
+                
+                FinancialRow(
+                    label = if (isPendientePago) "Abono (No pagado)" else "Abonado", 
+                    amount = cita.montoAbono,
+                    color = if (isPendientePago) MaterialTheme.colorScheme.error else Color.Unspecified
+                )
+                
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                
+                val montoPorPagar = if (isPendientePago) cita.precioFinal else if (isFinalizada) 0 else cita.saldoPendiente
+                
                 FinancialRow(
                     label = "Por Pagar", 
-                    amount = if (isFinalizada) 0 else cita.saldoPendiente, 
+                    amount = montoPorPagar, 
                     isBold = true,
-                    color = if (!isFinalizada && cita.saldoPendiente > 0) MaterialTheme.colorScheme.error else Color(0xFF2E7D32)
+                    color = if (montoPorPagar > 0) MaterialTheme.colorScheme.error else Color(0xFF2E7D32)
                 )
             }
         }

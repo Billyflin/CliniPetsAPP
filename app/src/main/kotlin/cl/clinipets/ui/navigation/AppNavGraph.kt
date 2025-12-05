@@ -9,32 +9,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
 import cl.clinipets.openapi.models.ProfileResponse
-import cl.clinipets.ui.auth.LoginScreen
-import cl.clinipets.ui.auth.LoginViewModel
 import cl.clinipets.ui.agenda.PaymentResultScreen
 import cl.clinipets.ui.agenda.PaymentScreen
+import cl.clinipets.ui.auth.LoginScreen
+import cl.clinipets.ui.auth.LoginViewModel
 import cl.clinipets.ui.staff.StaffAgendaScreen
-import kotlinx.serialization.Serializable
 
-@Serializable object LoginRoute
-@Serializable object HomeRoute
-@Serializable object StaffAgendaRoute
-@Serializable data class StaffCitaDetailRoute(val citaId: String)
-@Serializable data class StaffAtencionRoute(val citaId: String, val mascotaId: String)
-@Serializable data class MascotaFormRoute(val petId: String? = null)
-@Serializable data class BookingRoute(val petId: String? = null)
-@Serializable data class PaymentRoute(val paymentUrl: String?, val price: Int)
-@Serializable data class PaymentResultRoute(val status: String? = null)
-@Serializable object ProfileRoute
-@Serializable object MyReservationsRoute
-@Serializable object MyPetsRoute
-@Serializable data class PetDetailRoute(val petId: String)
-
-
-@Serializable
-data class JuntaRoute(val reservaId: String)
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalStdlibApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
@@ -48,7 +29,7 @@ fun AppNavGraph(
 
     // Determine the start destination based on role
     val startDestination: Any = if (isLoggedIn) {
-        val role = uiState.me?.role
+        val role = uiState.me.role
         if (role == ProfileResponse.Role.STAFF || role == ProfileResponse.Role.ADMIN) {
             StaffAgendaRoute
         } else {
@@ -201,7 +182,7 @@ fun AppNavGraph(
                 onBack = { navController.popBackStack() },
                 onAddPet = { navController.navigate(MascotaFormRoute()) },
                 onSuccess = { cita -> 
-                    navController.navigate(PaymentRoute(cita.paymentUrl, cita.precioFinal))
+                    navController.navigate(PaymentRoute(cita.paymentUrl, cita.montoAbono))
                 }
             )
         }
