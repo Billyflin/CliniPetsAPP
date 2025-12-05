@@ -86,7 +86,9 @@ fun AppNavGraph(
         
         composable<StaffAgendaRoute> {
             StaffAgendaScreen(
-                onLogout = onLogout,
+                onProfileClick = {
+                    navController.navigate(ProfileRoute)
+                },
                 onCitaClick = { citaId ->
                     navController.navigate(StaffCitaDetailRoute(citaId))
                 }

@@ -16,7 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -44,7 +44,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StaffAgendaScreen(
-    onLogout: () -> Unit = {},
+    onProfileClick: () -> Unit = {},
     onCitaClick: (String) -> Unit = {},
     viewModel: StaffAgendaViewModel = hiltViewModel()
 ) {
@@ -55,8 +55,8 @@ fun StaffAgendaScreen(
             CenterAlignedTopAppBar(
                 title = { Text("Staff Agenda") },
                 actions = {
-                    IconButton(onClick = onLogout) {
-                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Salir")
+                    IconButton(onClick = onProfileClick) {
+                        Icon(Icons.Default.AccountCircle, contentDescription = "Perfil")
                     }
                 }
             )

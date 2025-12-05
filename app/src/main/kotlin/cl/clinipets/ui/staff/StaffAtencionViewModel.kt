@@ -103,12 +103,12 @@ class StaffAtencionViewModel @Inject constructor(
                 val fichaResponse = fichaApi.crearFicha(request)
                 
                 if (fichaResponse.isSuccessful) {
-                    // Si se creó la ficha, confirmamos/finalizamos la reserva
-                    val reservaResponse = reservaApi.confirmarReserva(UUID.fromString(citaId))
+                    // Si se creó la ficha, finalizamos la reserva
+                    val reservaResponse = reservaApi.finalizarCita(UUID.fromString(citaId))
                     if (reservaResponse.isSuccessful) {
                         _uiState.update { it.copy(isLoading = false, success = true) }
                     } else {
-                         _uiState.update { it.copy(isLoading = false, error = "Ficha guardada, pero error al actualizar reserva: ${reservaResponse.code()}") }
+                         _uiState.update { it.copy(isLoading = false, error = "Ficha guardada, pero error al finalizar cita: ${reservaResponse.code()}") }
                     }
                 } else {
                     _uiState.update { it.copy(isLoading = false, error = "Error al guardar ficha: ${fichaResponse.code()}") }

@@ -54,31 +54,51 @@ fun StaffCitaDetailScreen(
             if (state.cita != null && !state.isLoading) {
                 val cita = state.cita!!
                 val mascotaId = cita.detalles.firstOrNull()?.mascotaId?.toString()
+                val isFinalizada = cita.estado == CitaDetalladaResponse.Estado.FINALIZADA
 
                 Column(Modifier.padding(16.dp)) {
-                    Button(
-                        onClick = { 
-                            if (mascotaId != null) {
-                                onStartAtencion(cita.id.toString(), mascotaId)
-                            } else {
-                                Toast.makeText(context, "Error: No hay mascota asociada", Toast.LENGTH_SHORT).show()
+                    if (isFinalizada) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(
+                                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Atención Finalizada ✅",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color(0xFF2E7D32),
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !state.isCancelled && mascotaId != null
-                    ) {
-                        Text("Iniciar Atención")
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = { viewModel.cancelarCita() },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !state.isCancelled,
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Text("Cancelar Cita")
+                        }
+                    } else {
+                        Button(
+                            onClick = { 
+                                if (mascotaId != null) {
+                                    onStartAtencion(cita.id.toString(), mascotaId)
+                                } else {
+                                    Toast.makeText(context, "Error: No hay mascota asociada", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !state.isCancelled && mascotaId != null
+                        ) {
+                            Text("Iniciar Atención")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = { viewModel.cancelarCita() },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !state.isCancelled,
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Text("Cancelar Cita")
+                        }
                     }
                 }
             }
@@ -116,6 +136,7 @@ private fun Content(
     val nombreServicio = detalle?.nombreServicio ?: "Servicio General"
     val nombreMascota = detalle?.nombreMascota ?: "Mascota"
     val mascotaId = detalle?.mascotaId
+    val isFinalizada = cita.estado == CitaDetalladaResponse.Estado.FINALIZADA
 
     Column(
         modifier = Modifier
@@ -144,7 +165,7 @@ private fun Content(
             StatusChip(cita.estado)
         }
 
-        Divider()
+        HorizontalDivider()
 
         // Patient Card
         Card(
@@ -206,12 +227,12 @@ private fun Content(
                 
                 FinancialRow(label = "Precio Total", amount = cita.precioFinal)
                 FinancialRow(label = "Abonado", amount = cita.montoAbono)
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 FinancialRow(
                     label = "Por Pagar", 
-                    amount = cita.saldoPendiente, 
+                    amount = if (isFinalizada) 0 else cita.saldoPendiente, 
                     isBold = true,
-                    color = if (cita.saldoPendiente > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    color = if (!isFinalizada && cita.saldoPendiente > 0) MaterialTheme.colorScheme.error else Color(0xFF2E7D32)
                 )
             }
         }
