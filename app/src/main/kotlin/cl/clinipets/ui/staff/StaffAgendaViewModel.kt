@@ -43,6 +43,10 @@ class StaffAgendaViewModel @Inject constructor(
         cargarAgenda(_uiState.value.date)
     }
 
+    fun refresh() {
+        cargarAgenda(_uiState.value.date)
+    }
+
     fun cargarAgenda(date: LocalDate) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, date = date) }

@@ -79,8 +79,6 @@ class MascotaFormViewModel @Inject constructor(
         id: String?,
         nombre: String,
         especie: MascotaCreateRequest.Especie,
-        peso: Double,
-        fechaNacimiento: LocalDate,
         raza: String,
         sexo: MascotaCreateRequest.Sexo,
         esterilizado: Boolean,
@@ -88,17 +86,15 @@ class MascotaFormViewModel @Inject constructor(
         chip: String?
     ) {
         if (id != null) {
-            actualizarMascota(id, nombre, peso, raza, sexo, esterilizado, temperamento, chip)
+            actualizarMascota(id, nombre, raza, sexo, esterilizado, temperamento, chip)
         } else {
-            crearMascota(nombre, especie, peso, fechaNacimiento, raza, sexo, esterilizado, temperamento, chip)
+            crearMascota(nombre, especie, raza, sexo, esterilizado, temperamento, chip)
         }
     }
 
     private fun crearMascota(
         nombre: String,
         especie: MascotaCreateRequest.Especie,
-        peso: Double,
-        fechaNacimiento: LocalDate,
         raza: String,
         sexo: MascotaCreateRequest.Sexo,
         esterilizado: Boolean,
@@ -111,8 +107,8 @@ class MascotaFormViewModel @Inject constructor(
                 val request = MascotaCreateRequest(
                     nombre = nombre,
                     especie = especie,
-                    pesoActual = BigDecimal.valueOf(peso),
-                    fechaNacimiento = fechaNacimiento,
+                    pesoActual = BigDecimal.ZERO,
+                    fechaNacimiento = LocalDate.now(),
                     raza = raza,
                     sexo = sexo,
                     esterilizado = esterilizado,
@@ -134,7 +130,6 @@ class MascotaFormViewModel @Inject constructor(
     private fun actualizarMascota(
         id: String,
         nombre: String,
-        peso: Double,
         raza: String,
         sexo: MascotaCreateRequest.Sexo,
         esterilizado: Boolean,
@@ -156,7 +151,7 @@ class MascotaFormViewModel @Inject constructor(
 
                 val request = MascotaUpdateRequest(
                     nombre = nombre,
-                    pesoActual = BigDecimal.valueOf(peso),
+                    pesoActual = BigDecimal.ZERO,
                     raza = raza,
                     sexo = updateSexo,
                     esterilizado = esterilizado,

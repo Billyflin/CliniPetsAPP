@@ -8,11 +8,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -26,9 +23,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,9 +32,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.MascotaCreateRequest
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZoneOffset
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,16 +48,10 @@ fun MascotaFormScreen(
     var esterilizado by remember { mutableStateOf(false) }
     var temperamento by remember { mutableStateOf(MascotaCreateRequest.Temperamento.DOCIL) }
     var chip by remember { mutableStateOf("") }
-    var peso by remember { mutableStateOf("") }
-    var fechaNacimientoStr by remember { mutableStateOf("") } 
 
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     
-    // State for date picker
-    var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState()
-
     LaunchedEffect(petId) {
         if (petId != null) {
             viewModel.cargarMascota(petId)
@@ -81,8 +67,6 @@ fun MascotaFormScreen(
             esterilizado = pet.esterilizado
             temperamento = MascotaCreateRequest.Temperamento.valueOf(pet.temperamento.name)
             chip = pet.chipIdentificador ?: ""
-            peso = pet.pesoActual.toPlainString()
-            fechaNacimientoStr = pet.fechaNacimiento.toString()
         }
     }
 
@@ -97,30 +81,6 @@ fun MascotaFormScreen(
         }
     }
     
-    if (showDatePicker) {
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { millis ->
-                        val date = LocalDateTime.ofEpochSecond(
-                            millis / 1000,
-                            0,
-                            ZoneOffset.UTC
-                        ).toLocalDate()
-                        fechaNacimientoStr = date.toString()
-                    }
-                    showDatePicker = false
-                }) { Text("OK") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancelar") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -216,34 +176,6 @@ fun MascotaFormScreen(
                     }
                 }
 
-                OutlinedTextField(
-                    value = peso,
-                    onValueChange = { peso = it },
-                    label = { Text("Peso (Kg)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = fechaNacimientoStr,
-                    onValueChange = { },
-                    label = { Text("Fecha Nacimiento") },
-                    placeholder = { Text("Selecciona una fecha") },
-                    readOnly = true,
-                    enabled = !uiState.isEdit,
-                    trailingIcon = {
-                        IconButton(
-                            onClick = { showDatePicker = true },
-                            enabled = !uiState.isEdit
-                        ) {
-                            Icon(Icons.Default.CalendarToday, contentDescription = "Seleccionar fecha")
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(enabled = !uiState.isEdit) { showDatePicker = true }
-                )
-
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth(),
@@ -290,16 +222,9 @@ fun MascotaFormScreen(
 
             Button(
                 onClick = {
-                    val pesoVal = peso.toDoubleOrNull()
-                    val fechaVal = try {
-                        LocalDate.parse(fechaNacimientoStr)
-                    } catch (e: Exception) {
-                        null
-                    }
-
-                    if (nombre.isNotBlank() && pesoVal != null && fechaVal != null && raza.isNotBlank()) {
+                    if (nombre.isNotBlank() && raza.isNotBlank()) {
                         viewModel.guardarMascota(
-                            petId, nombre, especie, pesoVal, fechaVal,
+                            petId, nombre, especie,
                             raza, sexo, esterilizado, temperamento, chip
                         )
                     } else {
