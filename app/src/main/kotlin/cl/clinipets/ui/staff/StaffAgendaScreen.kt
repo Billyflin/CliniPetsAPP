@@ -20,6 +20,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -29,11 +31,14 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimePickerState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -65,11 +70,6 @@ fun StaffAgendaScreen(
     val state by viewModel.uiState.collectAsState()
     val pullRefreshState = rememberPullToRefreshState()
     var showBlockDialog by remember { mutableStateOf(false) }
-    var horaInicio by remember { mutableStateOf("") }
-    var horaFin by remember { mutableStateOf("") }
-    var motivo by remember { mutableStateOf("") }
-    var dialogError by remember { mutableStateOf<String?>(null) }
-    val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
 
     Scaffold(
         topBar = {
@@ -85,7 +85,6 @@ fun StaffAgendaScreen(
         floatingActionButton = {
             FloatingActionButton(onClick = { 
                 showBlockDialog = true
-                dialogError = null
             }) {
                 Icon(Icons.Default.Add, contentDescription = "Nuevo bloqueo")
             }
@@ -159,63 +158,11 @@ fun StaffAgendaScreen(
     }
 
     if (showBlockDialog) {
-        AlertDialog(
-            onDismissRequest = { showBlockDialog = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    dialogError = null
-                    val inicio = runCatching { LocalTime.parse(horaInicio, timeFormatter) }.getOrNull()
-                    val fin = runCatching { LocalTime.parse(horaFin, timeFormatter) }.getOrNull()
-                    if (inicio == null || fin == null) {
-                        dialogError = "Formato de hora inválido (usa HH:mm)"
-                        return@TextButton
-                    }
-                    if (!fin.isAfter(inicio)) {
-                        dialogError = "La hora fin debe ser posterior al inicio"
-                        return@TextButton
-                    }
-                    viewModel.crearBloqueo(inicio, fin, motivo)
-                    showBlockDialog = false
-                    horaInicio = ""
-                    horaFin = ""
-                    motivo = ""
-                }) {
-                    Text("Bloquear")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showBlockDialog = false }) {
-                    Text("Cancelar")
-                }
-            },
-            title = { Text("Nuevo bloqueo") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = horaInicio,
-                        onValueChange = { horaInicio = it },
-                        label = { Text("Hora inicio (HH:mm)") },
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = horaFin,
-                        onValueChange = { horaFin = it },
-                        label = { Text("Hora fin (HH:mm)") },
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = motivo,
-                        onValueChange = { motivo = it },
-                        label = { Text("Motivo (opcional)") }
-                    )
-                    dialogError?.let { err ->
-                        Text(
-                            text = err,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
+        NuevoBloqueoDialog(
+            onDismiss = { showBlockDialog = false },
+            onConfirm = { inicio, fin, motivo ->
+                viewModel.crearBloqueo(inicio, fin, motivo)
+                showBlockDialog = false
             }
         )
     }
@@ -227,7 +174,8 @@ fun AppointmentItem(cita: CitaDetalladaResponse, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -296,7 +244,7 @@ fun BlockItem(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+        colors = CardDefaults.cardColors(containerColor = colorScheme.errorContainer)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -308,18 +256,152 @@ fun BlockItem(
                     text = "${bloqueo.fechaHoraInicio.toLocalHour()} - ${bloqueo.fechaHoraFin.toLocalHour()}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onErrorContainer
+                    color = colorScheme.onErrorContainer
                 )
-                TextButton(onClick = onDelete) {
-                    Text("Eliminar", color = MaterialTheme.colorScheme.onErrorContainer)
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.Delete, contentDescription = "Eliminar bloqueo", tint = colorScheme.onErrorContainer)
                 }
             }
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = bloqueo.motivo ?: "Bloqueo de agenda",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.Lock, contentDescription = null, tint = colorScheme.onErrorContainer)
+                Column {
+                    Text(
+                        text = "Bloqueo: ${bloqueo.motivo ?: "Agenda bloqueada"}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colorScheme.onErrorContainer,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "${bloqueo.fechaHoraInicio.toLocalHour()} - ${bloqueo.fechaHoraFin.toLocalHour()}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colorScheme.onErrorContainer
+                    )
+                }
+            }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NuevoBloqueoDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (LocalTime, LocalTime, String?) -> Unit
+) {
+    var motivo by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    val now = LocalTime.now()
+    val startState = remember { TimePickerState(now.hour, now.minute, true) }
+    val endState = remember { TimePickerState(now.plusHours(1).hour % 24, now.minute, true) }
+    var showStartPicker by remember { mutableStateOf(false) }
+    var showEndPicker by remember { mutableStateOf(false) }
+
+    val formatTime: (TimePickerState) -> String = { state ->
+        val hour = state.hour.toString().padStart(2, '0')
+        val minute = state.minute.toString().padStart(2, '0')
+        "$hour:$minute"
+    }
+
+    fun validateAndConfirm() {
+        val inicio = LocalTime.of(startState.hour, startState.minute)
+        val fin = LocalTime.of(endState.hour, endState.minute)
+        if (!fin.isAfter(inicio)) {
+            error = "La hora fin debe ser posterior al inicio"
+            return
+        }
+        onConfirm(inicio, fin, motivo.takeUnless { it.isBlank() })
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { validateAndConfirm() }) { Text("Bloquear") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        },
+        title = { Text("Nuevo bloqueo") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                TimeSelectorRow(
+                    label = "Hora inicio",
+                    timeText = formatTime(startState),
+                    onClick = { showStartPicker = true }
+                )
+                TimeSelectorRow(
+                    label = "Hora fin",
+                    timeText = formatTime(endState),
+                    onClick = { showEndPicker = true }
+                )
+                OutlinedTextField(
+                    value = motivo,
+                    onValueChange = { motivo = it },
+                    label = { Text("Motivo (opcional)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                error?.let {
+                    Text(text = it, color = colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    )
+
+    if (showStartPicker) {
+        TimePickerDialog(
+            onDismissRequest = { showStartPicker = false },
+            onConfirm = { showStartPicker = false },
+            state = startState
+        )
+    }
+    if (showEndPicker) {
+        TimePickerDialog(
+            onDismissRequest = { showEndPicker = false },
+            onConfirm = { showEndPicker = false },
+            state = endState
+        )
+    }
+}
+
+@Composable
+private fun TimeSelectorRow(
+    label: String,
+    timeText: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(text = label, style = MaterialTheme.typography.labelMedium, color = colorScheme.onSurfaceVariant)
+            Text(text = timeText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
+        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = colorScheme.primary)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimePickerDialog(
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+    state: TimePickerState
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text("Aceptar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) { Text("Cancelar") }
+        },
+        text = {
+            TimePicker(state = state)
+        }
+    )
 }
