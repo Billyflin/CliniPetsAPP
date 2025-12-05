@@ -1,13 +1,19 @@
 package cl.clinipets.ui.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -21,15 +27,20 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import cl.clinipets.ui.settings.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
-    viewModel: ProfileViewModel = hiltViewModel()
+    profileViewModel: ProfileViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by profileViewModel.uiState.collectAsState()
+    val isDarkPref by settingsViewModel.isDarkMode.collectAsState()
+    val isSystemDark = isSystemInDarkTheme()
+    val isDark = isDarkPref ?: isSystemDark
 
     Scaffold(
         topBar = {
@@ -61,7 +72,7 @@ fun ProfileScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error)
-                        Button(onClick = { viewModel.loadProfile() }) {
+                        Button(onClick = { profileViewModel.loadProfile() }) {
                             Text("Reintentar")
                         }
                     }
@@ -96,14 +107,74 @@ fun ProfileScreen(
                             fontWeight = FontWeight.Bold
                         )
 
+                        // Datos Personales
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    "Datos Personales",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
                                 ProfileItem(icon = Icons.Default.Email, label = "Email", value = state.profile.email ?: "-")
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                                 ProfileItem(icon = Icons.Default.VerifiedUser, label = "Rol", value = state.profile.role?.toString() ?: "-")
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                                // Placeholder Editar
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().clickable { /* TODO: Navegar a Editar Perfil */ },
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Text("Editar Datos (Próximamente)", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                                }
+                            }
+                        }
+
+                        // Configuración
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    "Configuración",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = if (isDark) Icons.Default.DarkMode else Icons.Default.LightMode,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Column {
+                                            Text("Modo Oscuro", style = MaterialTheme.typography.bodyLarge)
+                                            Text(
+                                                if (isDark) "Activado" else "Desactivado",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                    Switch(
+                                        checked = isDark,
+                                        onCheckedChange = { settingsViewModel.setDarkMode(it) }
+                                    )
+                                }
                             }
                         }
 
@@ -111,7 +182,7 @@ fun ProfileScreen(
 
                         Button(
                             onClick = {
-                                viewModel.logout()
+                                profileViewModel.logout()
                                 onLogout()
                             },
                             modifier = Modifier.fillMaxWidth(),

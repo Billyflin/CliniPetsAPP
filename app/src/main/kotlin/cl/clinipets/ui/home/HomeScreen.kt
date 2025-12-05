@@ -48,7 +48,6 @@ import androidx.compose.foundation.layout.width
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onLogout: () -> Unit, // Deprecated in favor of ProfileScreen, but kept for signature compatibility
     onServiceClick: (String) -> Unit,
     onMyPetsClick: () -> Unit,
     onProfileClick: () -> Unit,

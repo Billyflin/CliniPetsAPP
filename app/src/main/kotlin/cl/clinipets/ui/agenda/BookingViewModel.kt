@@ -229,7 +229,8 @@ class BookingViewModel @Inject constructor(
                     val request = ReservaCreateRequest(
                         detalles = detalles,
                         fechaHoraInicio = selectedSlot,
-                        origen = ReservaCreateRequest.Origen.APP
+                        origen = ReservaCreateRequest.Origen.APP,
+                        tipoAtencion = ReservaCreateRequest.TipoAtencion.CLINICA
                     )
 
                     val response = reservaApi.crearReserva(request)

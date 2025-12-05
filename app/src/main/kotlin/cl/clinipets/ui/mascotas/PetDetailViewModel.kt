@@ -73,17 +73,17 @@ class PetDetailViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val mascotaResponse = mascotaApi.obtenerMascota(uuid)
-                val allReservasResponse = reservaApi.listarReservas()
+                // Use optimized endpoint for pet history
+                val historyResponse = reservaApi.historialMascota(uuid)
 
                 if (mascotaResponse.isSuccessful) {
                     val pet = mascotaResponse.body()
-                    val history = if (allReservasResponse.isSuccessful) {
-                        val allReservas = allReservasResponse.body().orEmpty()
-                        // Filter reservations where ANY detail matches the petId
-                        allReservas.filter { cita -> 
-                            cita.detalles.any { detalle -> detalle.mascotaId == uuid }
-                        }.sortedByDescending { it.fechaHoraInicio }
-                    } else emptyList()
+                    val history = if (historyResponse.isSuccessful) {
+                        historyResponse.body().orEmpty()
+                            .sortedByDescending { it.fechaHoraInicio }
+                    } else {
+                        emptyList()
+                    }
 
                     _uiState.update {
                         it.copy(
