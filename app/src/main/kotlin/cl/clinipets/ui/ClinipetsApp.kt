@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,10 +21,17 @@ import cl.clinipets.BuildConfig
 import cl.clinipets.ui.auth.LoginViewModel
 import cl.clinipets.ui.auth.requestGoogleIdToken
 import cl.clinipets.ui.navigation.AppNavGraph
+import cl.clinipets.ui.navigation.MyReservationsRoute
+import cl.clinipets.ui.navigation.StaffCitaDetailRoute
 import kotlinx.coroutines.launch
 
 @Composable
-fun ClinipetsApp(vm: LoginViewModel = hiltViewModel()) {
+fun ClinipetsApp(
+    vm: LoginViewModel = hiltViewModel(),
+    deepLinkType: String? = null,
+    deepLinkTargetId: String? = null,
+    onDeepLinkConsumed: () -> Unit = {}
+) {
     val scope = rememberCoroutineScope()
     val state by vm.ui.collectAsState()
     val navController = rememberNavController()
@@ -66,6 +74,27 @@ fun ClinipetsApp(vm: LoginViewModel = hiltViewModel()) {
                 onLogout = { vm.logout() },
                 onRefreshProfile = { vm.refreshProfile() }
             )
+        }
+    }
+
+    LaunchedEffect(deepLinkType, deepLinkTargetId, state.me, state.isCheckingSession) {
+        val type = deepLinkType ?: return@LaunchedEffect
+        if (state.isCheckingSession || state.me == null) {
+            return@LaunchedEffect
+        }
+        when (type) {
+            "STAFF_CITA_DETAIL" -> {
+                val citaId = deepLinkTargetId
+                if (!citaId.isNullOrBlank()) {
+                    navController.navigate(StaffCitaDetailRoute(citaId))
+                }
+                onDeepLinkConsumed()
+            }
+            "CLIENT_RESERVATIONS" -> {
+                navController.navigate(MyReservationsRoute)
+                onDeepLinkConsumed()
+            }
+            else -> onDeepLinkConsumed()
         }
     }
 }

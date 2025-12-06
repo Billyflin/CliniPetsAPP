@@ -57,10 +57,10 @@ import cl.clinipets.openapi.models.BloqueoAgenda
 import cl.clinipets.openapi.models.CitaDetalladaResponse
 import cl.clinipets.openapi.models.ResumenDiarioResponse
 import cl.clinipets.ui.util.toLocalHour
+import java.text.NumberFormat
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,6 +72,7 @@ fun StaffAgendaScreen(
     val state by viewModel.uiState.collectAsState()
     val pullRefreshState = rememberPullToRefreshState()
     var showBlockDialog by remember { mutableStateOf(false) }
+    val lastUpdatedFormatter = remember { DateTimeFormatter.ofPattern("HH:mm:ss") }
 
     Scaffold(
         topBar = {
@@ -112,6 +113,15 @@ fun StaffAgendaScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Siguiente")
                 }
             }
+
+            val lastUpdatedText = state.lastUpdated?.format(lastUpdatedFormatter) ?: "--:--:--"
+            Text(
+                text = "Última actualización: $lastUpdatedText",
+                style = MaterialTheme.typography.labelSmall,
+                color = colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
 
             PullToRefreshBox(
                 isRefreshing = state.isLoading,
@@ -212,7 +222,7 @@ fun AppointmentItem(cita: CitaDetalladaResponse, onClick: () -> Unit) {
             Text(
                 text = "Servicio: $nombreServicio",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = colorScheme.onSurfaceVariant
             )
         }
     }

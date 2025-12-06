@@ -10,14 +10,17 @@ import cl.clinipets.openapi.models.CitaDetalladaResponse
 import cl.clinipets.openapi.models.ResumenDiarioResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.ZoneId
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
 
@@ -43,8 +46,10 @@ class StaffAgendaViewModel @Inject constructor(
         val date: LocalDate = LocalDate.now(),
         val agendaItems: List<AgendaItem> = emptyList(),
         val isLoading: Boolean = false,
+        val isRefreshingSilently: Boolean = false,
         val error: String? = null,
-        val resumen: ResumenDiarioResponse? = null
+        val resumen: ResumenDiarioResponse? = null,
+        val lastUpdated: LocalTime? = null
     )
 
     private val _uiState = MutableStateFlow(UiState())
@@ -63,47 +68,81 @@ class StaffAgendaViewModel @Inject constructor(
 
     init {
         cargarAgenda(_uiState.value.date)
+        startAutoRefresh()
     }
 
     fun refresh() {
         cargarAgenda(_uiState.value.date)
     }
 
-    fun cargarAgenda(date: LocalDate) {
+    fun cargarAgenda(date: LocalDate, isSilent: Boolean = false) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null, date = date) }
-            try {
+            fetchAgenda(date, isSilent)
+        }
+    }
+
+    private suspend fun fetchAgenda(date: LocalDate, isSilent: Boolean) {
+        if (isSilent) {
+            _uiState.update { it.copy(date = date, error = null, isRefreshingSilently = true) }
+        } else {
+            _uiState.update { it.copy(date = date, error = null, isLoading = true, isRefreshingSilently = false) }
+        }
+        try {
+            val (citasResponse, bloqueosResponse, resumenResponse) = coroutineScope {
                 val citasDeferred = async { reservaApi.obtenerAgendaDiaria(date) }
                 val bloqueosDeferred = async { bloqueoApi.listarBloqueos(date) }
                 val resumenDeferred = async { reservaApi.obtenerResumenDiario(date) }
+                Triple(citasDeferred.await(), bloqueosDeferred.await(), resumenDeferred.await())
+            }
 
-                val citasResponse = citasDeferred.await()
-                val bloqueosResponse = bloqueosDeferred.await()
-                val resumenResponse = resumenDeferred.await()
+            val citas = if (citasResponse.isSuccessful) {
+                citasResponse.body().orEmpty().filter { it.estado in VALID_STATES }
+            } else emptyList()
 
-                val citas = if (citasResponse.isSuccessful) {
-                    citasResponse.body().orEmpty().filter { it.estado in VALID_STATES }
-                } else emptyList()
+            val bloqueos = if (bloqueosResponse.isSuccessful) {
+                bloqueosResponse.body().orEmpty()
+            } else emptyList()
 
-                val bloqueos = if (bloqueosResponse.isSuccessful) {
-                    bloqueosResponse.body().orEmpty()
-                } else emptyList()
+            val items = (citas.map { ItemCita(it) } + bloqueos.map { ItemBloqueo(it) })
+                .sortedBy { it.hora }
 
-                val items = (citas.map { ItemCita(it) } + bloqueos.map { ItemBloqueo(it) })
-                    .sortedBy { it.hora }
+            val resumen = resumenResponse.takeIf { it.isSuccessful }?.body()
 
-                val resumen = resumenResponse.takeIf { it.isSuccessful }?.body()
+            val errorMsg = when {
+                !citasResponse.isSuccessful -> "Error al cargar citas: ${citasResponse.code()}"
+                !bloqueosResponse.isSuccessful -> "Error al cargar bloqueos: ${bloqueosResponse.code()}"
+                !resumenResponse.isSuccessful -> "Error al cargar resumen diario: ${resumenResponse.code()}"
+                else -> null
+            }
 
-                val errorMsg = when {
-                    !citasResponse.isSuccessful -> "Error al cargar citas: ${citasResponse.code()}"
-                    !bloqueosResponse.isSuccessful -> "Error al cargar bloqueos: ${bloqueosResponse.code()}"
-                    !resumenResponse.isSuccessful -> "Error al cargar resumen diario: ${resumenResponse.code()}"
-                    else -> null
-                }
+            val updatedTime = LocalTime.now()
 
-                _uiState.update { it.copy(agendaItems = items, isLoading = false, error = errorMsg, resumen = resumen) }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error desconocido") }
+            _uiState.update {
+                it.copy(
+                    agendaItems = items,
+                    isLoading = if (isSilent) it.isLoading else false,
+                    isRefreshingSilently = false,
+                    error = errorMsg,
+                    resumen = resumen,
+                    lastUpdated = if (errorMsg == null) updatedTime else it.lastUpdated
+                )
+            }
+        } catch (e: Exception) {
+            _uiState.update {
+                it.copy(
+                    isLoading = if (isSilent) it.isLoading else false,
+                    isRefreshingSilently = false,
+                    error = e.message ?: "Error desconocido"
+                )
+            }
+        }
+    }
+
+    private fun startAutoRefresh() {
+        viewModelScope.launch {
+            while (isActive) {
+                fetchAgenda(_uiState.value.date, isSilent = true)
+                delay(15_000)
             }
         }
     }

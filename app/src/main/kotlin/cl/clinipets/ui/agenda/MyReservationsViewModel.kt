@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import cl.clinipets.openapi.apis.ReservaControllerApi
 import cl.clinipets.openapi.models.CitaDetalladaResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
@@ -29,23 +31,43 @@ class MyReservationsViewModel @Inject constructor(
 
     init {
         loadReservas()
+        startPolling()
     }
 
-    fun loadReservas() {
+    fun loadReservas(isSilent: Boolean = false) {
         viewModelScope.launch {
+            fetchReservas(isSilent)
+        }
+    }
+
+    private suspend fun fetchReservas(isSilent: Boolean) {
+        if (!isSilent) {
             isLoading.value = true
-            try {
-                val response = reservaApi.listarReservas()
-                if (response.isSuccessful) {
-                    _reservas.value = response.body() ?: emptyList()
-                } else {
-                    errorMessage.value = "Error al cargar reservas: ${response.code()}"
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                errorMessage.value = e.message ?: "Error desconocido al cargar reservas"
-            } finally {
+        }
+        try {
+            val response = reservaApi.listarReservas()
+            if (response.isSuccessful) {
+                _reservas.value = response.body() ?: emptyList()
+            } else {
+                errorMessage.value = "Error al cargar reservas: ${response.code()}"
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            errorMessage.value = e.message ?: "Error desconocido al cargar reservas"
+        } finally {
+            if (!isSilent) {
                 isLoading.value = false
+            }
+        }
+    }
+
+    private fun startPolling() {
+        viewModelScope.launch {
+            while (isActive) {
+                delay(10_000)
+                if (actionInProgressId.value == null && !isLoading.value) {
+                    fetchReservas(isSilent = true)
+                }
             }
         }
     }
