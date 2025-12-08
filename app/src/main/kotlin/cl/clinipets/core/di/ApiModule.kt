@@ -9,6 +9,8 @@ import cl.clinipets.openapi.apis.DeviceTokenControllerApi
 import cl.clinipets.openapi.apis.DisponibilidadControllerApi
 import cl.clinipets.openapi.apis.FichaClinicaControllerApi
 import cl.clinipets.openapi.apis.GaleriaControllerApi
+import cl.clinipets.openapi.apis.HomeControllerApi
+import cl.clinipets.openapi.apis.IaControllerApi
 import cl.clinipets.openapi.apis.MaestrosControllerApi
 import cl.clinipets.openapi.apis.MascotaControllerApi
 import cl.clinipets.openapi.apis.ReservaControllerApi
@@ -119,6 +121,16 @@ object ApiModule {
     @Singleton
     fun provideGaleriaApi(apiClient: ApiClient): GaleriaControllerApi =
         apiClient.createService(GaleriaControllerApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideIaApi(apiClient: ApiClient): IaControllerApi =
+        apiClient.createService(IaControllerApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideHomeApi(apiClient: ApiClient): HomeControllerApi =
+        apiClient.createService(HomeControllerApi::class.java)
 
 
     @Provides

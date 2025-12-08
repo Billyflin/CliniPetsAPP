@@ -1,19 +1,26 @@
 package cl.clinipets.ui.staff
 
+import cl.clinipets.openapi.apis.GaleriaControllerApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.openapi.apis.FichaClinicaControllerApi
+import cl.clinipets.openapi.apis.IaControllerApi
 import cl.clinipets.openapi.apis.MascotaControllerApi
 import cl.clinipets.openapi.apis.ReservaControllerApi
 import cl.clinipets.openapi.models.CitaDetalladaResponse
 import cl.clinipets.openapi.models.FichaCreateRequest
 import cl.clinipets.openapi.models.FinalizarCitaRequest
 import cl.clinipets.openapi.models.MascotaClinicalUpdateRequest
+import cl.clinipets.openapi.models.ResumenAtencionRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -23,7 +30,9 @@ import javax.inject.Inject
 class StaffAtencionViewModel @Inject constructor(
     private val fichaApi: FichaClinicaControllerApi,
     private val reservaApi: ReservaControllerApi,
-    private val mascotaApi: MascotaControllerApi
+    private val mascotaApi: MascotaControllerApi,
+    private val iaApi: IaControllerApi,
+    private val galeriaApi: GaleriaControllerApi
 ) : ViewModel() {
 
     data class UiState(
@@ -47,7 +56,13 @@ class StaffAtencionViewModel @Inject constructor(
         
         // Actualización Carnet
         val testRetroviralNegativo: Boolean = false,
-        val esterilizado: Boolean = false
+        val esterilizado: Boolean = false,
+
+        // Imagen y resumen
+        val selectedPhotoPath: String? = null,
+        val showResumenDialog: Boolean = false,
+        val resumenTexto: String = "",
+        val pendingMetodoPago: FinalizarCitaRequest.MetodoPago? = null
     )
 
     private val _uiState = MutableStateFlow(UiState())
@@ -127,24 +142,31 @@ class StaffAtencionViewModel @Inject constructor(
         _uiState.update { it.copy(esterilizado = checked) }
     }
 
-    fun iniciarFinalizacion() {
+    fun onPhotoSelected(path: String?) {
+        _uiState.update { it.copy(selectedPhotoPath = path) }
+    }
+
+    fun onResumenTextChanged(value: String) {
+        _uiState.update { it.copy(resumenTexto = value) }
+    }
+
+    fun iniciarFinalizacion(citaId: String, mascotaId: String) {
         val saldo = _uiState.value.cita?.saldoPendiente ?: 0
         if (saldo > 0) {
             _uiState.update { it.copy(showPaymentDialog = true) }
         } else {
-            // Si no hay deuda, finalizamos directo
-            val citaId = _uiState.value.cita?.id?.toString()
-            val mascotaId = _uiState.value.cita?.detalles?.firstOrNull()?.mascotaId?.toString()
-            
-            if (citaId != null && mascotaId != null) {
-                guardarFicha(citaId, mascotaId, null)
-            }
+            prepararFinalizacion(citaId, mascotaId, null)
         }
     }
     
     fun onPaymentMethodSelected(method: FinalizarCitaRequest.MetodoPago, citaId: String, mascotaId: String) {
         _uiState.update { it.copy(showPaymentDialog = false) }
-        guardarFicha(citaId, mascotaId, method)
+        prepararFinalizacion(citaId, mascotaId, method)
+    }
+
+    fun onDialogActionConfirmed(citaId: String, mascotaId: String) {
+        _uiState.update { it.copy(showResumenDialog = false) }
+        guardarFicha(citaId, mascotaId, _uiState.value.pendingMetodoPago)
     }
 
     fun guardarFicha(citaId: String, mascotaId: String, metodoPago: FinalizarCitaRequest.MetodoPago? = null) {
@@ -152,18 +174,8 @@ class StaffAtencionViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val state = _uiState.value
-                
-                // Validaciones básicas
-                if (state.peso.isBlank()) {
-                    _uiState.update { it.copy(isLoading = false, error = "El peso es obligatorio") }
-                    return@launch
-                }
 
-                val pesoVal = state.peso.toDoubleOrNull()
-                if (pesoVal == null) {
-                    _uiState.update { it.copy(isLoading = false, error = "Peso inválido") }
-                    return@launch
-                }
+                val pesoVal = validarPeso() ?: return@launch
 
                 val request = FichaCreateRequest(
                     mascotaId = UUID.fromString(mascotaId),
@@ -195,7 +207,7 @@ class StaffAtencionViewModel @Inject constructor(
                 if (fichaResponse.isSuccessful) {
                     // Si se creó la ficha, finalizamos la reserva con el método de pago
                     // Usamos EFECTIVO como fallback si es nulo (caso deuda 0 o cierre simple)
-                    val metodoPagoSeguro = metodoPago ?: FinalizarCitaRequest.MetodoPago.EFECTIVO
+                    val metodoPagoSeguro = metodoPago ?: _uiState.value.pendingMetodoPago ?: FinalizarCitaRequest.MetodoPago.EFECTIVO
                     val finalizarRequest = FinalizarCitaRequest(metodoPago = metodoPagoSeguro)
                     
                     try {
@@ -208,7 +220,7 @@ class StaffAtencionViewModel @Inject constructor(
                                 _uiState.update { it.copy(isLoading = false, paymentLinkToShare = citaUpdated?.paymentUrl, success = false) }
                             } else {
                                 // Caso normal: Cerrar
-                                _uiState.update { it.copy(isLoading = false, success = true) }
+                                _uiState.update { it.copy(isLoading = false, success = true, pendingMetodoPago = null) }
                             }
                         } else {
                              _uiState.update { it.copy(isLoading = false, error = "Ficha guardada, pero error al finalizar cita: ${reservaResponse.code()}") }
@@ -226,5 +238,89 @@ class StaffAtencionViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error desconocido") }
             }
         }
+    }
+
+    private fun prepararFinalizacion(citaId: String, mascotaId: String, metodoPago: FinalizarCitaRequest.MetodoPago?) {
+        viewModelScope.launch {
+            if (validarPeso() == null) return@launch
+            _uiState.update { it.copy(isLoading = true, error = null, pendingMetodoPago = metodoPago) }
+
+            val photoPath = _uiState.value.selectedPhotoPath
+            if (!photoPath.isNullOrBlank()) {
+                val file = File(photoPath)
+                if (!file.exists()) {
+                    _uiState.update { it.copy(isLoading = false, error = "No encontramos el archivo de imagen seleccionado") }
+                    return@launch
+                }
+
+                try {
+                    val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
+                    val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
+                    val uploadResponse = galeriaApi.uploadFile(
+                        mascotaId = UUID.fromString(mascotaId),
+                        file = body,
+                        titulo = null,
+                        tipo = GaleriaControllerApi.TipoUploadFile.IMAGE
+                    )
+                    if (!uploadResponse.isSuccessful) {
+                        val errorBody = uploadResponse.errorBody()?.string()
+                        _uiState.update { it.copy(isLoading = false, error = "No se pudo subir la imagen: ${errorBody ?: uploadResponse.code()}") }
+                        return@launch
+                    }
+                } catch (e: Exception) {
+                    _uiState.update { it.copy(isLoading = false, error = "Error al subir imagen: ${e.message}") }
+                    return@launch
+                }
+            }
+
+            val state = _uiState.value
+            val nombreMascota = state.cita?.detalles?.firstOrNull()?.nombreMascota ?: "tu mascota"
+            val resumenRequest = ResumenAtencionRequest(
+                anamnesis = state.anamnesis.ifBlank { "Sin anamnesis" },
+                diagnostico = state.diagnostico.ifBlank { "Sin diagnóstico" },
+                tratamiento = state.tratamiento.ifBlank { "Sin tratamiento" },
+                nombreMascota = nombreMascota
+            )
+
+            val draft = try {
+                val response = iaApi.generarResumenAtencion(resumenRequest)
+                if (response.isSuccessful) {
+                    response.body()?.mensaje
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                null
+            } ?: buildString {
+                appendLine("Hola! Te compartimos el resumen de la atención de $nombreMascota.")
+                appendLine("Diagnóstico: ${state.diagnostico.ifBlank { "Pendiente" }}")
+                appendLine("Tratamiento: ${state.tratamiento.ifBlank { "Pendiente" }}")
+                append("Observaciones: ${state.anamnesis.ifBlank { "Sin observaciones adicionales." }}")
+            }
+
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    showResumenDialog = true,
+                    resumenTexto = draft,
+                    pendingMetodoPago = metodoPago
+                )
+            }
+        }
+    }
+
+    private fun validarPeso(): Double? {
+        val state = _uiState.value
+        if (state.peso.isBlank()) {
+            _uiState.update { it.copy(isLoading = false, error = "El peso es obligatorio") }
+            return null
+        }
+
+        val pesoVal = state.peso.toDoubleOrNull()
+        if (pesoVal == null) {
+            _uiState.update { it.copy(isLoading = false, error = "Peso inválido") }
+            return null
+        }
+        return pesoVal
     }
 }

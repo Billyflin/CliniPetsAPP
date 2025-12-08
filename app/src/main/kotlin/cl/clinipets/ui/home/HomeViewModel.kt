@@ -2,8 +2,8 @@ package cl.clinipets.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cl.clinipets.openapi.apis.AuthControllerApi
-import cl.clinipets.openapi.apis.ServicioMedicoControllerApi
+import cl.clinipets.openapi.apis.HomeControllerApi
+import cl.clinipets.openapi.models.MascotaResponse
 import cl.clinipets.openapi.models.ServicioMedicoDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -16,16 +16,18 @@ import javax.inject.Inject
 sealed class HomeUiState {
     object Loading : HomeUiState()
     data class Success(
-        val nombreUsuario: String,
-        val servicios: List<ServicioMedicoDto>
+        val saludo: String,
+        val mensajeIa: String,
+        val mascotas: List<MascotaResponse>,
+        val serviciosDestacados: List<ServicioMedicoDto>,
+        val todosLosServicios: List<ServicioMedicoDto>
     ) : HomeUiState()
     data class Error(val mensaje: String) : HomeUiState()
 }
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val authApi: AuthControllerApi,
-    private val serviciosApi: ServicioMedicoControllerApi
+    private val homeApi: HomeControllerApi
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
@@ -39,25 +41,25 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = HomeUiState.Loading
             try {
-                // Fetch user profile and services in parallel or sequentially
-                // Sequential for simplicity and safety first
-                val profileResponse = withContext(Dispatchers.IO) { authApi.getProfile() }
-                val serviciosResponse = withContext(Dispatchers.IO) { serviciosApi.listarServicios() }
+                val dashboardResponse = withContext(Dispatchers.IO) { homeApi.obtenerDashboard() }
 
-                if (profileResponse.isSuccessful && serviciosResponse.isSuccessful) {
-                    val profile = profileResponse.body()
-                    val servicios = serviciosResponse.body() ?: emptyList()
-                    
-                    _uiState.value = HomeUiState.Success(
-                        nombreUsuario = profile?.name ?: "Usuario",
-                        servicios = servicios
-                    )
-                } else {
-                    val errorMsg = if (!profileResponse.isSuccessful) {
-                        "Error perfil: ${profileResponse.code()}"
-                    } else {
-                        "Error servicios: ${serviciosResponse.code()}"
+                if (dashboardResponse.isSuccessful) {
+                    dashboardResponse.body()?.let { dashboard ->
+                        _uiState.value = HomeUiState.Success(
+                            saludo = dashboard.saludo,
+                            mensajeIa = dashboard.mensajeIa,
+                            mascotas = dashboard.mascotas,
+                            serviciosDestacados = dashboard.serviciosDestacados,
+                            todosLosServicios = dashboard.todosLosServicios
+                        )
+                    } ?: run {
+                        _uiState.value = HomeUiState.Error("Respuesta de dashboard vacía")
                     }
+                } else {
+                    val errorMsg = runCatching { dashboardResponse.errorBody()?.string() }
+                        .getOrNull()
+                        ?.takeIf { it.isNotBlank() }
+                        ?: "Error dashboard: ${dashboardResponse.code()}"
                     _uiState.value = HomeUiState.Error(errorMsg)
                 }
             } catch (e: Exception) {
