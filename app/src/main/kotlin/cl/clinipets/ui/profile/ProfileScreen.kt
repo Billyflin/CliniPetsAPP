@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -40,8 +41,11 @@ import coil3.request.crossfade
 import cl.clinipets.BuildConfig
 import cl.clinipets.ui.auth.requestGoogleIdToken
 import cl.clinipets.ui.settings.SettingsViewModel
-import com.google.android.gms.auth.api.signin.GoogleSignIn
 import kotlinx.coroutines.launch
+
+// Temporary extension until backend/OpenAPI adds photoUrl to ProfileResponse
+private val cl.clinipets.openapi.models.ProfileResponse.photoUrl: String?
+    get() = null
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,10 +125,8 @@ fun ProfileScreen(
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
                         // Avatar (Google photo si existe)
-                        val googlePhoto = remember(state.profile) {
-                            GoogleSignIn.getLastSignedInAccount(context)?.photoUrl?.toString()
-                        }
-                        if (googlePhoto.isNullOrBlank()) {
+                        val avatar = state.profile.photoUrl
+                        if (avatar.isNullOrBlank()) {
                             Box(
                                 modifier = Modifier
                                     .size(120.dp)
@@ -142,13 +144,14 @@ fun ProfileScreen(
                         } else {
                             AsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current)
-                                    .data(googlePhoto)
+                                    .data(avatar)
                                     .crossfade(true)
                                     .build(),
                                 contentDescription = "Foto de perfil",
                                 modifier = Modifier
                                     .size(120.dp)
                                     .clip(CircleShape),
+                                contentScale = ContentScale.Crop
                             )
                         }
 
