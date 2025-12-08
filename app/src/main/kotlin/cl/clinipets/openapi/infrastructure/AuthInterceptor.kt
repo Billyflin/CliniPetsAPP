@@ -18,7 +18,7 @@ class AuthInterceptor @Inject constructor() : Interceptor {
         val request = chain.request()
         val currentToken = token.get()
 
-        return if (!currentToken.isNullOrBlank()) {
+        return if (!currentToken.isNullOrBlank() && request.url.host.isBackendHost()) {
             val newRequest = request.newBuilder()
                 .addHeader("Authorization", "Bearer $currentToken")
                 .build()
@@ -27,4 +27,11 @@ class AuthInterceptor @Inject constructor() : Interceptor {
             chain.proceed(request)
         }
     }
+}
+
+private fun String?.isBackendHost(): Boolean {
+    if (this.isNullOrBlank()) return false
+    return this == "api.clinipets.cl" ||
+        this == "homeserver.local" ||
+        this.startsWith("192.168.")
 }

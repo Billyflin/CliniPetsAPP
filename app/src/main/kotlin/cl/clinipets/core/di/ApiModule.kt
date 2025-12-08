@@ -8,6 +8,7 @@ import cl.clinipets.openapi.apis.BloqueoControllerApi
 import cl.clinipets.openapi.apis.DeviceTokenControllerApi
 import cl.clinipets.openapi.apis.DisponibilidadControllerApi
 import cl.clinipets.openapi.apis.FichaClinicaControllerApi
+import cl.clinipets.openapi.apis.GaleriaControllerApi
 import cl.clinipets.openapi.apis.MaestrosControllerApi
 import cl.clinipets.openapi.apis.MascotaControllerApi
 import cl.clinipets.openapi.apis.ReservaControllerApi
@@ -21,6 +22,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import javax.inject.Named
 import javax.inject.Singleton
 
@@ -30,13 +33,31 @@ object ApiModule {
 
     @Provides
     @Singleton
+    fun provideCoilOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
+        val okHttpBuilder = OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)
+
+        if (BuildConfig.DEBUG) {
+            val loggingInterceptor = HttpLoggingInterceptor { message ->
+                Log.d("OkHttp", message)
+            }.apply {
+                level = HttpLoggingInterceptor.Level.BODY
+            }
+            okHttpBuilder.addInterceptor(loggingInterceptor)
+        }
+
+        return okHttpBuilder.build()
+    }
+
+    @Provides
+    @Singleton
     fun provideApiClient(authInterceptor: AuthInterceptor): ApiClient {
         val baseUrl = resolveBaseUrl()
 
         val apiClient = ApiClient(
             baseUrl = baseUrl
         )
-        
+
         // Add Bearer Token Interceptor
         apiClient.addAuthorization("Bearer", authInterceptor)
 
@@ -93,6 +114,12 @@ object ApiModule {
     @Singleton
     fun provideDeviceTokenApi(apiClient: ApiClient): DeviceTokenControllerApi =
         apiClient.createService(DeviceTokenControllerApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideGaleriaApi(apiClient: ApiClient): GaleriaControllerApi =
+        apiClient.createService(GaleriaControllerApi::class.java)
+
 
     @Provides
     @Named("GoogleClientId")

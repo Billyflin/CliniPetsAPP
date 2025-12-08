@@ -143,6 +143,7 @@ dependencies {
 
     // Imágenes en Compose
     implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
 
     // Coroutines y Serialization
     implementation(libs.coroutines.android)

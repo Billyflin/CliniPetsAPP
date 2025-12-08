@@ -5,7 +5,7 @@ coreKtx = "1.17.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
 espressoCore = "3.7.0"
-lifecycleRuntimeKtx = "2.9.4"
+lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.11.0"
 composeBom = "2024.09.00"
 navigationCompose = "2.9.5"
@@ -17,20 +17,20 @@ serialization = "1.7.3"
 securityCrypto = "1.1.0"
 datastore = "1.1.7"
 openapiGenerator = "7.17.0"
-credentials = "1.6.0-beta01"
+credentials = "1.6.0-beta03"
 googleid = "1.1.1"
-mapsCompose = "4.4.1"
-playServicesMaps = "19.0.0"
+mapsCompose = "6.12.2"
+playServicesMaps = "19.2.0"
 playServicesLocation = "21.3.0"
 hilt = "2.57.2"
-coil = "2.7.0"
-foundation = "1.9.4"
+coil = "3.3.0"
+foundation = "1.10.0"
 secretsGradle = "2.0.1"
-runtimeSaveable = "1.9.4"
+runtimeSaveable = "1.10.0"
 firebaseCrashlytics = "20.0.3"
-googleServices = "4.4.2"
+googleServices = "4.4.4"
 googleFirebaseCrashlytics = "3.0.6"
-firebaseBom = "33.1.0"
+firebaseBom = "34.6.0"
 firebaseMessagingKtx = "25.0.1"
 
 [libraries]
@@ -69,7 +69,8 @@ androidx-compose-material-icons-extended = { group = "androidx.compose.material"
 retrofit2-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
 hilt = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
-coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
 androidx-compose-runtime-saveable = { group = "androidx.compose.runtime", name = "runtime-saveable", version.ref = "runtimeSaveable" }
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics", version.ref = "firebaseCrashlytics" }

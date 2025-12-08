@@ -2,6 +2,7 @@ package cl.clinipets.ui.mascotas.gallery
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cl.clinipets.core.di.ApiModule
 import cl.clinipets.openapi.apis.GaleriaControllerApi
 import cl.clinipets.openapi.models.MediaResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -37,7 +38,14 @@ class PetGalleryViewModel @Inject constructor(
             try {
                 val response = galeriaApi.listarGaleria(UUID.fromString(petId))
                 if (response.isSuccessful) {
-                    _uiState.update { it.copy(isLoading = false, mediaList = response.body() ?: emptyList()) }
+                    val baseUrl = ApiModule.resolveBaseUrl()
+                    val media = response.body()
+                        ?.map { item ->
+                            val fullUrl = item.url.toFullUrl(baseUrl)
+                            item.copy(url = fullUrl)
+                        }
+                        ?: emptyList()
+                    _uiState.update { it.copy(isLoading = false, mediaList = media) }
                 } else {
                     _uiState.update { it.copy(isLoading = false, error = "Error al cargar galería: ${response.code()}") }
                 }
@@ -75,4 +83,11 @@ class PetGalleryViewModel @Inject constructor(
             }
         }
     }
+}
+
+private fun String.toFullUrl(baseUrl: String): String {
+    if (startsWith("http://") || startsWith("https://")) return this
+    val sanitizedBase = baseUrl.trimEnd('/')
+    val sanitizedPath = trimStart('/')
+    return "$sanitizedBase/$sanitizedPath"
 }

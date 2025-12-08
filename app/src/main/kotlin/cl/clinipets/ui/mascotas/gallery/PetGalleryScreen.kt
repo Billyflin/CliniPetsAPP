@@ -24,8 +24,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import java.io.File
 import java.io.FileOutputStream
 
@@ -99,7 +99,6 @@ fun PetGalleryContent(
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(media.url)
-                            .crossfade(true)
                             .build(),
                         contentDescription = media.titulo,
                         contentScale = ContentScale.Crop,
