@@ -282,6 +282,42 @@ fun StaffAtencionScreen(
                 }
             }
             
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = "Carnet Sanitario",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Test Retroviral Negativo\n(Habilita Vacunas Leucemia)",
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = state.testRetroviralNegativo,
+                    onCheckedChange = { viewModel.onTestRetroviralChanged(it) }
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Esterilizado")
+                Switch(
+                    checked = state.esterilizado,
+                    onCheckedChange = { viewModel.onEsterilizadoChanged(it) }
+                )
+            }
+            
             Spacer(Modifier.height(64.dp)) // Espacio extra para que el botón no tape contenido
         }
     }

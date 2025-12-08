@@ -56,6 +56,16 @@ class ClinipetsMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
+
+        if (message.data["type"] == "PAYMENT_CONFIRMED") {
+            val citaId = message.data["citaId"]
+            if (citaId != null) {
+                CoroutineScope(Dispatchers.Main).launch {
+                    entryPoint().paymentStatusManager().notifyPaymentSuccess(citaId)
+                }
+            }
+        }
+
         ensureDefaultChannel()
 
         val notification = message.notification ?: return
@@ -105,6 +115,7 @@ class ClinipetsMessagingService : FirebaseMessagingService() {
     interface DeviceTokenEntryPoint {
         fun deviceTokenApi(): DeviceTokenControllerApi
         fun sessionManager(): SessionManager
+        fun paymentStatusManager(): PaymentStatusManager
     }
 
     companion object {

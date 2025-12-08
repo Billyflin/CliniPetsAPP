@@ -1,6 +1,7 @@
 package cl.clinipets.ui.mascotas
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,12 +19,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.CircularProgressIndicator
@@ -57,6 +63,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.CitaDetalladaResponse
 import cl.clinipets.openapi.models.FichaResponse
 import cl.clinipets.openapi.models.MascotaResponse
+import cl.clinipets.ui.mascotas.gallery.PetGalleryContent
 import cl.clinipets.ui.util.toLocalDateStr
 import cl.clinipets.ui.util.toLocalHour
 
@@ -153,7 +160,7 @@ fun PetDetailScreen(
 
             else -> {
                 uiState.pet?.let { pet ->
-                    val tabTitles = listOf("Citas", "Fichas Médicas")
+                    val tabTitles = listOf("Citas", "Fichas Médicas", "Galería")
                     var selectedTab by remember { mutableStateOf(0) }
 
                     Column(
@@ -187,6 +194,13 @@ fun PetDetailScreen(
                             else -> ClinicalHistory(
                                 records = uiState.clinicalRecords
                             )
+                        }
+
+                        // Tab Content for Gallery (Index 2)
+                        if (selectedTab == 2) {
+                            Box(modifier = Modifier.height(500.dp).fillMaxWidth()) {
+                                PetGalleryContent(petId = pet.id.toString())
+                            }
                         }
                     }
                 }
@@ -233,25 +247,79 @@ private fun PetHeader(pet: MascotaResponse) {
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            // Detalles: Sexo, Peso, Esterilizado
+            // Datos básicos (Sexo, Peso)
             Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Sexo
                 DetailChip(label = pet.sexo.name)
+                
+                // Peso
                 DetailChip(label = "${pet.pesoActual.toPlainString()} kg")
-                if (pet.esterilizado) {
-                    DetailChip(label = "Esterilizado")
-                }
             }
+            
+            // Estados Clínicos (Nueva sección)
+            if (pet.testRetroviralNegativo || pet.esterilizado || !pet.chipIdentificador.isNullOrBlank()) {
+                OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Test Viral Negativo
+                    if (pet.testRetroviralNegativo) {
+                        AssistChip(
+                            onClick = {},
+                            label = { Text("Test Viral (-)") },
+                            leadingIcon = { 
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.Check, 
+                                    contentDescription = null,
+                                    tint = Color(0xFF4CAF50) 
+                                ) 
+                            },
+                            colors = androidx.compose.material3.AssistChipDefaults.assistChipColors(
+                                labelColor = Color(0xFF4CAF50)
+                            )
+                        )
+                    }
 
-            // Chip
-            if (!pet.chipIdentificador.isNullOrBlank()) {
-                Text(
-                    text = "Chip: ${pet.chipIdentificador}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                    // Esterilizado
+                    if (pet.esterilizado) {
+                        AssistChip(
+                            onClick = {},
+                            label = { Text("Esterilizado") },
+                            leadingIcon = { 
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.ContentCut, 
+                                    contentDescription = null 
+                                ) 
+                            },
+                            colors = androidx.compose.material3.AssistChipDefaults.assistChipColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                                labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            ),
+                            border = null
+                        )
+                    }
+
+                    // Chip Identificador
+                    if (!pet.chipIdentificador.isNullOrBlank()) {
+                        AssistChip(
+                            onClick = {},
+                            label = { Text("Chip: ${pet.chipIdentificador}") },
+                            leadingIcon = { 
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.QrCode, 
+                                    contentDescription = null 
+                                ) 
+                            }
+                        )
+                    }
+                }
             }
 
             // Temperamento Warning

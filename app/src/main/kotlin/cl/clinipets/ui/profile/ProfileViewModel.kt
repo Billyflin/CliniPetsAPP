@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.core.session.SessionManager
 import cl.clinipets.openapi.apis.AuthControllerApi
+import cl.clinipets.openapi.models.GoogleLoginRequest
 import cl.clinipets.openapi.models.ProfileResponse
 import cl.clinipets.openapi.models.UserUpdateRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -103,6 +104,47 @@ class ProfileViewModel @Inject constructor(
                 _uiState.value = currentState.copy(
                     isUpdating = false,
                     updateError = e.message ?: "Error desconocido al actualizar perfil"
+                )
+            }
+        }
+    }
+
+    fun linkGoogleAccount(idToken: String) {
+        val currentState = _uiState.value
+        if (currentState !is ProfileUiState.Success) return
+
+        viewModelScope.launch {
+            _uiState.value = currentState.copy(isUpdating = true, updateError = null)
+            try {
+                val response = authApi.linkGoogleAccount(GoogleLoginRequest(idToken = idToken))
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null) {
+                        _uiState.value = ProfileUiState.Success(
+                            profile = body,
+                            isUpdating = false,
+                            updateError = null
+                        )
+                    } else {
+                        _uiState.value = currentState.copy(
+                            isUpdating = false,
+                            updateError = "Respuesta vacía al vincular cuenta"
+                        )
+                    }
+                } else {
+                    val errorMessage = runCatching { response.errorBody()?.string() }
+                        .getOrNull()
+                        ?.takeIf { it.isNotBlank() }
+                        ?: "Error al vincular cuenta: ${response.code()}"
+                    _uiState.value = currentState.copy(
+                        isUpdating = false,
+                        updateError = errorMessage
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = currentState.copy(
+                    isUpdating = false,
+                    updateError = e.message ?: "Error desconocido al vincular cuenta"
                 )
             }
         }

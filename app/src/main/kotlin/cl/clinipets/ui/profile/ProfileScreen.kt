@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
@@ -22,16 +23,21 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import cl.clinipets.BuildConfig
+import cl.clinipets.ui.auth.requestGoogleIdToken
 import cl.clinipets.ui.settings.SettingsViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +51,8 @@ fun ProfileScreen(
     val isDarkPref by settingsViewModel.isDarkMode.collectAsState()
     val isSystemDark = isSystemInDarkTheme()
     val isDark = isDarkPref ?: isSystemDark
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -147,6 +155,40 @@ fun ProfileScreen(
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                                 ProfileItem(icon = Icons.Default.VerifiedUser, label = "Rol", value = state.profile.role?.toString() ?: "-")
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                                
+                                // Google Link Logic
+                                val email = state.profile.email ?: ""
+                                val isTemporaryAccount = email.startsWith("otp_") || email.startsWith("wsp_")
+                                
+                                if (isTemporaryAccount) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            scope.launch {
+                                                val token = requestGoogleIdToken(context, BuildConfig.GOOGLE_SERVER_CLIENT_ID)
+                                                if (!token.isNullOrBlank()) {
+                                                    profileViewModel.linkGoogleAccount(token)
+                                                }
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        enabled = !state.isUpdating
+                                    ) {
+                                        if (state.isUpdating) {
+                                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                            Spacer(Modifier.width(8.dp))
+                                        }
+                                        Text("Conectar con Google \uD83D\uDD04") // 🔄
+                                    }
+                                } else {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50)) // Green
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Cuenta vinculada con Google", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF4CAF50))
+                                    }
+                                }
+                                
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                                
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()

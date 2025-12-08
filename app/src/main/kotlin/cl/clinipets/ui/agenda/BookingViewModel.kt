@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import javax.inject.Inject
@@ -38,6 +39,7 @@ data class BookingUiState(
     // Selection State for building order
     val selectedPet: MascotaResponse? = null,
     val selectedService: ServicioMedicoDto? = null,
+    val tipoAtencion: ReservaCreateRequest.TipoAtencion = ReservaCreateRequest.TipoAtencion.CLINICA,
 
     // Agenda State
     val selectedDate: LocalDate? = null,
@@ -158,6 +160,22 @@ class BookingViewModel @Inject constructor(
         if (!serviceInCart && service.stock != null && service.stock <= 0) {
              _uiState.update { it.copy(error = "Lo sentimos, este servicio se ha agotado.") }
              recalculateAvailableServices(pet) // Refresh list
+             return
+        }
+
+        // Check for required services (Client-side validation warning)
+        if (service.serviciosRequeridosIds.isNotEmpty()) {
+            val currentCart = cartManager.cartState.value.cart
+            val missingRequirements = service.serviciosRequeridosIds.filter { reqId ->
+                currentCart.none { it.servicio.id == reqId && it.mascota.id == pet.id }
+            }
+
+            if (missingRequirements.isNotEmpty()) {
+                val missingNames = _allServices.filter { it.id in missingRequirements }.joinToString(", ") { it.nombre }
+                if (missingNames.isNotEmpty()) {
+                    _uiState.update { it.copy(error = "Este servicio requiere: $missingNames. Asegúrate de agregarlo(s) al carrito.") }
+                }
+            }
         }
     }
 
@@ -224,7 +242,7 @@ class BookingViewModel @Inject constructor(
                         detalles = detalles,
                         fechaHoraInicio = selectedSlot,
                         origen = ReservaCreateRequest.Origen.APP,
-                        tipoAtencion = ReservaCreateRequest.TipoAtencion.CLINICA,
+                        tipoAtencion = currentState.tipoAtencion,
                         pagoTotal = currentState.isFullPayment
                     )
 
@@ -233,10 +251,27 @@ class BookingViewModel @Inject constructor(
                         _uiState.update { it.copy(isLoading = false, bookingResult = response.body()) }
                         // El carrito y los slots se limpiarán explícitamente desde la UI
                     } else {
-                        _uiState.update { it.copy(isLoading = false, error = "Error reserva: ${response.code()}") }
+                        val errorMessage = if (response.code() == 400) {
+                            response.errorBody()?.string() ?: "Error de validación (400)"
+                        } else {
+                            "Error reserva: ${response.code()}"
+                        }
+                        _uiState.update { it.copy(isLoading = false, error = errorMessage) }
                     }
+                } catch (e: HttpException) {
+                    val errorMessage = if (e.code() == 400) {
+                        e.response()?.errorBody()?.string() ?: "Error de validación (400)"
+                    } else {
+                        e.message() ?: "Error desconocido"
+                    }
+                    _uiState.update { it.copy(isLoading = false, error = errorMessage) }
                 } catch (e: Exception) {
-                    _uiState.update { it.copy(isLoading = false, error = e.message) }
+                    val errorMessage = if (e is HttpException && e.code() == 400) {
+                        e.response()?.errorBody()?.string() ?: "Error de validación"
+                    } else {
+                        e.message ?: "Error desconocido"
+                    }
+                    _uiState.update { it.copy(isLoading = false, error = errorMessage) }
                 }
             }
         }

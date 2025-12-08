@@ -23,7 +23,8 @@ fun AppNavGraph(
     busy: Boolean,
     onLoginClick: () -> Unit,
     onLogout: () -> Unit,
-    onRefreshProfile: () -> Unit
+    onRefreshProfile: () -> Unit,
+    viewModel: LoginViewModel
 ) {
     val isLoggedIn = uiState.me != null
 
@@ -61,7 +62,8 @@ fun AppNavGraph(
             LoginScreen(
                 busy = busy,
                 error = uiState.error,
-                onLoginClick = onLoginClick
+                onLoginClick = onLoginClick,
+                viewModel = viewModel
             )
         }
         

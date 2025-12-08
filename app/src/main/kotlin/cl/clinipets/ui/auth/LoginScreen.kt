@@ -51,6 +51,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,8 +71,14 @@ import cl.clinipets.core.di.ApiModule.resolveBaseUrl
 fun LoginScreen(
     busy: Boolean,
     error: String?,
-    onLoginClick: () -> Unit
+    onLoginClick: () -> Unit,
+    viewModel: LoginViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.ui.collectAsState()
+    var showPhoneLogin by remember { mutableStateOf(false) }
+    var phoneInput by remember { mutableStateOf("") }
+    var codeInput by remember { mutableStateOf("") }
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Fondo con degradado dinámico
         Box(
@@ -346,80 +362,186 @@ fun LoginScreen(
                         }
                     }
 
-                    // Botón de Google con diseño más visible y atractivo
-                    Button(
-                        onClick = onLoginClick,
-                        enabled = !busy,
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(68.dp)
-                            .shadow(
-                                elevation = if (busy) 8.dp else 20.dp,
-                                shape = RoundedCornerShape(20.dp),
-                                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-                                ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-                            ),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(
-                            defaultElevation = 0.dp,
-                            pressedElevation = 0.dp,
-                            disabledElevation = 0.dp
-                        )
-                    ) {
-                        if (busy) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(32.dp),
-                                strokeWidth = 3.5.dp,
-                                color = MaterialTheme.colorScheme.onPrimary
+                    if (showPhoneLogin) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .shadow(
+                                    elevation = 16.dp,
+                                    shape = RoundedCornerShape(20.dp),
+                                    spotColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.25f)
+                                ),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
                             )
-                        } else {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .padding(24.dp)
+                                    .fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.surface,
-                                    modifier = Modifier.size(44.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentAlignment = Alignment.Center
+                                if (!uiState.otpSent) {
+                                    Text(
+                                        text = "Ingresa tu número",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    
+                                    OutlinedTextField(
+                                        value = phoneInput,
+                                        onValueChange = { phoneInput = it },
+                                        label = { Text("Teléfono (+569...)") },
+                                        placeholder = { Text("+56912345678") },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp),
+                                        singleLine = true
+                                    )
+
+                                    Button(
+                                        onClick = { viewModel.requestOtp(phoneInput) },
+                                        enabled = !busy && phoneInput.isNotBlank(),
+                                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                                        shape = RoundedCornerShape(12.dp)
                                     ) {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.ic_google_logo),
-                                            contentDescription = "Logo de Google",
-                                            modifier = Modifier.size(26.dp),
-                                            tint = Color.Unspecified
+                                        if (busy) {
+                                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                                        } else {
+                                            Text("Enviar Código")
+                                        }
+                                    }
+                                } else {
+                                    Text(
+                                        text = "Código enviado a ${uiState.phoneNumber}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    OutlinedTextField(
+                                        value = codeInput,
+                                        onValueChange = { codeInput = it },
+                                        label = { Text("Código (6 dígitos)") },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp),
+                                        singleLine = true
+                                    )
+
+                                    Button(
+                                        onClick = { viewModel.loginWithOtp(codeInput) },
+                                        enabled = !busy && codeInput.length >= 4,
+                                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        if (busy) {
+                                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                                        } else {
+                                            Text("Verificar")
+                                        }
+                                    }
+                                }
+
+                                TextButton(
+                                    onClick = { 
+                                        showPhoneLogin = false
+                                        viewModel.resetLoginState()
+                                        phoneInput = ""
+                                        codeInput = ""
+                                    }
+                                ) {
+                                    Text("Cancelar / Volver")
+                                }
+                            }
+                        }
+                    } else {
+                        // Botón de Google con diseño más visible y atractivo
+                        Button(
+                            onClick = onLoginClick,
+                            enabled = !busy,
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(68.dp)
+                                .shadow(
+                                    elevation = if (busy) 8.dp else 20.dp,
+                                    shape = RoundedCornerShape(20.dp),
+                                    spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                                    ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                                ),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(
+                                defaultElevation = 0.dp,
+                                pressedElevation = 0.dp,
+                                disabledElevation = 0.dp
+                            )
+                        ) {
+                            if (busy) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(32.dp),
+                                    strokeWidth = 3.5.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            } else {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.surface,
+                                        modifier = Modifier.size(44.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_google_logo),
+                                                contentDescription = "Logo de Google",
+                                                modifier = Modifier.size(26.dp),
+                                                tint = Color.Unspecified
+                                            )
+                                        }
+                                    }
+                                    Spacer(Modifier.width(16.dp))
+                                    Column(
+                                        horizontalAlignment = Alignment.Start
+                                    ) {
+                                        Text(
+                                            text = "Continuar con Google",
+                                            style = MaterialTheme.typography.titleLarge.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 18.sp
+                                            )
+                                        )
+                                        Text(
+                                            text = "Acceso rápido y seguro",
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontSize = 13.sp
+                                            ),
+                                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
                                         )
                                     }
                                 }
-                                Spacer(Modifier.width(16.dp))
-                                Column(
-                                    horizontalAlignment = Alignment.Start
-                                ) {
-                                    Text(
-                                        text = "Continuar con Google",
-                                        style = MaterialTheme.typography.titleLarge.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 18.sp
-                                        )
-                                    )
-                                    Text(
-                                        text = "Acceso rápido y seguro",
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            fontSize = 13.sp
-                                        ),
-                                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
-                                    )
-                                }
                             }
+                        }
+
+                        // Botón Ingresar con celular
+                        OutlinedButton(
+                            onClick = { showPhoneLogin = true },
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            enabled = !busy
+                        ) {
+                            Text("Ingresar con número de celular")
                         }
                     }
 

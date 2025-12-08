@@ -72,7 +72,8 @@ fun ClinipetsApp(
                     }
                 },
                 onLogout = { vm.logout() },
-                onRefreshProfile = { vm.refreshProfile() }
+                onRefreshProfile = { vm.refreshProfile() },
+                viewModel = vm
             )
         }
     }

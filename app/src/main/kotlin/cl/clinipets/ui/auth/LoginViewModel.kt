@@ -8,6 +8,8 @@ import cl.clinipets.openapi.apis.AuthControllerApi
 import cl.clinipets.openapi.apis.DeviceTokenControllerApi
 import cl.clinipets.openapi.models.DeviceTokenRequest
 import cl.clinipets.openapi.models.GoogleLoginRequest
+import cl.clinipets.openapi.models.OtpRequest
+import cl.clinipets.openapi.models.OtpVerifyRequest
 import cl.clinipets.openapi.models.ProfileResponse
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,6 +35,9 @@ class LoginViewModel @Inject constructor(
         val me: ProfileResponse? = null,
         val error: String? = null,
         val ok: Boolean = false,
+        val needsPhoneVerification: Boolean = false,
+        val otpSent: Boolean = false,
+        val phoneNumber: String = ""
     )
 
     private val _ui = MutableStateFlow(UiState())
@@ -56,12 +61,12 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    fun loginWithGoogleIdToken(idToken: String) {
+    fun loginWithGoogleIdToken(idToken: String, phone: String? = null) {
         viewModelScope.launch {
             _ui.update { it.copy(isAuthenticating = true, error = null) }
             try {
                 // 1. Exchange Google ID Token for App Token
-                val loginResponse = authApi.loginGoogle(GoogleLoginRequest(idToken))
+                val loginResponse = authApi.loginGoogle(GoogleLoginRequest(idToken, phone))
 
                 if (loginResponse.isSuccessful) {
                     val token = loginResponse.body()?.accessToken
@@ -82,6 +87,7 @@ class LoginViewModel @Inject constructor(
                                         isAuthenticating = false,
                                         isCheckingSession = false,
                                         error = null,
+                                        needsPhoneVerification = !me.phoneVerified
                                     )
                                 }
                                 sendFcmTokenSafe()
@@ -110,6 +116,51 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    fun requestOtp(phone: String) {
+        viewModelScope.launch {
+            _ui.update { it.copy(isAuthenticating = true, error = null) }
+            val cleanPhone = phone.replace(" ", "").trim()
+            try {
+                val response = authApi.requestOtp(OtpRequest(cleanPhone))
+                if (response.isSuccessful) {
+                    _ui.update { it.copy(isAuthenticating = false, otpSent = true, phoneNumber = cleanPhone) }
+                } else {
+                     _ui.update { it.copy(isAuthenticating = false, error = "Error al solicitar código: ${response.code()}") }
+                }
+            } catch (e: Exception) {
+                _ui.update { it.copy(isAuthenticating = false, error = e.message ?: "Error de conexión") }
+            }
+        }
+    }
+
+    fun loginWithOtp(code: String) {
+        viewModelScope.launch {
+            _ui.update { it.copy(isAuthenticating = true, error = null) }
+            try {
+                val currentPhone = _ui.value.phoneNumber
+                val response = authApi.verifyOtp(OtpVerifyRequest(phone = currentPhone, code = code))
+                
+                if (response.isSuccessful) {
+                    val token = response.body()?.accessToken
+                    if (!token.isNullOrBlank()) {
+                         session.setAndPersist(token)
+                         fetchProfile() // This will update state to ok=true if successful
+                    } else {
+                        _ui.update { it.copy(isAuthenticating = false, error = "Token inválido") }
+                    }
+                } else {
+                    _ui.update { it.copy(isAuthenticating = false, error = "Código incorrecto o expirado") }
+                }
+            } catch (e: Exception) {
+                _ui.update { it.copy(isAuthenticating = false, error = e.message ?: "Error al verificar código") }
+            }
+        }
+    }
+
+    fun resetLoginState() {
+        _ui.update { it.copy(otpSent = false, phoneNumber = "", error = null, isAuthenticating = false) }
+    }
+
     fun fetchProfile() {
         viewModelScope.launch {
             _ui.update { it.copy(isCheckingSession = true) }
@@ -124,6 +175,7 @@ class LoginViewModel @Inject constructor(
                                 me = body,
                                 isCheckingSession = false,
                                 error = null,
+                                needsPhoneVerification = !body.phoneVerified
                             )
                         }
                         sendFcmTokenSafe()
