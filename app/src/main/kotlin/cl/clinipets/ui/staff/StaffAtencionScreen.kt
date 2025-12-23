@@ -9,52 +9,18 @@ import android.widget.DatePicker
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AddAPhoto
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.Money
-import androidx.compose.material.icons.filled.MonitorWeight
-import androidx.compose.material.icons.filled.PhoneAndroid
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -70,6 +36,12 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
 
+import androidx.compose.material.icons.filled.Thermostat
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Air
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.OutlinedTextFieldDefaults
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StaffAtencionScreen(
@@ -82,6 +54,7 @@ fun StaffAtencionScreen(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val fileProviderAuthority = "${context.packageName}.fileprovider"
+    var selectedTab by remember { mutableStateOf(0) }
 
     var pendingCameraFile by remember { mutableStateOf<File?>(null) }
     val takePictureLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
@@ -133,7 +106,7 @@ fun StaffAtencionScreen(
 
     if (state.showPaymentDialog) {
         AlertDialog(
-            onDismissRequest = { /* No dismissal to force selection or back */ },
+            onDismissRequest = { },
             title = { Text("Cobrar Saldo Pendiente: $${state.cita?.saldoPendiente}") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -161,7 +134,7 @@ fun StaffAtencionScreen(
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { /* Optional: Close dialog logic if needed */ }) {
+                TextButton(onClick = { /* Optional */ }) {
                     Text("Cancelar")
                 }
             }
@@ -170,7 +143,7 @@ fun StaffAtencionScreen(
 
     if (state.showResumenDialog) {
         AlertDialog(
-            onDismissRequest = { /* no op to obligate selección */ },
+            onDismissRequest = { },
             title = { Text("Revisar mensaje para WhatsApp") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -239,13 +212,11 @@ fun StaffAtencionScreen(
                 Button(
                     onClick = { viewModel.iniciarFinalizacion(citaId, mascotaId) },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isLoading
+                    enabled = !state.isLoading && selectedTab == 2 // Enable only on last tab
                 ) {
                     if (state.isLoading) {
                         CircularProgressIndicator(
-                            modifier = Modifier
-                                .width(20.dp)
-                                .height(20.dp),
+                            modifier = Modifier.size(20.dp),
                             color = MaterialTheme.colorScheme.onPrimary,
                             strokeWidth = 2.dp
                         )
@@ -260,229 +231,246 @@ fun StaffAtencionScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            if (state.error != null) {
-                Text(
-                    text = state.error ?: "",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            Text(
-                text = "Signos Vitales",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            OutlinedTextField(
-                value = state.peso,
-                onValueChange = { viewModel.onPesoChanged(it) },
-                label = { Text("Peso Actual (kg)") },
-                leadingIcon = { Icon(Icons.Default.MonitorWeight, null) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "Evolución Clínica (SOAP)",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            OutlinedTextField(
-                value = state.anamnesis,
-                onValueChange = { viewModel.onAnamnesisChanged(it) },
-                label = { Text("Anamnesis (Subjetivo)") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3
-            )
-
-            OutlinedTextField(
-                value = state.examenFisico,
-                onValueChange = { viewModel.onExamenFisicoChanged(it) },
-                label = { Text("Examen Físico (Objetivo)") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3
-            )
-
-            OutlinedTextField(
-                value = state.diagnostico,
-                onValueChange = { viewModel.onDiagnosticoChanged(it) },
-                label = { Text("Diagnóstico (Análisis)") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2
-            )
-
-            OutlinedTextField(
-                value = state.tratamiento,
-                onValueChange = { viewModel.onTratamientoChanged(it) },
-                label = { Text("Tratamiento (Plan)") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3
-            )
-
-            Text(
-                text = "Foto de la atención",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = {
-                        val photoFile = runCatching { createTempImageFile(context) }.getOrNull()
-                        if (photoFile == null) {
-                            Toast.makeText(context, "No pudimos crear el archivo para la cámara", Toast.LENGTH_SHORT).show()
-                            return@OutlinedButton
-                        }
-                        pendingCameraFile = photoFile
-                        val uri = FileProvider.getUriForFile(context, fileProviderAuthority, photoFile)
-                        takePictureLauncher.launch(uri)
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.AddAPhoto, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Tomar foto")
+            TabRow(selectedTabIndex = selectedTab) {
+                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
+                    Text(text = "Triaje", modifier = Modifier.padding(16.dp))
                 }
-
-                OutlinedButton(
-                    onClick = { pickImageLauncher.launch("image/*") },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.Image, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Elegir galería")
+                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
+                    Text(text = "Examen", modifier = Modifier.padding(16.dp))
+                }
+                Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
+                    Text(text = "Plan", modifier = Modifier.padding(16.dp))
                 }
             }
 
-            selectedImageUri?.let { uri ->
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    AsyncImage(
-                        model = uri,
-                        contentDescription = "Vista previa de la foto",
-                        modifier = Modifier
-                            .size(96.dp),
-                        contentScale = ContentScale.Crop
-                    )
-                    Text(
-                        text = "La foto se adjuntará al historial y al WhatsApp.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "Seguimiento",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("¿Agendar recordatorio?")
-                Switch(
-                    checked = state.agendarRecordatorio,
-                    onCheckedChange = { viewModel.onAgendarRecordatorioChanged(it) }
-                )
-            }
+                if (state.error != null) {
+                    Text(text = state.error ?: "", color = MaterialTheme.colorScheme.error)
+                }
 
-            if (state.agendarRecordatorio) {
-                val dateText = state.fechaProximoControl?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "Seleccionar Fecha"
-                
-                OutlinedButton(
-                    onClick = {
-                        val calendar = Calendar.getInstance()
-                        val dpd = DatePickerDialog(
-                            context,
-                            { _: DatePicker, year: Int, month: Int, dayOfMonth: Int ->
-                                viewModel.onFechaProximoControlChanged(LocalDate.of(year, month + 1, dayOfMonth))
-                            },
-                            calendar.get(Calendar.YEAR),
-                            calendar.get(Calendar.MONTH),
-                            calendar.get(Calendar.DAY_OF_MONTH)
+                when (selectedTab) {
+                    0 -> { // Triaje
+                        SectionHeader(title = "Constantes Vitales", icon = Icons.Default.MonitorWeight)
+                        
+                        val tempValue = state.form.temperatura
+                        val isHighTemp = tempValue != null && tempValue > 39.5
+                        
+                        OutlinedTextField(
+                            value = state.form.pesoRegistrado?.toString() ?: "",
+                            onValueChange = viewModel::onPesoChanged,
+                            label = { Text("Peso Actual (kg)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth(),
+                            leadingIcon = { Icon(Icons.Default.MonitorWeight, null) }
                         )
-                        dpd.datePicker.minDate = System.currentTimeMillis()
-                        dpd.show()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.CalendarToday, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(dateText)
+                        OutlinedTextField(
+                            value = state.form.temperatura?.toString() ?: "",
+                            onValueChange = viewModel::onTemperaturaChanged,
+                            label = { Text("Temperatura (°C)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth(),
+                            leadingIcon = { 
+                                Icon(
+                                    imageVector = if (isHighTemp) Icons.Default.Warning else Icons.Default.Thermostat, 
+                                    contentDescription = null,
+                                    tint = if (isHighTemp) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                                ) 
+                            },
+                            colors = if (isHighTemp) {
+                                OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MaterialTheme.colorScheme.error,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.error,
+                                    focusedLabelColor = MaterialTheme.colorScheme.error,
+                                    unfocusedLabelColor = MaterialTheme.colorScheme.error
+                                )
+                            } else OutlinedTextFieldDefaults.colors()
+                        )
+                        if (isHighTemp) {
+                            Text(
+                                text = "¡Alerta! Temperatura elevada",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
+                        }
+                        
+                        OutlinedTextField(
+                            value = state.form.frecuenciaCardiaca?.toString() ?: "",
+                            onValueChange = viewModel::onFrecuenciaCardiacaChanged,
+                            label = { Text("Frecuencia Cardíaca (lpm)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth(),
+                            leadingIcon = { Icon(Icons.Default.Favorite, null) }
+                        )
+                        OutlinedTextField(
+                            value = state.form.frecuenciaRespiratoria?.toString() ?: "",
+                            onValueChange = viewModel::onFrecuenciaRespiratoriaChanged,
+                            label = { Text("Frecuencia Respiratoria (rpm)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth(),
+                            leadingIcon = { Icon(Icons.Default.Air, null) }
+                        )
+
+                        if (state.cita?.estado == cl.clinipets.openapi.models.CitaDetalladaResponse.Estado.EN_SALA || 
+                            state.cita?.estado == cl.clinipets.openapi.models.CitaDetalladaResponse.Estado.CONFIRMADA) {
+                            Button(
+                                onClick = { viewModel.guardarTriaje(citaId) },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !state.isLoading,
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                            ) {
+                                if (state.isLoading) {
+                                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
+                                } else {
+                                    Icon(Icons.Default.Save, null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Guardar Triaje y Notificar")
+                                }
+                            }
+                        }
+                    }
+                    1 -> { // Examen
+                        SectionHeader(title = "Examen Físico (S+O)", icon = Icons.Default.MedicalServices)
+                        OutlinedTextField(
+                            value = state.form.anamnesis ?: "",
+                            onValueChange = viewModel::onAnamnesisChanged,
+                            label = { Text("Anamnesis (Subjetivo)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 4
+                        )
+                        OutlinedTextField(
+                            value = state.form.hallazgosObjetivos ?: "",
+                            onValueChange = viewModel::onHallazgosObjetivosChanged,
+                            label = { Text("Hallazgos Objetivos (Objetivo)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 4
+                        )
+                        
+                        SectionHeader(title = "Evidencia Gráfica", icon = Icons.Default.AddAPhoto)
+                        PhotoSelectionRow(
+                            onCameraClick = {
+                                val photoFile = runCatching { createTempImageFile(context) }.getOrNull()
+                                if (photoFile != null) {
+                                    pendingCameraFile = photoFile
+                                    takePictureLauncher.launch(FileProvider.getUriForFile(context, fileProviderAuthority, photoFile))
+                                }
+                            },
+                            onGalleryClick = { pickImageLauncher.launch("image/*") }
+                        )
+                        selectedImageUri?.let { uri ->
+                            AsyncImage(
+                                model = uri,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxWidth().height(200.dp),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+                    2 -> { // Diagnóstico y Plan
+                        SectionHeader(title = "Diagnóstico y Plan (A+P)", icon = Icons.Default.Description)
+                        OutlinedTextField(
+                            value = state.form.avaluoClinico ?: "",
+                            onValueChange = viewModel::onAvaluoClinicoChanged,
+                            label = { Text("Avalúo Clínico (Análisis)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 3
+                        )
+                        OutlinedTextField(
+                            value = state.form.planTratamiento ?: "",
+                            onValueChange = viewModel::onPlanTratamientoChanged,
+                            label = { Text("Plan de Tratamiento (Plan)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 4
+                        )
+
+                        SectionHeader(title = "Seguimiento", icon = Icons.Default.CalendarToday)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("¿Agendar recordatorio?")
+                            Spacer(Modifier.weight(1f))
+                            Switch(checked = state.form.fechaProximoControl != null, onCheckedChange = viewModel::onAgendarRecordatorioChanged)
+                        }
+                        if (state.form.fechaProximoControl != null) {
+                            DatePickerButton(
+                                date = state.form.fechaProximoControl,
+                                onDateSelected = viewModel::onFechaProximoControlChanged
+                            )
+                        }
+
+                        SectionHeader(title = "Carnet Sanitario", icon = Icons.Default.VerifiedUser)
+                        SwitchRow(label = "Test Retroviral Negativo", checked = state.testRetroviralNegativo, onCheckedChange = viewModel::onTestRetroviralChanged)
+                        SwitchRow(label = "Esterilizado", checked = state.esterilizado, onCheckedChange = viewModel::onEsterilizadoChanged)
+                    }
                 }
+                
+                Spacer(Modifier.height(32.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    if (selectedTab > 0) {
+                        OutlinedButton(onClick = { selectedTab-- }) { Text("Anterior") }
+                    } else {
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    if (selectedTab < 2) {
+                        Button(onClick = { selectedTab++ }) { Text("Siguiente") }
+                    }
+                }
+                Spacer(Modifier.height(64.dp))
             }
-            
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "Carnet Sanitario",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Test Retroviral Negativo\n(Habilita Vacunas Leucemia)",
-                    modifier = Modifier.weight(1f)
-                )
-                Switch(
-                    checked = state.testRetroviralNegativo,
-                    onCheckedChange = { viewModel.onTestRetroviralChanged(it) }
-                )
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Esterilizado")
-                Switch(
-                    checked = state.esterilizado,
-                    onCheckedChange = { viewModel.onEsterilizadoChanged(it) }
-                )
-            }
-            
-            Spacer(Modifier.height(64.dp)) // Espacio extra para que el botón no tape contenido
         }
     }
 }
 
 @Composable
-fun PaymentMethodButton(text: String, icon: ImageVector, onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Icon(icon, contentDescription = null)
+fun SectionHeader(title: String, icon: ImageVector) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))
-        Text(text)
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    }
+}
+
+@Composable
+fun PhotoSelectionRow(onCameraClick: () -> Unit, onGalleryClick: () -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = onCameraClick, modifier = Modifier.weight(1f)) {
+            Icon(Icons.Default.AddAPhoto, null)
+            Spacer(Modifier.width(8.dp))
+            Text("Cámara")
+        }
+        OutlinedButton(onClick = onGalleryClick, modifier = Modifier.weight(1f)) {
+            Icon(Icons.Default.Image, null)
+            Spacer(Modifier.width(8.dp))
+            Text("Galería")
+        }
+    }
+}
+
+@Composable
+fun SwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Text(label, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+fun DatePickerButton(date: LocalDate?, onDateSelected: (LocalDate) -> Unit) {
+    val context = LocalContext.current
+    val dateText = date?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "Seleccionar Fecha"
+    OutlinedButton(onClick = {
+        val calendar = Calendar.getInstance()
+        DatePickerDialog(context, { _, y, m, d -> onDateSelected(LocalDate.of(y, m + 1, d)) }, 
+            calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+    }, modifier = Modifier.fillMaxWidth()) {
+        Icon(Icons.Default.CalendarToday, null)
+        Spacer(Modifier.width(8.dp))
+        Text(dateText)
     }
 }
 
@@ -491,58 +479,43 @@ private fun createTempImageFile(context: Context): File {
     return File.createTempFile("clinipets_atencion_", ".jpg", imagesDir)
 }
 
-private fun shareToWhatsApp(
-    context: Context,
-    message: String,
-    imageUri: Uri?
-) {
+private fun shareToWhatsApp(context: Context, message: String, imageUri: Uri?) {
     val intent = Intent(Intent.ACTION_SEND).apply {
         if (imageUri != null) {
             type = "image/jpeg"
-
-            // 1. El estándar: Stream y Texto
             putExtra(Intent.EXTRA_STREAM, imageUri)
             putExtra(Intent.EXTRA_TEXT, message)
-
-            // 2. El truco de compatibilidad: Título y Asunto (algunas apps usan esto como caption)
-            putExtra(Intent.EXTRA_TITLE, message)
-            putExtra(Intent.EXTRA_SUBJECT, message)
-
-            // 3. El truco moderno (ClipData):
-            // Esto le dice a Android explícitamente "Este Intent lleva este archivo"
-            // Ayuda a que WhatsApp asocie el texto al archivo correctamente.   
             clipData = ClipData.newRawUri(null, imageUri)
-
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         } else {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, message)
         }
     }
-
-    // Lógica de detección de paquetes (Business vs Normal)
     val whatsappPackages = listOf("com.whatsapp", "com.whatsapp.w4b")
     var targetPackage: String? = null
-
-    for (packageName in whatsappPackages) {
-        try {
-            context.packageManager.getPackageInfo(packageName, 0)
-            targetPackage = packageName
-            break
-        } catch (e: Exception) {
-            continue
-        }
+    for (pkg in whatsappPackages) {
+        try { context.packageManager.getPackageInfo(pkg, 0); targetPackage = pkg; break } catch (e: Exception) { continue }
     }
-
     try {
-        if (targetPackage != null) {
-            intent.setPackage(targetPackage)
-            context.startActivity(intent)
-        } else {
-            val chooser = Intent.createChooser(intent, "Enviar resumen vía...")
-            context.startActivity(chooser)
-        }
-    } catch (e: Exception) {
-        Toast.makeText(context, "No se pudo abrir WhatsApp", Toast.LENGTH_SHORT).show()
+        if (targetPackage != null) { intent.setPackage(targetPackage); context.startActivity(intent) }
+        else { context.startActivity(Intent.createChooser(intent, "Enviar vía...")) }
+    } catch (e: Exception) { Toast.makeText(context, "No se pudo abrir WhatsApp", Toast.LENGTH_SHORT).show() }
+}
+
+@Composable
+fun PaymentMethodButton(
+    text: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(12.dp)
+    ) {
+        Icon(icon, contentDescription = null)
+        Spacer(Modifier.width(12.dp))
+        Text(text, style = MaterialTheme.typography.bodyLarge)
     }
 }

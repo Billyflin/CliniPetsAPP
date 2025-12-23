@@ -25,11 +25,14 @@ import java.io.File
 import java.util.UUID
 import javax.inject.Inject
 
+import cl.clinipets.openapi.models.PesoPunto
+
 data class PetDetailUiState(
     val isLoading: Boolean = true,
     val pet: MascotaResponse? = null,
     val history: List<CitaDetalladaResponse> = emptyList(),
     val clinicalRecords: List<FichaResponse> = emptyList(),
+    val weightHistory: List<PesoPunto> = emptyList(),
     val error: String? = null,
     val isDeleted: Boolean = false,
     val isDownloading: Set<UUID> = emptySet()
@@ -86,9 +89,9 @@ class PetDetailViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val mascotaResponse = mascotaApi.obtenerMascota(uuid)
-                // Use optimized endpoint for pet history
                 val historyResponse = reservaApi.historialMascota(uuid)
                 val clinicalHistoryResponse = fichaApi.obtenerHistorial(uuid)
+                val weightHistoryResponse = fichaApi.obtenerGraficoPeso(uuid)
 
                 if (mascotaResponse.isSuccessful) {
                     val pet = mascotaResponse.body()
@@ -114,13 +117,20 @@ class PetDetailViewModel @Inject constructor(
                     } else {
                         emptyList()
                     }
+                    
+                    val weightHistory = if (weightHistoryResponse.isSuccessful) {
+                        weightHistoryResponse.body()?.puntos ?: emptyList()
+                    } else {
+                        emptyList()
+                    }
 
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             pet = pet,
                             history = history,
-                            clinicalRecords = clinicalHistory
+                            clinicalRecords = clinicalHistory,
+                            weightHistory = weightHistory
                         )
                     }
                 } else {

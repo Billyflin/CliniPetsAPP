@@ -7,7 +7,7 @@ import cl.clinipets.openapi.apis.MascotaControllerApi
 import cl.clinipets.openapi.apis.ReservaControllerApi
 import cl.clinipets.openapi.apis.ServicioMedicoControllerApi
 import cl.clinipets.openapi.models.CitaResponse
-import cl.clinipets.openapi.models.DetalleReservaRequest
+import cl.clinipets.openapi.models.ItemReserva
 import cl.clinipets.openapi.models.MascotaResponse
 import cl.clinipets.openapi.models.ReservaCreateRequest
 import cl.clinipets.openapi.models.ServicioMedicoDto
@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.time.LocalDate
 import java.time.OffsetDateTime
+import java.util.UUID
 import javax.inject.Inject
 
 data class BookingUiState(
@@ -35,7 +36,7 @@ data class BookingUiState(
     val totalPrice: Int = 0,
     
     // Selection State for building order
-    val selectedPet: MascotaResponse? = null,
+    val selectedPets: Set<UUID> = emptySet(),
     val selectedService: ServicioMedicoDto? = null,
     val tipoAtencion: ReservaCreateRequest.TipoAtencion = ReservaCreateRequest.TipoAtencion.CLINICA,
 
@@ -75,7 +76,6 @@ class BookingViewModel @Inject constructor(
                         cart = cartState.cart,
                         totalDuration = cartState.totalDuration,
                         totalPrice = cartState.totalPrice,
-                        // Reset slot selection if cart changes, forcing user to re-select
                         selectedSlot = if (needsAvailabilityUpdate) null else it.selectedSlot,
                         availableSlots = if (needsAvailabilityUpdate) emptyList() else it.availableSlots
                     )
@@ -105,10 +105,6 @@ class BookingViewModel @Inject constructor(
                             pets = pets
                         ) 
                     }
-                    // Pre-select first pet if available
-                    if (pets.isNotEmpty()) {
-                        selectPet(pets.first())
-                    }
                 } else {
                     _uiState.update { it.copy(isLoading = false, error = "Error al cargar datos iniciales") }
                 }
@@ -118,49 +114,30 @@ class BookingViewModel @Inject constructor(
         }
     }
 
-    fun selectPet(pet: MascotaResponse) {
-        _uiState.update { it.copy(selectedPet = pet) }
-        recalculateAvailableServices(pet)
+    fun togglePetSelection(petId: UUID) {
+        _uiState.update { state ->
+            val newSelected = if (state.selectedPets.contains(petId)) {
+                state.selectedPets - petId
+            } else {
+                state.selectedPets + petId
+            }
+            state.copy(selectedPets = newSelected)
+        }
     }
 
-    private fun recalculateAvailableServices(pet: MascotaResponse) {
-        val filteredServices = _allServices.filter { service ->
-            // Filter by Species
+    fun getFilteredServicesForPet(pet: MascotaResponse): List<ServicioMedicoDto> {
+        return _allServices.filter { service ->
             val isSpeciesAllowed = service.especiesPermitidas.isNullOrEmpty() || 
                                    service.especiesPermitidas.any { it.name == pet.especie.name }
-            
-            // Filter by Stock (Hidden Rule: Exclude if stock <= 0)
-            // If stock is null, it's unlimited/service (always true)
             val hasStock = service.stock == null || service.stock > 0
-
             isSpeciesAllowed && hasStock
         }
-        _uiState.update { it.copy(services = filteredServices, selectedService = null) }
     }
 
-    fun selectService(service: ServicioMedicoDto) {
-        _uiState.update { it.copy(selectedService = service) }
-    }
-
-    fun addToCart() {
-        val currentState = _uiState.value
-        val pet = currentState.selectedPet ?: return
-        val service = currentState.selectedService ?: return
-
-        // Delegate to CartManager
+    fun addServiceToPet(pet: MascotaResponse, service: ServicioMedicoDto) {
         cartManager.addToCart(pet, service)
-
-        // The stock check is now inside CartManager. If it fails, it won't add the item.
-        // We might want to expose an error state from CartManager in the future.
-        // For now, we can check if the cart actually changed.
-        val serviceInCart = cartManager.cartState.value.cart.any { it.servicio.id == service.id && it.mascota.id == pet.id }
-        if (!serviceInCart && service.stock != null && service.stock <= 0) {
-             _uiState.update { it.copy(error = "Lo sentimos, este servicio se ha agotado.") }
-             recalculateAvailableServices(pet) // Refresh list
-             return
-        }
-
-        // Check for required services (Client-side validation warning)
+        
+        // Validation for required services
         if (service.serviciosRequeridosIds.isNotEmpty()) {
             val currentCart = cartManager.cartState.value.cart
             val missingRequirements = service.serviciosRequeridosIds.filter { reqId ->
@@ -170,21 +147,19 @@ class BookingViewModel @Inject constructor(
             if (missingRequirements.isNotEmpty()) {
                 val missingNames = _allServices.filter { it.id in missingRequirements }.joinToString(", ") { it.nombre }
                 if (missingNames.isNotEmpty()) {
-                    _uiState.update { it.copy(error = "Este servicio requiere: $missingNames. Asegúrate de agregarlo(s) al carrito.") }
+                    _uiState.update { it.copy(error = "Mascota ${pet.nombre} requiere adicionalmente: $missingNames") }
                 }
             }
         }
     }
 
-    fun removeFromCart(item: CartItem) {
+    fun removeServiceFromPet(item: CartItem) {
         cartManager.removeFromCart(item)
     }
 
     fun selectDate(date: LocalDate) {
         _uiState.update { it.copy(selectedDate = date, selectedSlot = null, availableSlots = emptyList()) }
-        
         if (_uiState.value.cart.isEmpty()) return
-
         fetchAvailability(date)
     }
 
@@ -196,10 +171,8 @@ class BookingViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val response = disponibilidadApi.obtenerDisponibilidad(date, duration)
-
                 if (response.isSuccessful) {
                     val availability = response.body()
-                    // Store raw slots (OffsetDateTime) directly
                     val slots = availability?.slots ?: emptyList()
                     _uiState.update { it.copy(isLoading = false, availableSlots = slots) }
                 } else {
@@ -224,15 +197,16 @@ class BookingViewModel @Inject constructor(
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true) }
                 try {
-                    val detalles = cart.map { item ->
-                        DetalleReservaRequest(
-                            servicioId = item.servicio.id,
-                            mascotaId = item.mascota.id
+                    // Group cart items by pet for the new ItemReserva structure
+                    val items = cart.groupBy { it.mascota.id }.map { (mascotaId, cartItems) ->
+                        ItemReserva(
+                            mascotaId = mascotaId,
+                            serviciosIds = cartItems.map { it.servicio.id }
                         )
                     }
 
                     val request = ReservaCreateRequest(
-                        detalles = detalles,
+                        items = items,
                         fechaHoraInicio = selectedSlot,
                         origen = ReservaCreateRequest.Origen.APP,
                         tipoAtencion = currentState.tipoAtencion,
@@ -242,55 +216,21 @@ class BookingViewModel @Inject constructor(
                     val response = reservaApi.crearReserva(request)
                     if (response.isSuccessful) {
                         _uiState.update { it.copy(isLoading = false, bookingResult = response.body()) }
-                        // El carrito y los slots se limpiarán explícitamente desde la UI
                     } else {
-                        val errorMessage = if (response.code() == 400) {
-                            response.errorBody()?.string() ?: "Error de validación (400)"
-                        } else {
-                            "Error reserva: ${response.code()}"
-                        }
+                        val errorMessage = response.errorBody()?.string() ?: "Error reserva: ${response.code()}"
                         _uiState.update { it.copy(isLoading = false, error = errorMessage) }
                     }
-                } catch (e: HttpException) {
-                    val errorMessage = if (e.code() == 400) {
-                        e.response()?.errorBody()?.string() ?: "Error de validación (400)"
-                    } else {
-                        e.message() ?: "Error desconocido"
-                    }
-                    _uiState.update { it.copy(isLoading = false, error = errorMessage) }
                 } catch (e: Exception) {
-                    val errorMessage = if (e is HttpException && e.code() == 400) {
-                        e.response()?.errorBody()?.string() ?: "Error de validación"
-                    } else {
-                        e.message ?: "Error desconocido"
-                    }
-                    _uiState.update { it.copy(isLoading = false, error = errorMessage) }
+                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error desconocido") }
                 }
             }
         }
     }
 
-    fun clearError() {
-        _uiState.update { it.copy(error = null) }
-    }
-
-    fun resetBookingState() {
-        _uiState.update { it.copy(bookingResult = null) }
-    }
-
-    /**
-     * Limpia por completo el estado del carrito y de la reserva.
-     * Llamar cuando la UI ya consumió el evento de éxito (ej. después
-     * de navegar a la pantalla de pago o mostrar confirmación).
-     */
+    fun clearError() = _uiState.update { it.copy(error = null) }
+    fun resetBookingState() = _uiState.update { it.copy(bookingResult = null) }
     fun clearCart() {
         cartManager.clearCart()
-        _uiState.update {
-            it.copy(
-                selectedSlot = null,
-                availableSlots = emptyList(),
-                bookingResult = null
-            )
-        }
+        _uiState.update { it.copy(selectedSlot = null, availableSlots = emptyList(), bookingResult = null) }
     }
 }

@@ -11,10 +11,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -22,12 +25,16 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,11 +69,13 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+import androidx.compose.material.icons.filled.PlayArrow
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StaffAgendaScreen(
     onProfileClick: () -> Unit = {},
-    onCitaClick: (String) -> Unit = {},
+    onCitaClick: (String, String) -> Unit = { _, _ -> },
     viewModel: StaffAgendaViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -154,14 +163,86 @@ fun StaffAgendaScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        // SALA DE ESPERA
+                        val salaDeEspera = state.agendaItems.filterIsInstance<ItemCita>().filter {
+                            it.data.estado == CitaDetalladaResponse.Estado.EN_SALA || 
+                            it.data.estado == CitaDetalladaResponse.Estado.LISTO_PARA_BOX
+                        }
+                        
+                        if (salaDeEspera.isNotEmpty()) {
+                            item {
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                Icons.Default.MedicalServices, 
+                                                null, 
+                                                tint = MaterialTheme.colorScheme.tertiary,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                "SALA DE ESPERA (${salaDeEspera.size})",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.tertiary
+                                            )
+                                        }
+                                        Text(
+                                            "Pacientes listos para atención o en triaje",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                                        )
+                                    }
+                                }
+                            }
+                            items(salaDeEspera) { item ->
+                                AppointmentItem(
+                                    cita = item.data,
+                                    onClick = { 
+                                        val mId = item.data.detalles.firstOrNull()?.mascotaId?.toString() ?: ""
+                                        onCitaClick(item.data.id.toString(), mId) 
+                                    },
+                                    onTriageClick = { viewModel.cambiarEstadoCita(item.data.id, CitaDetalladaResponse.Estado.EN_SALA) }
+                                )
+                            }
+                            item { Spacer(modifier = Modifier.height(16.dp)) }
+                        }
+
                         state.resumen?.let { resumen ->
                             item {
                                 DailySummaryCard(resumen = resumen)
                             }
                         }
+                        
+                        item {
+                            Text(
+                                "Agenda del Día",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+
                         items(state.agendaItems) { item ->
                             when (item) {
-                                is ItemCita -> AppointmentItem(item.data, onClick = { onCitaClick(item.data.id.toString()) })
+                                is ItemCita -> {
+                                    if (item.data.estado != CitaDetalladaResponse.Estado.EN_SALA && 
+                                        item.data.estado != CitaDetalladaResponse.Estado.LISTO_PARA_BOX) {
+                                        AppointmentItem(
+                                            cita = item.data, 
+                                            onClick = { 
+                                                val mId = item.data.detalles.firstOrNull()?.mascotaId?.toString() ?: ""
+                                                onCitaClick(item.data.id.toString(), mId) 
+                                            },
+                                            onTriageClick = { viewModel.cambiarEstadoCita(item.data.id, CitaDetalladaResponse.Estado.EN_SALA) }
+                                        )
+                                    }
+                                }
                                 is ItemBloqueo -> BlockItem(
                                     bloqueo = item.data,
                                     onDelete = { item.data.id?.let { viewModel.eliminarBloqueo(it) } }
@@ -186,7 +267,11 @@ fun StaffAgendaScreen(
 }
 
 @Composable
-fun AppointmentItem(cita: CitaDetalladaResponse, onClick: () -> Unit) {
+fun AppointmentItem(
+    cita: CitaDetalladaResponse, 
+    onClick: () -> Unit,
+    onTriageClick: () -> Unit = {}
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -224,6 +309,19 @@ fun AppointmentItem(cita: CitaDetalladaResponse, onClick: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = colorScheme.onSurfaceVariant
             )
+
+            if (cita.estado == CitaDetalladaResponse.Estado.CONFIRMADA) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = onTriageClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary)
+                ) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Iniciar Triaje")
+                }
+            }
         }
     }
 }
@@ -231,11 +329,16 @@ fun AppointmentItem(cita: CitaDetalladaResponse, onClick: () -> Unit) {
 @Composable
 fun StatusChip(estado: CitaDetalladaResponse.Estado) {
     val (color, text) = when (estado) {
-        CitaDetalladaResponse.Estado.EN_SALA, CitaDetalladaResponse.Estado.EN_ATENCION -> Color(0xFF4CAF50) to "En Atención"
-        CitaDetalladaResponse.Estado.CONFIRMADA -> Color(0xFF2196F3) to "Confirmada"
+        CitaDetalladaResponse.Estado.EN_SALA -> Color(0xFFFF9800) to "En Sala"
+        CitaDetalladaResponse.Estado.LISTO_PARA_BOX -> Color(0xFF4CAF50) to "Listo para Box"
+        CitaDetalladaResponse.Estado.EN_ATENCION -> Color(0xFF2196F3) to "En Atención"
+        CitaDetalladaResponse.Estado.CONFIRMADA -> Color(0xFF607D8B) to "Confirmada"
         CitaDetalladaResponse.Estado.FINALIZADA -> Color.Gray to "Finalizada"
         CitaDetalladaResponse.Estado.CANCELADA -> Color.Gray to "Cancelada"
-        else -> Color.Gray to estado.name
+        CitaDetalladaResponse.Estado.LLEGADA -> Color(0xFF9C27B0) to "Llegada"
+        CitaDetalladaResponse.Estado.EN_SEDACION -> Color(0xFFE91E63) to "Sedación"
+        CitaDetalladaResponse.Estado.PABELLON_ESPERA -> Color(0xFF795548) to "Pabellón"
+        CitaDetalladaResponse.Estado.ATENDIENDO -> Color(0xFF3F51B5) to "Atendiendo"
     }
 
     Surface(

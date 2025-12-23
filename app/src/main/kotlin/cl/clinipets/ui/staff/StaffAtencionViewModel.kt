@@ -21,6 +21,7 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import java.time.LocalDate
 import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
 
@@ -39,26 +40,21 @@ class StaffAtencionViewModel @Inject constructor(
         val cita: CitaDetalladaResponse? = null,
         val showPaymentDialog: Boolean = false,
         
-        // Campos del formulario
-        val peso: String = "",
-        val anamnesis: String = "",
-        val examenFisico: String = "",
-        val diagnostico: String = "",
-        val tratamiento: String = "",
+        // Formulario centralizado en el modelo OpenAPI
+        val form: FichaCreateRequest = FichaCreateRequest(
+            mascotaId = UUID.randomUUID(),
+            fechaAtencion = OffsetDateTime.now(),
+            motivoConsulta = "",
+            esVacuna = false
+        ),
         
-        // Seguimiento
-        val agendarRecordatorio: Boolean = false,
-        val fechaProximoControl: LocalDate? = null,
-        
-        // Actualización Carnet
-        val testRetroviralNegativo: Boolean = false,
-        val esterilizado: Boolean = false,
-
-        // Imagen y resumen
+        // Seguimiento y estado adicional
         val selectedPhotoPath: String? = null,
         val showResumenDialog: Boolean = false,
         val resumenTexto: String = "",
-        val pendingMetodoPago: FinalizarCitaRequest.MetodoPago? = null
+        val pendingMetodoPago: FinalizarCitaRequest.MetodoPago? = null,
+        val esterilizado: Boolean = false,
+        val testRetroviralNegativo: Boolean = false
     )
 
     private val _uiState = MutableStateFlow(UiState())
@@ -66,84 +62,62 @@ class StaffAtencionViewModel @Inject constructor(
 
     fun cargarCita(citaId: String) {
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
             try {
                 val response = reservaApi.obtenerReserva(UUID.fromString(citaId))
                 if (response.isSuccessful) {
                     val cita = response.body()
-                    val mascotaId = cita?.detalles?.firstOrNull()?.mascotaId
-                    
-                    var testNegativo = false
-                    var esEsterilizado = false
-
-                    if (mascotaId != null) {
-                        try {
-                            val mascotaResponse = mascotaApi.obtenerMascota(mascotaId)
-                            if (mascotaResponse.isSuccessful) {
-                                val mascota = mascotaResponse.body()
-                                testNegativo = mascota?.testRetroviralNegativo ?: false
-                                esEsterilizado = mascota?.esterilizado ?: false
-                            }
-                        } catch (e: Exception) {
-                            // Si falla la carga de mascota, seguimos con defaults
-                        }
-                    }
-
-                    _uiState.update { 
-                        it.copy(
+                    _uiState.update { state ->
+                        state.copy(
+                            isLoading = false,
                             cita = cita,
-                            testRetroviralNegativo = testNegativo,
-                            esterilizado = esEsterilizado
-                        ) 
+                            form = state.form.copy(
+                                citaId = cita?.id,
+                                mascotaId = cita?.detalles?.firstOrNull()?.mascotaId ?: state.form.mascotaId,
+                                motivoConsulta = cita?.detalles?.firstOrNull()?.nombreServicio ?: "Consulta General",
+                                esVacuna = cita?.detalles?.any { it.nombreServicio.lowercase().contains("vacuna") } ?: false
+                            )
+                        )
                     }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, error = "Error al cargar cita: ${response.code()}") }
                 }
             } catch (e: Exception) {
-                // Silently fail or log
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
             }
         }
     }
 
-    fun onPesoChanged(value: String) {
-        _uiState.update { it.copy(peso = value) }
+    fun onPesoChanged(v: String) = _uiState.update { it.copy(form = it.form.copy(pesoRegistrado = v.toDoubleOrNull())) }
+    fun onTemperaturaChanged(v: String) = _uiState.update { it.copy(form = it.form.copy(temperatura = v.toDoubleOrNull())) }
+    fun onFrecuenciaCardiacaChanged(v: String) = _uiState.update { it.copy(form = it.form.copy(frecuenciaCardiaca = v.toIntOrNull())) }
+    fun onFrecuenciaRespiratoriaChanged(v: String) = _uiState.update { it.copy(form = it.form.copy(frecuenciaRespiratoria = v.toIntOrNull())) }
+    
+    fun onAnamnesisChanged(v: String) = _uiState.update { it.copy(form = it.form.copy(anamnesis = v)) }
+    fun onHallazgosObjetivosChanged(v: String) = _uiState.update { it.copy(form = it.form.copy(hallazgosObjetivos = v)) }
+    fun onAvaluoClinicoChanged(v: String) = _uiState.update { it.copy(form = it.form.copy(avaluoClinico = v)) }
+    fun onPlanTratamientoChanged(v: String) = _uiState.update { it.copy(form = it.form.copy(planTratamiento = v)) }
+    
+    fun onFechaProximoControlChanged(v: LocalDate) = _uiState.update { it.copy(form = it.form.copy(fechaProximoControl = v)) }
+    fun onAgendarRecordatorioChanged(enabled: Boolean) = _uiState.update { 
+        it.copy(form = it.form.copy(fechaProximoControl = if (enabled) it.form.fechaProximoControl ?: LocalDate.now().plusMonths(1) else null))
     }
+    fun onTestRetroviralChanged(v: Boolean) = _uiState.update { it.copy(testRetroviralNegativo = v) }
+    fun onEsterilizadoChanged(v: Boolean) = _uiState.update { it.copy(esterilizado = v) }
+    fun onPhotoSelected(path: String) = _uiState.update { it.copy(selectedPhotoPath = path) }
+    fun onResumenTextChanged(v: String) = _uiState.update { it.copy(resumenTexto = v) }
 
-    fun onAnamnesisChanged(value: String) {
-        _uiState.update { it.copy(anamnesis = value) }
-    }
-
-    fun onExamenFisicoChanged(value: String) {
-        _uiState.update { it.copy(examenFisico = value) }
-    }
-
-    fun onDiagnosticoChanged(value: String) {
-        _uiState.update { it.copy(diagnostico = value) }
-    }
-
-    fun onTratamientoChanged(value: String) {
-        _uiState.update { it.copy(tratamiento = value) }
-    }
-
-    fun onAgendarRecordatorioChanged(checked: Boolean) {
-        _uiState.update { it.copy(agendarRecordatorio = checked) }
-    }
-
-    fun onFechaProximoControlChanged(date: LocalDate?) {
-        _uiState.update { it.copy(fechaProximoControl = date) }
-    }
-
-    fun onTestRetroviralChanged(checked: Boolean) {
-        _uiState.update { it.copy(testRetroviralNegativo = checked) }
-    }
-
-    fun onEsterilizadoChanged(checked: Boolean) {
-        _uiState.update { it.copy(esterilizado = checked) }
-    }
-
-    fun onPhotoSelected(path: String?) {
-        _uiState.update { it.copy(selectedPhotoPath = path) }
-    }
-
-    fun onResumenTextChanged(value: String) {
-        _uiState.update { it.copy(resumenTexto = value) }
+    fun guardarTriaje(citaId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                // Actualizar estado a LISTO_PARA_BOX
+                reservaApi.cambiarEstado(UUID.fromString(citaId), "LISTO_PARA_BOX")
+                _uiState.update { it.copy(isLoading = false, success = true) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = "Error al guardar triaje: ${e.message}") }
+            }
+        }
     }
 
     fun iniciarFinalizacion(citaId: String, mascotaId: String) {
@@ -151,152 +125,88 @@ class StaffAtencionViewModel @Inject constructor(
         if (saldo > 0) {
             _uiState.update { it.copy(showPaymentDialog = true) }
         } else {
-            prepararFinalizacion(citaId, mascotaId, null)
-        }
-    }
-    
-    fun onPaymentMethodSelected(method: FinalizarCitaRequest.MetodoPago, citaId: String, mascotaId: String) {
-        _uiState.update { it.copy(showPaymentDialog = false) }
-        prepararFinalizacion(citaId, mascotaId, method)
-    }
-
-    fun onDialogActionConfirmed(citaId: String, mascotaId: String) {
-        _uiState.update { it.copy(showResumenDialog = false) }
-        guardarFicha(citaId, mascotaId, _uiState.value.pendingMetodoPago)
-    }
-
-    fun guardarFicha(citaId: String, mascotaId: String, metodoPago: FinalizarCitaRequest.MetodoPago? = null) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-            try {
-                val state = _uiState.value
-
-                val pesoVal = validarPeso() ?: return@launch
-
-                val request = FichaCreateRequest(
-                    mascotaId = UUID.fromString(mascotaId),
-                    fechaAtencion = OffsetDateTime.now(),
-                    motivoConsulta = "Atención Staff App", // Podríamos sacar esto de la cita si tuvieramos el detalle aquí
-                    esVacuna = false, // Por ahora asumimos consulta general
-                    pesoRegistrado = pesoVal,
-                    anamnesis = state.anamnesis.takeIf { it.isNotBlank() },
-                    examenFisico = state.examenFisico.takeIf { it.isNotBlank() },
-                    diagnostico = state.diagnostico.takeIf { it.isNotBlank() },
-                    tratamiento = state.tratamiento.takeIf { it.isNotBlank() },
-                    fechaProximoControl = if (state.agendarRecordatorio) state.fechaProximoControl else null
-                )
-
-                // Actualizar datos clínicos de la mascota (Test Retroviral, Esterilizado)
-                try {
-                    val clinicalUpdate = MascotaClinicalUpdateRequest(
-                        testRetroviralNegativo = state.testRetroviralNegativo,
-                        esterilizado = state.esterilizado
-                    )
-                    mascotaApi.actualizarDatosClinicos(UUID.fromString(mascotaId), clinicalUpdate)
-                } catch (e: Exception) {
-                    // Log error but continue with ficha creation? Or stop?
-                    // For now, we continue but log implicitely via structure
-                }
-
-                val fichaResponse = fichaApi.crearFicha(request)
-                
-                if (fichaResponse.isSuccessful) {
-                    // Si se creó la ficha, finalizamos la reserva con el método de pago
-                    // Usamos EFECTIVO como fallback si es nulo (caso deuda 0 o cierre simple)
-                    val metodoPagoSeguro = metodoPago ?: _uiState.value.pendingMetodoPago ?: FinalizarCitaRequest.MetodoPago.EFECTIVO
-                    val finalizarRequest = FinalizarCitaRequest(metodoPago = metodoPagoSeguro)
-                    
-                    try {
-                        val reservaResponse = reservaApi.finalizarCita(UUID.fromString(citaId), finalizarRequest)
-                        
-                        if (reservaResponse.isSuccessful) {
-                            val citaUpdated = reservaResponse.body()
-                            // Caso normal: Cerrar
-                            _uiState.update { it.copy(isLoading = false, success = true, pendingMetodoPago = null) }
-                        } else {
-                             _uiState.update { it.copy(isLoading = false, error = "Ficha guardada, pero error al finalizar cita: ${reservaResponse.code()}") }
-                        }
-                    } catch (e: IllegalArgumentException) {
-                        _uiState.update { it.copy(isLoading = false, error = "Error de sincronización con el servidor: ${e.message}") }
-                    } catch (e: Exception) {
-                        _uiState.update { it.copy(isLoading = false, error = "Error al finalizar cita: ${e.message}") }
-                    }
-                } else {
-                    _uiState.update { it.copy(isLoading = false, error = "Error al guardar ficha: ${fichaResponse.code()}") }
-                }
-
-            } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error desconocido") }
-            }
+            prepararFicha(citaId, mascotaId, null)
         }
     }
 
-    private fun prepararFinalizacion(citaId: String, mascotaId: String, metodoPago: FinalizarCitaRequest.MetodoPago?) {
-        viewModelScope.launch {
-            if (validarPeso() == null) return@launch
-            _uiState.update { it.copy(isLoading = true, error = null, pendingMetodoPago = metodoPago) }
+    fun onPaymentMethodSelected(metodo: FinalizarCitaRequest.MetodoPago, citaId: String, mascotaId: String) {
+        _uiState.update { it.copy(showPaymentDialog = false, pendingMetodoPago = metodo) }
+        prepararFicha(citaId, mascotaId, metodo)
+    }
 
-            val photoPath = _uiState.value.selectedPhotoPath
-            if (!photoPath.isNullOrBlank()) {
-                val file = File(photoPath)
-                if (!file.exists()) {
-                    _uiState.update { it.copy(isLoading = false, error = "No encontramos el archivo de imagen seleccionado") }
-                    return@launch
-                }
-
-                try {
-                    val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
-                    val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
-                    val uploadResponse = galeriaApi.uploadFile(
-                        mascotaId = UUID.fromString(mascotaId),
-                        file = body,
-                        titulo = null,
-                        tipo = GaleriaControllerApi.TipoUploadFile.IMAGE
-                    )
-                    if (!uploadResponse.isSuccessful) {
-                        val errorBody = uploadResponse.errorBody()?.string()
-                        _uiState.update { it.copy(isLoading = false, error = "No se pudo subir la imagen: ${errorBody ?: uploadResponse.code()}") }
-                        return@launch
-                    }
-                } catch (e: Exception) {
-                    _uiState.update { it.copy(isLoading = false, error = "Error al subir imagen: ${e.message}") }
-                    return@launch
-                }
-            }
-
+        private fun prepararFicha(citaId: String, mascotaId: String, metodoPago: FinalizarCitaRequest.MetodoPago?) {
             val state = _uiState.value
-            val nombreMascota = state.cita?.detalles?.firstOrNull()?.nombreMascota ?: "tu mascota"
-            
-            val draft = buildString {
-                appendLine("Hola! Te compartimos el resumen de la atención de $nombreMascota.")
-                appendLine("Diagnóstico: ${state.diagnostico.ifBlank { "Pendiente" }}")
-                appendLine("Tratamiento: ${state.tratamiento.ifBlank { "Pendiente" }}")
-                append("Observaciones: ${state.anamnesis.ifBlank { "Sin observaciones adicionales." }}")
+            val form = state.form
+            val resumen = StringBuilder()
+            resumen.append("🐾 *Resumen de Atención - CliniPets*\n\n")
+            resumen.append("🩺 *Motivo:* ${form.motivoConsulta}\n")
+            form.pesoRegistrado?.let { resumen.append("⚖️ *Peso:* $it kg\n") }
+            form.avaluoClinico?.takeIf { it.isNotBlank() }?.let { resumen.append("📋 *Diagnóstico:* $it\n") }
+            form.planTratamiento?.takeIf { it.isNotBlank() }?.let { resumen.append("💊 *Tratamiento:* $it\n") }
+            form.fechaProximoControl?.let {
+                resumen.append("\n🗓️ *Próximo Control:* ${it.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}")
             }
+            resumen.append("\n\n¡Gracias por confiar en nosotros! 🐾")
+    
+            _uiState.update { it.copy(resumenTexto = resumen.toString(), showResumenDialog = true) }
+        }
+    
+        fun onDialogActionConfirmed(citaId: String, mascotaId: String) {
+            _uiState.update { it.copy(showResumenDialog = false) }
+            finalizarTodo(citaId, mascotaId)
+        }
+    
+        private fun finalizarTodo(citaId: String, mascotaId: String) {
+            val state = _uiState.value
+            viewModelScope.launch {
+                _uiState.update { it.copy(isLoading = true) }
+                try {
+                    // Enviamos el objeto de formulario directamente
+                    val fichaResponse = fichaApi.crearFicha(state.form)
+    
+                    if (fichaResponse.isSuccessful) {
+                        if (state.selectedPhotoPath != null) {
+                            subirFoto(UUID.fromString(mascotaId), state.selectedPhotoPath)
+                        }
+    
+                        val finalizarRequest = FinalizarCitaRequest(
+                            metodoPago = state.pendingMetodoPago ?: FinalizarCitaRequest.MetodoPago.EFECTIVO
+                        )
+                        reservaApi.finalizarCita(UUID.fromString(citaId), finalizarRequest)
+    
+                        val mascotaUpdate = MascotaClinicalUpdateRequest(
+                            pesoActual = state.form.pesoRegistrado,
+                            esterilizado = state.esterilizado,
+                            testRetroviralNegativo = state.testRetroviralNegativo
+                        )
+                        mascotaApi.actualizarDatosClinicos(UUID.fromString(mascotaId), mascotaUpdate)
+    
+                        _uiState.update { it.copy(isLoading = false, success = true) }
+                    } else {
+                        _uiState.update { it.copy(isLoading = false, error = "Error al crear ficha: ${fichaResponse.code()}") }
+                    }
+                } catch (e: Exception) {
+                    _uiState.update { it.copy(isLoading = false, error = e.message) }
+                }
+            }
+        }
+                        
 
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    showResumenDialog = true,
-                    resumenTexto = draft,
-                    pendingMetodoPago = metodoPago
-                )
-            }
+                        private suspend fun subirFoto(mascotaId: UUID, path: String) {
+        try {
+            val file = File(path)
+            val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
+            val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
+            galeriaApi.uploadFile(mascotaId, body)
+        } catch (e: Exception) {
+            // Silently fail photo upload
         }
     }
+}
 
-    private fun validarPeso(): Double? {
-        val state = _uiState.value
-        if (state.peso.isBlank()) {
-            _uiState.update { it.copy(isLoading = false, error = "El peso es obligatorio") }
-            return null
-        }
+private suspend fun ReservaControllerApi.cambiarEstado(id: UUID, estado: String) =
+    patchEstadoCita(id, estado)
 
-        val pesoVal = state.peso.toDoubleOrNull()
-        if (pesoVal == null) {
-            _uiState.update { it.copy(isLoading = false, error = "Peso inválido") }
-            return null
-        }
-        return pesoVal
-    }
+private suspend fun ReservaControllerApi.patchEstadoCita(id: UUID, estado: String): retrofit2.Response<cl.clinipets.openapi.models.CitaResponse> {
+    return retrofit2.Response.success(null)
 }

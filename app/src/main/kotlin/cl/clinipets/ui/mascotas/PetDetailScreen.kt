@@ -84,6 +84,17 @@ import androidx.compose.ui.platform.LocalContext
 import java.util.Locale
 import java.util.UUID
 
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Thermostat
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Air
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import cl.clinipets.openapi.models.PesoPunto
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PetDetailScreen(
@@ -178,8 +189,9 @@ fun PetDetailScreen(
 
             else -> {
                 uiState.pet?.let { pet ->
-                    val tabTitles = listOf("Citas", "Fichas Médicas", "Galería")
+                    val tabTitles = listOf("Citas", "Historial Médico", "Galería")
                     var selectedTab by remember { mutableStateOf(0) }
+                    val lastRecord = uiState.clinicalRecords.firstOrNull()
 
                     Column(
                         modifier = Modifier
@@ -190,6 +202,17 @@ fun PetDetailScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         PetHeader(pet)
+                        
+                        VitalSignsDashboard(
+                            peso = pet.pesoActual,
+                            temperatura = lastRecord?.temperatura,
+                            frecuencia = lastRecord?.frecuenciaCardiaca
+                        )
+
+                        if (uiState.weightHistory.size > 1) {
+                            WeightHistoryCard(uiState.weightHistory)
+                        }
+
                         TabRow(selectedTabIndex = selectedTab) {
                             tabTitles.forEachIndexed { index, title ->
                                 Tab(
@@ -209,22 +232,175 @@ fun PetDetailScreen(
                                 speciesColor = speciesColor(pet.especie)
                             )
 
-                            else -> ClinicalHistory(
+                            1 -> ClinicalHistory(
                                 records = uiState.clinicalRecords,
                                 onDownload = { viewModel.descargarFicha(context, it) },
                                 downloadingIds = uiState.isDownloading
                             )
-                        }
-
-                        // Tab Content for Gallery (Index 2)
-                        if (selectedTab == 2) {
-                            Box(modifier = Modifier.height(500.dp).fillMaxWidth()) {
+                            
+                            2 -> Box(modifier = Modifier.height(500.dp).fillMaxWidth()) {
                                 PetGalleryContent(petId = pet.id.toString())
                             }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun WeightHistoryCard(points: List<PesoPunto>) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Evolución de Peso",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "${points.last().peso} kg (último)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            WeightChart(
+                points = points,
+                modifier = Modifier.fillMaxWidth().height(120.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun WeightChart(points: List<PesoPunto>, modifier: Modifier = Modifier) {
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    
+    // Sort points by date ascending for the chart
+    val sortedPoints = points.sortedBy { it.fecha }
+    
+    Canvas(modifier = modifier) {
+        val width = size.width
+        val height = size.height
+        val padding = 20f
+        
+        val maxWeight = sortedPoints.maxOf { it.peso }.let { if (it == 0.0) 10.0 else it * 1.2 }
+        val minWeight = sortedPoints.minOf { it.peso }.let { if (it == 0.0) 0.0 else it * 0.8 }
+        val weightRange = (maxWeight - minWeight).coerceAtLeast(1.0)
+        
+        val xStep = (width - 2 * padding) / (sortedPoints.size - 1).coerceAtLeast(1)
+        
+        val path = Path()
+        sortedPoints.forEachIndexed { index, punto ->
+            val x = padding + index * xStep
+            val y = height - padding - ((punto.peso - minWeight) / weightRange * (height - 2 * padding)).toFloat()
+            
+            if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            
+            drawCircle(
+                color = primaryColor,
+                radius = 6f,
+                center = androidx.compose.ui.geometry.Offset(x, y)
+            )
+        }
+        
+        drawPath(
+            path = path,
+            color = primaryColor,
+            style = Stroke(width = 4f, cap = StrokeCap.Round)
+        )
+    }
+}
+
+@Composable
+fun VitalSignsDashboard(
+    peso: Double,
+    temperatura: Double?,
+    frecuencia: Int?
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        VitalSignCard(
+            modifier = Modifier.weight(1f),
+            label = "Peso",
+            value = "${String.format(Locale.getDefault(), "%.1f", peso)} kg",
+            icon = Icons.Default.MonitorWeight,
+            color = MaterialTheme.colorScheme.primary
+        )
+        
+        temperatura?.let { temp ->
+            val isHigh = temp > 39.5
+            VitalSignCard(
+                modifier = Modifier.weight(1f),
+                label = "Temp",
+                value = "${String.format(Locale.getDefault(), "%.1f", temp)}°C",
+                icon = if (isHigh) Icons.Default.Warning else Icons.Default.Thermostat,
+                color = if (isHigh) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary,
+                isAlert = isHigh
+            )
+        }
+        
+        frecuencia?.let { freq ->
+            VitalSignCard(
+                modifier = Modifier.weight(1f),
+                label = "FC",
+                value = "$freq lpm",
+                icon = Icons.Default.Favorite,
+                color = MaterialTheme.colorScheme.tertiary
+            )
+        }
+    }
+}
+
+@Composable
+fun VitalSignCard(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String,
+    icon: ImageVector,
+    color: Color,
+    isAlert: Boolean = false
+) {
+    ElevatedCard(
+        modifier = modifier,
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = if (isAlert) color.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(24.dp)
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (isAlert) color else MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -557,20 +733,20 @@ private fun ClinicalRecordCard(
                     )
                 }
 
-                record.diagnostico?.takeIf { it.isNotBlank() }?.let { diagnostico ->
+                record.avaluoClinico?.takeIf { it.isNotBlank() }?.let { avaluo ->
                     ClinicalSection(
                         icon = Icons.Default.MedicalServices,
                         label = "Diagnóstico",
-                        content = diagnostico,
+                        content = avaluo,
                         highlight = true
                     )
                 }
 
-                record.tratamiento?.takeIf { it.isNotBlank() }?.let { tratamiento ->
+                record.planTratamiento?.takeIf { it.isNotBlank() }?.let { plan ->
                     ClinicalSection(
                         icon = Icons.Default.Medication,
                         label = "Tratamiento",
-                        content = tratamiento,
+                        content = plan,
                         highlight = true
                     )
                 }
@@ -592,13 +768,32 @@ private fun ClinicalRecordCard(
                                 content = anamnesis
                             )
                         }
-                        record.examenFisico?.takeIf { it.isNotBlank() }?.let { examen ->
+                        record.hallazgosObjetivos?.takeIf { it.isNotBlank() }?.let { hallazgos ->
                             ClinicalSection(
                                 icon = Icons.Default.Info,
                                 label = "Examen Físico",
-                                content = examen
+                                content = hallazgos
                             )
                         }
+
+                        // Clinical Constants
+                        if (record.temperatura != null || record.frecuenciaCardiaca != null || record.frecuenciaRespiratoria != null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                record.temperatura?.let {
+                                    ConstantBadge(label = "T°", value = "$it°C", icon = Icons.Default.Thermostat)
+                                }
+                                record.frecuenciaCardiaca?.let {
+                                    ConstantBadge(label = "FC", value = "$it lpm", icon = Icons.Default.Favorite)
+                                }
+                                record.frecuenciaRespiratoria?.let {
+                                    ConstantBadge(label = "FR", value = "$it rpm", icon = Icons.Default.Air)
+                                }
+                            }
+                        }
+
                         record.observaciones?.takeIf { it.isNotBlank() }?.let { obs ->
                             ClinicalSection(
                                 icon = Icons.Default.Info,
@@ -645,6 +840,32 @@ private fun ClinicalRecordCard(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ConstantBadge(
+    label: String,
+    value: String,
+    icon: ImageVector
+) {
+    Surface(
+        shape = MaterialTheme.shapes.extraSmall,
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f),
+        modifier = Modifier.padding(vertical = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(icon, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.secondary)
+            Text(
+                text = "$label: $value",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
         }
     }
 }

@@ -118,147 +118,60 @@ fun BookingScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                // --- SECTION 1: BUILD ORDER ---
-                SectionTitle("1. Arma tu visita")
+                // --- SECTION 1: SELECCIONAR MASCOTAS ---
+                SectionTitle("1. ¿A quién atenderemos?")
                 
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        // Pet Selector
-                        var expandedPet by remember { mutableStateOf(false) }
-                        ExposedDropdownMenuBox(
-                            expanded = expandedPet,
-                            onExpandedChange = { expandedPet = !expandedPet }
-                        ) {
-                            OutlinedTextField(
-                                value = uiState.selectedPet?.nombre ?: "Selecciona una mascota",
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Mascota") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPet) },
-                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                                modifier = Modifier.fillMaxWidth().menuAnchor()
-                            )
-                            ExposedDropdownMenu(expanded = expandedPet, onDismissRequest = { expandedPet = false }) {
-                                uiState.pets.forEach { pet ->
-                                    DropdownMenuItem(
-                                        text = { Text(pet.nombre) },
-                                        onClick = {
-                                            viewModel.selectPet(pet)
-                                            expandedPet = false
-                                        }
-                                    )
-                                }
-                                DropdownMenuItem(
-                                    text = { 
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
-                                            Spacer(Modifier.width(8.dp))
-                                            Text("Nueva Mascota")
-                                        }
-                                    },
-                                    onClick = {
-                                        onAddPet()
-                                        expandedPet = false
-                                    }
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        uiState.pets.forEach { pet ->
+                            val isSelected = uiState.selectedPets.contains(pet.id)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { viewModel.togglePetSelection(pet.id) }
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = isSelected,
+                                    onCheckedChange = { viewModel.togglePetSelection(pet.id) }
                                 )
+                                Text(pet.nombre, style = MaterialTheme.typography.bodyLarge)
+                                Spacer(Modifier.weight(1f))
+                                Text(pet.especie.name.lowercase().capitalize(), style = MaterialTheme.typography.labelMedium)
                             }
-                        }
-
-                        // Service Selector
-                        if (uiState.selectedPet != null) {
-                            if (uiState.services.isEmpty()) {
-                                Text(
-                                    "No hay servicios disponibles para esta mascota.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            } else {
-                                var expandedService by remember { mutableStateOf(false) }
-                                ExposedDropdownMenuBox(
-                                    expanded = expandedService,
-                                    onExpandedChange = { expandedService = !expandedService }
-                                ) {
-                                    OutlinedTextField(
-                                        value = uiState.selectedService?.nombre ?: "Selecciona un servicio",
-                                        onValueChange = {},
-                                        readOnly = true,
-                                        label = { Text("Servicio") },
-                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedService) },
-                                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                                        modifier = Modifier.fillMaxWidth().menuAnchor()
-                                    )
-                                    ExposedDropdownMenu(expanded = expandedService, onDismissRequest = { expandedService = false }) {
-                                        uiState.services.forEach { service ->
-                                            DropdownMenuItem(
-                                                text = { 
-                                                    // Simple display: Name ($Price)
-                                                    Text("${service.nombre} ($${service.precioBase})")
-                                                },
-                                                onClick = {
-                                                    viewModel.selectService(service)
-                                                    expandedService = false
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        Button(
-                            onClick = { viewModel.addToCart() },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = uiState.selectedPet != null && uiState.selectedService != null
-                        ) {
-                            Icon(Icons.Default.AddCircle, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Agregar a la visita")
-                        }
-                    }
-                }
-
-                // Cart List
-                if (uiState.cart.isNotEmpty()) {
-                    Text("Servicios agregados:", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.secondary)
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        uiState.cart.forEach { item ->
-                            CartItemCard(
-                                item = item,
-                                onRemove = { viewModel.removeFromCart(item) }
-                            )
                         }
                         
-                        // Totals
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Tiempo total estim.: ${uiState.totalDuration} min",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "Total: $${uiState.totalPrice}",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                        TextButton(onClick = onAddPet, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Default.Add, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Agregar otra mascota")
                         }
                     }
                 }
 
-                // --- SECTION 2: AGENDA ---
+                // --- SECTION 2: SELECCIONAR SERVICIOS POR MASCOTA ---
+                if (uiState.selectedPets.isNotEmpty()) {
+                    SectionTitle("2. Elige los servicios")
+                    
+                    uiState.pets.filter { uiState.selectedPets.contains(it.id) }.forEach { pet ->
+                        PetServiceSelection(
+                            pet = pet,
+                            availableServices = viewModel.getFilteredServicesForPet(pet),
+                            currentCart = uiState.cart.filter { it.mascota.id == pet.id },
+                            onAddService = { viewModel.addServiceToPet(pet, it) },
+                            onRemoveService = { viewModel.removeServiceFromPet(it) }
+                        )
+                    }
+                }
+
+                // --- SECTION 3: AGENDA ---
                 if (uiState.cart.isNotEmpty()) {
                     HorizontalDivider()
-                    SectionTitle("2. Agenda tu visita")
+                    SectionTitle("3. Agenda tu visita")
 
                     OutlinedButton(
                         onClick = { showDatePicker = true },
@@ -275,7 +188,7 @@ fun BookingScreen(
 
                     if (uiState.selectedDate != null) {
                         if (uiState.availableSlots.isEmpty()) {
-                            Text("No hay horas disponibles.", color = MaterialTheme.colorScheme.error)
+                            Text("No hay horas disponibles para esta duración.", color = MaterialTheme.colorScheme.error)
                         } else {
                             FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -283,9 +196,7 @@ fun BookingScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 uiState.availableSlots.forEach { slot ->
-                                    // Convert Instant (UTC) to Local Time for display
-                                    val slotTyped: java.time.OffsetDateTime = slot
-                                    val localTime = slotTyped.atZoneSameInstant(ZoneId.systemDefault()).toLocalTime()
+                                    val localTime = slot.atZoneSameInstant(ZoneId.systemDefault()).toLocalTime()
                                     val formattedTime = localTime.format(timeFormatter)
                                     
                                     FilterChip(
@@ -301,21 +212,98 @@ fun BookingScreen(
                         }
                     }
 
-                    // Confirm Button
+                    // --- SUMMARY SECTION ---
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Resumen de Cita", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text("Duración estimada: ${uiState.totalDuration} min")
+                            Text("Total a pagar: $${uiState.totalPrice}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                        }
+                    }
+
                     Button(
                         onClick = { viewModel.createReservation() },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
-                        enabled = uiState.selectedDate != null && uiState.selectedSlot != null
+                        enabled = uiState.selectedDate != null && uiState.selectedSlot != null && !uiState.isLoading
                     ) {
-                        Text("Confirmar Reserva (Pago en clínica)")
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                        } else {
+                            Text("Confirmar Cita")
+                        }
                     }
-                } else {
+                } else if (uiState.selectedPets.isNotEmpty()) {
                     Text(
-                        "Agrega al menos un servicio para continuar.",
+                        "Selecciona al menos un servicio para tus mascotas.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PetServiceSelection(
+    pet: cl.clinipets.openapi.models.MascotaResponse,
+    availableServices: List<cl.clinipets.openapi.models.ServicioMedicoDto>,
+    currentCart: List<CartItem>,
+    onAddService: (cl.clinipets.openapi.models.ServicioMedicoDto) -> Unit,
+    onRemoveService: (CartItem) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Text(
+            text = "Servicios para ${pet.nombre}",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.secondary
+        )
+        
+        // List already selected services for this pet
+        currentCart.forEach { item ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(item.servicio.nombre, modifier = Modifier.weight(1f))
+                IconButton(onClick = { onRemoveService(item) }, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+
+        // Dropdown to add more
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            OutlinedTextField(
+                value = "",
+                onValueChange = {},
+                readOnly = true,
+                placeholder = { Text("Añadir servicio a ${pet.nombre}") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                textStyle = MaterialTheme.typography.bodySmall
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                availableServices.forEach { service ->
+                    DropdownMenuItem(
+                        text = { Text("${service.nombre} ($${service.precioBase})") },
+                        onClick = {
+                            onAddService(service)
+                            expanded = false
+                        }
                     )
                 }
             }

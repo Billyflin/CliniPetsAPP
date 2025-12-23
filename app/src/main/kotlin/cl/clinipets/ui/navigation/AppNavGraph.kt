@@ -70,7 +70,7 @@ fun AppNavGraph(
                 onProfileClick = {
                     navController.navigate(ProfileRoute)
                 },
-                onCitaClick = { citaId ->
+                onCitaClick = { citaId, mascotaId ->
                     navController.navigate(StaffCitaDetailRoute(citaId))
                 }
             )

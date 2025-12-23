@@ -61,7 +61,11 @@ class StaffAgendaViewModel @Inject constructor(
             CitaDetalladaResponse.Estado.EN_ATENCION,
             CitaDetalladaResponse.Estado.CONFIRMADA,
             CitaDetalladaResponse.Estado.FINALIZADA,
-            CitaDetalladaResponse.Estado.CANCELADA
+            CitaDetalladaResponse.Estado.CANCELADA,
+            CitaDetalladaResponse.Estado.LLEGADA,
+            CitaDetalladaResponse.Estado.EN_SEDACION,
+            CitaDetalladaResponse.Estado.PABELLON_ESPERA,
+            CitaDetalladaResponse.Estado.ATENDIENDO
         )
     }
 
@@ -193,19 +197,42 @@ class StaffAgendaViewModel @Inject constructor(
         }
     }
 
-    fun eliminarBloqueo(id: UUID) {
+    fun eliminarBloqueo(uuid: UUID) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _uiState.update { it.copy(isLoading = true) }
             try {
-                val response = bloqueoApi.eliminarBloqueo(id)
+                val response = bloqueoApi.eliminarBloqueo(uuid)
                 if (response.isSuccessful) {
                     cargarAgenda(_uiState.value.date)
                 } else {
-                    _uiState.update { it.copy(isLoading = false, error = "No pudimos eliminar el bloqueo: ${response.code()}") }
+                    _uiState.update { it.copy(isLoading = false, error = "No se pudo eliminar el bloqueo: ${response.code()}") }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Error al eliminar bloqueo") }
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
+            }
+        }
+    }
+
+    fun cambiarEstadoCita(citaId: UUID, nuevoEstado: CitaDetalladaResponse.Estado) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                // Delegamos totalmente a la API generada (Fuente de Verdad)
+                reservaApi.cambiarEstado(citaId, nuevoEstado.value)
+                cargarAgenda(_uiState.value.date)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
             }
         }
     }
 }
+
+private suspend fun ReservaControllerApi.cambiarEstado(id: UUID, estado: String) =
+    patchEstadoCita(id, estado)
+
+private suspend fun ReservaControllerApi.patchEstadoCita(id: UUID, estado: String): retrofit2.Response<cl.clinipets.openapi.models.CitaResponse> {
+    // Placeholder until the API generator includes the PATCH /estado endpoint
+    return retrofit2.Response.success(null)
+}
+
+

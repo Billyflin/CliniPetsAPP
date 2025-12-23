@@ -144,17 +144,14 @@ class MascotaFormViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, success = false) }
             try {
-                // Map CreateRequest Enums to UpdateRequest Enums
-                val updateSexo = MascotaUpdateRequest.Sexo.valueOf(sexo.name)
-                val updateTemperamento = MascotaUpdateRequest.Temperamento.valueOf(temperamento.name)
-
+                // Delegamos el mapeo a la consistencia de nombres (fuente de verdad)
                 val request = MascotaUpdateRequest(
                     nombre = nombre,
                     pesoActual = 0.0,
                     raza = raza,
-                    sexo = updateSexo,
+                    sexo = MascotaUpdateRequest.Sexo.valueOf(sexo.name),
                     esterilizado = esterilizado,
-                    temperamento = updateTemperamento,
+                    temperamento = MascotaUpdateRequest.Temperamento.valueOf(temperamento.name),
                     chipIdentificador = chip.takeIf { !it.isNullOrBlank() }
                 )
                 val response = mascotaApi.actualizarMascota(uuid, request)

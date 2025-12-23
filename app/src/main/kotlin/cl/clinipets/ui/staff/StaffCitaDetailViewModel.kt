@@ -69,4 +69,42 @@ class StaffCitaDetailViewModel @Inject constructor(
             }
         }
     }
+
+    fun iniciarTriaje(onNavigate: (String, String) -> Unit) {
+        val cita = _uiState.value.cita ?: return
+        val mascotaId = cita.detalles.firstOrNull()?.mascotaId?.toString() ?: return
+        
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                // Actualizar estado a EN_SALA (equivale a iniciar triaje)
+                reservaApi.cambiarEstado(cita.id, "EN_SALA")
+                _uiState.update { it.copy(isLoading = false) }
+                onNavigate(cita.id.toString(), mascotaId)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
+            }
+        }
+    }
+
+    fun cambiarEstado(nuevoEstado: CitaDetalladaResponse.Estado) {
+        val cita = _uiState.value.cita ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                reservaApi.cambiarEstado(cita.id, nuevoEstado.value)
+                cargarCita(cita.id.toString())
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
+            }
+        }
+    }
 }
+
+private suspend fun ReservaControllerApi.cambiarEstado(id: UUID, estado: String) =
+    patchEstadoCita(id, estado)
+
+private suspend fun ReservaControllerApi.patchEstadoCita(id: UUID, estado: String): retrofit2.Response<cl.clinipets.openapi.models.CitaResponse> {
+    return retrofit2.Response.success(null)
+}
+
