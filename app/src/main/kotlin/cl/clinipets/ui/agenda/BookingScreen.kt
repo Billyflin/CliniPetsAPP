@@ -301,26 +301,13 @@ fun BookingScreen(
                         }
                     }
 
-                    // Payment Option Section
-                    if (uiState.selectedDate != null && uiState.selectedSlot != null) {
-                        HorizontalDivider()
-                        SectionTitle("3. Opciones de Pago")
-                        PaymentOptionCard(
-                            minDeposit = uiState.minDeposit,
-                            totalPrice = uiState.totalPrice,
-                            isFullPayment = uiState.isFullPayment,
-                            onOptionSelected = { viewModel.setFullPayment(it) }
-                        )
-                    }
-
                     // Confirm Button
                     Button(
                         onClick = { viewModel.createReservation() },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         enabled = uiState.selectedDate != null && uiState.selectedSlot != null
                     ) {
-                        val payAmount = if (uiState.isFullPayment) uiState.totalPrice else uiState.minDeposit
-                        Text("Confirmar Reserva ($$payAmount)")
+                        Text("Confirmar Reserva (Pago en clínica)")
                     }
                 } else {
                     Text(
@@ -329,80 +316,6 @@ fun BookingScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun PaymentOptionCard(
-    minDeposit: Int,
-    totalPrice: Int,
-    isFullPayment: Boolean,
-    onOptionSelected: (Boolean) -> Unit
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Option 1: Abono
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onOptionSelected(false) }
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    if (!isFullPayment) Icons.Default.RadioButtonChecked else Icons.Default.RadioButtonUnchecked,
-                    contentDescription = null,
-                    tint = if (!isFullPayment) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text(
-                        text = "Pagar Reserva: $$minDeposit",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Paga el resto en la clínica",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-            // Option 2: Total
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onOptionSelected(true) }
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    if (isFullPayment) Icons.Default.RadioButtonChecked else Icons.Default.RadioButtonUnchecked,
-                    contentDescription = null,
-                    tint = if (isFullPayment) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text(
-                        text = "Pagar Total: $$totalPrice",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "¡Listo! Sin deuda pendiente",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

@@ -33,8 +33,6 @@ data class BookingUiState(
     val cart: List<CartItem> = emptyList(),
     val totalDuration: Int = 0,
     val totalPrice: Int = 0,
-    val minDeposit: Int = 0,
-    val isFullPayment: Boolean = false,
     
     // Selection State for building order
     val selectedPet: MascotaResponse? = null,
@@ -77,7 +75,6 @@ class BookingViewModel @Inject constructor(
                         cart = cartState.cart,
                         totalDuration = cartState.totalDuration,
                         totalPrice = cartState.totalPrice,
-                        minDeposit = cartState.minDeposit,
                         // Reset slot selection if cart changes, forcing user to re-select
                         selectedSlot = if (needsAvailabilityUpdate) null else it.selectedSlot,
                         availableSlots = if (needsAvailabilityUpdate) emptyList() else it.availableSlots
@@ -218,10 +215,6 @@ class BookingViewModel @Inject constructor(
         _uiState.update { it.copy(selectedSlot = slot) }
     }
 
-    fun setFullPayment(isFull: Boolean) {
-        _uiState.update { it.copy(isFullPayment = isFull) }
-    }
-
     fun createReservation() {
         val currentState = _uiState.value
         val selectedSlot = currentState.selectedSlot
@@ -243,7 +236,7 @@ class BookingViewModel @Inject constructor(
                         fechaHoraInicio = selectedSlot,
                         origen = ReservaCreateRequest.Origen.APP,
                         tipoAtencion = currentState.tipoAtencion,
-                        pagoTotal = currentState.isFullPayment
+                        pagoTotal = false
                     )
 
                     val response = reservaApi.crearReserva(request)

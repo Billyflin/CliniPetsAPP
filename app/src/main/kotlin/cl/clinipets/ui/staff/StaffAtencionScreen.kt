@@ -131,20 +131,6 @@ fun StaffAtencionScreen(
         }
     }
 
-    LaunchedEffect(state.paymentLinkToShare) {
-        state.paymentLinkToShare?.let { link ->
-            val sendIntent = Intent().apply {
-                action = Intent.ACTION_SEND
-                putExtra(Intent.EXTRA_TEXT, "Hola! Aquí tienes el link para pagar el saldo de tu atención en Clinipets: $link")
-                type = "text/plain"
-            }
-            val shareIntent = Intent.createChooser(sendIntent, "Enviar link de pago")
-            context.startActivity(shareIntent)
-            // Finalizamos el flujo tras lanzar el intent
-            onSuccess()
-        }
-    }
-
     if (state.showPaymentDialog) {
         AlertDialog(
             onDismissRequest = { /* No dismissal to force selection or back */ },

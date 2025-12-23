@@ -43,10 +43,6 @@ import cl.clinipets.ui.auth.requestGoogleIdToken
 import cl.clinipets.ui.settings.SettingsViewModel
 import kotlinx.coroutines.launch
 
-// Temporary extension until backend/OpenAPI adds photoUrl to ProfileResponse
-private val cl.clinipets.openapi.models.ProfileResponse.photoUrl: String?
-    get() = null
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -179,6 +175,7 @@ fun ProfileScreen(
                                 ProfileItem(icon = Icons.Default.VerifiedUser, label = "Rol", value = state.profile.role?.toString() ?: "-")
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                                 
+                                /*
                                 // Google Link Logic
                                 val email = state.profile.email ?: ""
                                 val isTemporaryAccount = email.startsWith("otp_") || email.startsWith("wsp_")
@@ -187,7 +184,7 @@ fun ProfileScreen(
                                     OutlinedButton(
                                         onClick = {
                                             scope.launch {
-                                                val token = requestGoogleIdToken(context, BuildConfig.GOOGLE_SERVER_CLIENT_ID)
+                                                val token = requestGoogleIdToken(context, context.getString(cl.clinipets.R.string.default_web_client_id))
                                                 if (!token.isNullOrBlank()) {
                                                     profileViewModel.linkGoogleAccount(token)
                                                 }
@@ -209,6 +206,7 @@ fun ProfileScreen(
                                         Text("Cuenta vinculada con Google", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF4CAF50))
                                     }
                                 }
+                                */
                                 
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                                 

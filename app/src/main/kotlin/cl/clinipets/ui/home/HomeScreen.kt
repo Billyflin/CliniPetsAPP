@@ -134,12 +134,6 @@ private fun HomeContent(
                 onMyReservationsClick = onMyReservationsClick
             )
         }
-        item {
-            AiHeroCard(
-                mensaje = state.mensajeIa,
-                mascota = state.mascotas.firstOrNull()
-            )
-        }
         if (state.mascotas.isNotEmpty()) {
             item {
                 PetsSection(
@@ -268,61 +262,6 @@ private fun QuickActionChip(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
-        }
-    }
-}
-
-@Composable
-private fun AiHeroCard(
-    mensaje: String,
-    mascota: MascotaResponse?
-) {
-    Card(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = "IA CliniPets",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Text(
-                    text = mensaje,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-            Surface(
-                modifier = Modifier.size(72.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.08f)
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    mascotaIconRes(mascota?.especie)?.let { resId ->
-                        Icon(
-                            painter = painterResource(id = resId),
-                            contentDescription = mascota?.nombre ?: "Mascota",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    } ?: Icon(
-                        imageVector = Icons.Default.Pets,
-                        contentDescription = "Mascota",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
         }
     }
 }

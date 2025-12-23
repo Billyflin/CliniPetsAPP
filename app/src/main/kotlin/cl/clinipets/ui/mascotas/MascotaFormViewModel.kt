@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
@@ -107,7 +106,7 @@ class MascotaFormViewModel @Inject constructor(
                 val request = MascotaCreateRequest(
                     nombre = nombre,
                     especie = especie,
-                    pesoActual = BigDecimal.ZERO,
+                    pesoActual = 0.0,
                     fechaNacimiento = LocalDate.now(),
                     raza = raza,
                     sexo = sexo,
@@ -151,7 +150,7 @@ class MascotaFormViewModel @Inject constructor(
 
                 val request = MascotaUpdateRequest(
                     nombre = nombre,
-                    pesoActual = BigDecimal.ZERO,
+                    pesoActual = 0.0,
                     raza = raza,
                     sexo = updateSexo,
                     esterilizado = esterilizado,

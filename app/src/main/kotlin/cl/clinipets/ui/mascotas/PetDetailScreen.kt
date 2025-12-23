@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
@@ -79,7 +80,9 @@ import cl.clinipets.openapi.models.MascotaResponse
 import cl.clinipets.ui.mascotas.gallery.PetGalleryContent
 import cl.clinipets.ui.util.toLocalDateStr
 import cl.clinipets.ui.util.toLocalHour
+import androidx.compose.ui.platform.LocalContext
 import java.util.Locale
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,6 +93,7 @@ fun PetDetailScreen(
     viewModel: PetDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.isDeleted) {
@@ -206,7 +210,9 @@ fun PetDetailScreen(
                             )
 
                             else -> ClinicalHistory(
-                                records = uiState.clinicalRecords
+                                records = uiState.clinicalRecords,
+                                onDownload = { viewModel.descargarFicha(context, it) },
+                                downloadingIds = uiState.isDownloading
                             )
                         }
 
@@ -273,7 +279,7 @@ private fun PetHeader(pet: MascotaResponse) {
                 DetailChip(label = pet.sexo.name)
                 
                 // Peso
-                DetailChip(label = "${pet.pesoActual.toPlainString()} kg")
+                DetailChip(label = "${pet.pesoActual} kg")
             }
             
             // Estados Clínicos (Nueva sección)
@@ -449,7 +455,11 @@ private fun PetHistory(
 }
 
 @Composable
-private fun ClinicalHistory(records: List<FichaResponse>) {
+private fun ClinicalHistory(
+    records: List<FichaResponse>,
+    onDownload: (UUID) -> Unit,
+    downloadingIds: Set<UUID>
+) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -467,14 +477,22 @@ private fun ClinicalHistory(records: List<FichaResponse>) {
             )
         } else {
             records.forEach { record ->
-                ClinicalRecordCard(record = record)
+                ClinicalRecordCard(
+                    record = record,
+                    onDownload = onDownload,
+                    isDownloading = downloadingIds.contains(record.id)
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ClinicalRecordCard(record: FichaResponse) {
+private fun ClinicalRecordCard(
+    record: FichaResponse,
+    onDownload: (UUID) -> Unit,
+    isDownloading: Boolean
+) {
     var expanded by remember { mutableStateOf(false) }
     val dateText = record.fechaAtencion.toLocalDateStr()
     val friendlyDate = dateText.split(" ").joinToString(" ") { part ->
@@ -498,113 +516,134 @@ private fun ClinicalRecordCard(record: FichaResponse) {
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        Box(
+            modifier = Modifier.padding(16.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column {
-                    Text(
-                        text = friendlyDate,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = record.motivoConsulta,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = friendlyDate,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = record.motivoConsulta,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    AssistChip(
+                        onClick = { },
+                        label = { Text(badgeText) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = badgeIcon,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+                            labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ),
+                        border = null
                     )
                 }
-                AssistChip(
-                    onClick = { },
-                    label = { Text(badgeText) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = badgeIcon,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
-                        labelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                    ),
-                    border = null
-                )
-            }
 
-            record.diagnostico?.takeIf { it.isNotBlank() }?.let { diagnostico ->
-                ClinicalSection(
-                    icon = Icons.Default.MedicalServices,
-                    label = "Diagnóstico",
-                    content = diagnostico,
-                    highlight = true
-                )
-            }
+                record.diagnostico?.takeIf { it.isNotBlank() }?.let { diagnostico ->
+                    ClinicalSection(
+                        icon = Icons.Default.MedicalServices,
+                        label = "Diagnóstico",
+                        content = diagnostico,
+                        highlight = true
+                    )
+                }
 
-            record.tratamiento?.takeIf { it.isNotBlank() }?.let { tratamiento ->
-                ClinicalSection(
-                    icon = Icons.Default.Medication,
-                    label = "Tratamiento",
-                    content = tratamiento,
-                    highlight = true
-                )
-            }
+                record.tratamiento?.takeIf { it.isNotBlank() }?.let { tratamiento ->
+                    ClinicalSection(
+                        icon = Icons.Default.Medication,
+                        label = "Tratamiento",
+                        content = tratamiento,
+                        highlight = true
+                    )
+                }
 
-            record.pesoRegistrado?.let { peso ->
-                ClinicalSection(
-                    icon = Icons.Default.MonitorWeight,
-                    label = "Peso",
-                    content = "${String.format(Locale.getDefault(), "%.1f", peso)} kg"
-                )
-            }
+                record.pesoRegistrado?.let { peso ->
+                    ClinicalSection(
+                        icon = Icons.Default.MonitorWeight,
+                        label = "Peso",
+                        content = "${String.format(Locale.getDefault(), "%.1f", peso)} kg"
+                    )
+                }
 
-            AnimatedVisibility(visible = expanded) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    record.anamnesis?.takeIf { it.isNotBlank() }?.let { anamnesis ->
-                        ClinicalSection(
-                            icon = Icons.Default.Info,
-                            label = "Anamnesis",
-                            content = anamnesis
-                        )
+                AnimatedVisibility(visible = expanded) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        record.anamnesis?.takeIf { it.isNotBlank() }?.let { anamnesis ->
+                            ClinicalSection(
+                                icon = Icons.Default.Info,
+                                label = "Anamnesis",
+                                content = anamnesis
+                            )
+                        }
+                        record.examenFisico?.takeIf { it.isNotBlank() }?.let { examen ->
+                            ClinicalSection(
+                                icon = Icons.Default.Info,
+                                label = "Examen Físico",
+                                content = examen
+                            )
+                        }
+                        record.observaciones?.takeIf { it.isNotBlank() }?.let { obs ->
+                            ClinicalSection(
+                                icon = Icons.Default.Info,
+                                label = "Observaciones",
+                                content = obs
+                            )
+                        }
                     }
-                    record.examenFisico?.takeIf { it.isNotBlank() }?.let { examen ->
-                        ClinicalSection(
-                            icon = Icons.Default.Info,
-                            label = "Examen Físico",
-                            content = examen
-                        )
-                    }
-                    record.observaciones?.takeIf { it.isNotBlank() }?.let { obs ->
-                        ClinicalSection(
-                            icon = Icons.Default.Info,
-                            label = "Observaciones",
-                            content = obs
-                        )
-                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (expanded) "Ocultar detalles" else "Ver anamnesis y examen",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Icon(
+                        imageVector = if (expanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
+            IconButton(
+                onClick = { onDownload(record.id) },
+                modifier = Modifier.align(Alignment.TopEnd),
+                enabled = !isDownloading
             ) {
-                Text(
-                    text = if (expanded) "Ocultar detalles" else "Ver anamnesis y examen",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.width(4.dp))
-                Icon(
-                    imageVector = if (expanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                if (isDownloading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.PictureAsPdf,
+                        contentDescription = "Descargar ficha"
+                    )
+                }
             }
         }
     }
@@ -714,18 +753,39 @@ private fun TimelineItem(
                     )
                 }
                 
-                AssistChip(
-                    onClick = { },
-                    enabled = false,
-                    label = { Text(cita.estado.name) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.EventAvailable,
-                            contentDescription = null,
-                            tint = speciesColor
-                        )
-                    }
-                )
+                if (cita.estado.name == "CONFIRMADA") {
+                    Text(
+                        text = "Cita Pendiente de Atención",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                } else if (cita.estado.name == "FINALIZADA") {
+                    AssistChip(
+                        onClick = { /* Todo: Implement download receipt for appointment */ },
+                        label = { Text("Descargar Boleta/Ficha") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.PictureAsPdf,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    )
+                } else {
+                    AssistChip(
+                        onClick = { },
+                        enabled = false,
+                        label = { Text(cita.estado.name) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.EventAvailable,
+                                contentDescription = null,
+                                tint = speciesColor
+                            )
+                        }
+                    )
+                }
             }
         }
     }

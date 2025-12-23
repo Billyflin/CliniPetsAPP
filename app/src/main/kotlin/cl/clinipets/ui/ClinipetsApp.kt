@@ -58,7 +58,7 @@ fun ClinipetsApp(
                                 requestingGoogle = true
                                 val token = requestGoogleIdToken(
                                     context = context,
-                                    serverClientId = BuildConfig.GOOGLE_SERVER_CLIENT_ID
+                                    serverClientId = context.getString(cl.clinipets.R.string.default_web_client_id)
                                 )
                                 if (!token.isNullOrBlank()) {
                                     vm.loginWithGoogleIdToken(token)

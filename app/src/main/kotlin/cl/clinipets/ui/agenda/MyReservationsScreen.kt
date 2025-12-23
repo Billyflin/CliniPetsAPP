@@ -22,7 +22,6 @@ import java.util.UUID
 @Composable
 fun MyReservationsScreen(
     onBack: () -> Unit,
-    onPay: (String) -> Unit,
     onCancel: (UUID) -> Unit,
     viewModel: MyReservationsViewModel = hiltViewModel()
 ) {
@@ -77,11 +76,6 @@ fun MyReservationsScreen(
                     val isBusy = actionInProgressId == cita.id
                     ReservationCard(
                         cita = cita,
-                        onPay = { url ->
-                            if (!url.isNullOrBlank() && !isBusy) {
-                                onPay(url)
-                            }
-                        },
                         onCancel = { id ->
                             if (!isBusy) {
                                 onCancel(id)
@@ -99,11 +93,9 @@ fun MyReservationsScreen(
 @Composable
 fun ReservationCard(
     cita: CitaDetalladaResponse,
-    onPay: (String?) -> Unit,
     onCancel: (UUID) -> Unit,
     isBusy: Boolean,
 ) {
-    val isPendingPago = cita.estado.name == "PENDIENTE_PAGO"
     val isConfirmada = cita.estado.name == "CONFIRMADA"
     val isCancelada = cita.estado.name == "CANCELADA"
 
@@ -136,30 +128,10 @@ fun ReservationCard(
                             else -> MaterialTheme.colorScheme.secondary
                         }
                     )
-                    if (isPendingPago) {
-                        Text(
-                            text = "Total Servicio: $${cita.precioFinal}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = "Abono a Pagar: $${cita.montoAbono}",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        if ((cita.saldoPendiente ?: 0) > 0) {
-                            Text(
-                                text = "Saldo en clínica: $${cita.saldoPendiente}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    } else {
-                        Text(
-                            text = "Precio: $${cita.precioFinal}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+                    Text(
+                        text = "Precio: $${cita.precioFinal}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
 
@@ -171,39 +143,11 @@ fun ReservationCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 when {
-                    isPendingPago -> {
-                        // Botón Pagar
-                        TextButton(
-                            onClick = { onPay(cita.paymentUrl) },
-                            enabled = !isBusy && !cita.paymentUrl.isNullOrBlank()
-                        ) {
-                            if (isBusy) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Text("Pagar $${cita.montoAbono}")
-                            }
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        // Botón/ícono Cancelar
-                        IconButton(
-                            onClick = { onCancel(cita.id) },
-                            enabled = !isBusy
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Cancel,
-                                contentDescription = "Cancelar",
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-
                     isConfirmada -> {
                         Text(
-                            text = "Confirmada",
+                            text = "Pago en clínica",
                             style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -217,10 +161,19 @@ fun ReservationCard(
                     }
 
                     else -> {
-                        Text(
-                            text = cita.estado.name,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        // Allow cancelling other states if needed, or just show state
+                        if (!isCancelada && !isConfirmada) { // Assuming simplistic logic
+                             IconButton(
+                                onClick = { onCancel(cita.id) },
+                                enabled = !isBusy
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Cancel,
+                                    contentDescription = "Cancelar",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
                     }
                 }
             }

@@ -59,7 +59,6 @@ class StaffAgendaViewModel @Inject constructor(
         val VALID_STATES = setOf(
             CitaDetalladaResponse.Estado.EN_SALA,
             CitaDetalladaResponse.Estado.EN_ATENCION,
-            CitaDetalladaResponse.Estado.PENDIENTE_PAGO,
             CitaDetalladaResponse.Estado.CONFIRMADA,
             CitaDetalladaResponse.Estado.FINALIZADA,
             CitaDetalladaResponse.Estado.CANCELADA

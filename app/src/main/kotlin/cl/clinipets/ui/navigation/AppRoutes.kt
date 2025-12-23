@@ -24,12 +24,6 @@ data class MascotaFormRoute(val petId: String? = null)
 data class BookingRoute(val petId: String? = null)
 
 @Serializable
-data class PaymentRoute(val citaId: String)
-
-@Serializable
-data class PaymentResultRoute(val status: String? = null)
-
-@Serializable
 object ProfileRoute
 
 @Serializable

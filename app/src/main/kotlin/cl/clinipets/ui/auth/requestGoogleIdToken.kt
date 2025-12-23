@@ -4,10 +4,14 @@ import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.NoCredentialException
+import android.util.Log
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 
+private const val TAG = "GoogleAuth"
+
 suspend fun requestGoogleIdToken(context: Context, serverClientId: String): String? {
+    Log.d(TAG, "Requesting Google ID Token with Client ID: $serverClientId")
     val credentialManager = CredentialManager.create(context)
     val googleIdOption = GetGoogleIdOption.Builder()
         .setFilterByAuthorizedAccounts(false)
@@ -19,15 +23,23 @@ suspend fun requestGoogleIdToken(context: Context, serverClientId: String): Stri
         .build()
 
     val credential = try {
-        credentialManager.getCredential(context, request).credential
+        val result = credentialManager.getCredential(context, request)
+        result.credential
     } catch (e: NoCredentialException) {
-        // Sin credenciales disponibles (usuario canceló o no hay cuentas válidas)
+        Log.w(TAG, "No credential available (cancelled or no accounts): ${e.message}")
         return null
     } catch (e: Exception) {
-        // Cualquier otro error: no imprimir stacktrace para mantener la UI limpia
+        Log.e(TAG, "Error requesting credential", e)
         return null
     }
 
-    val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
-    return googleCredential.idToken
+    return try {
+        val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
+        val token = googleCredential.idToken
+        Log.d(TAG, "Google ID Token retrieved. Length: ${token.length}, Prefix: ${token.take(10)}...")
+        token
+    } catch (e: Exception) {
+        Log.e(TAG, "Error parsing Google credential", e)
+        null
+    }
 }

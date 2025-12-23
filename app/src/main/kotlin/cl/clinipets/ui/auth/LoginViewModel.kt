@@ -1,5 +1,6 @@
 package cl.clinipets.ui.auth
 
+import android.app.Activity
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,20 +8,23 @@ import cl.clinipets.core.session.SessionManager
 import cl.clinipets.openapi.apis.AuthControllerApi
 import cl.clinipets.openapi.apis.DeviceTokenControllerApi
 import cl.clinipets.openapi.models.DeviceTokenRequest
-import cl.clinipets.openapi.models.GoogleLoginRequest
-import cl.clinipets.openapi.models.OtpRequest
-import cl.clinipets.openapi.models.OtpVerifyRequest
 import cl.clinipets.openapi.models.ProfileResponse
+import com.google.firebase.FirebaseException
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.PhoneAuthCredential
+import com.google.firebase.auth.PhoneAuthOptions
+import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
-import kotlin.coroutines.resume
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+import kotlin.coroutines.resume
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
@@ -37,25 +41,21 @@ class LoginViewModel @Inject constructor(
         val ok: Boolean = false,
         val needsPhoneVerification: Boolean = false,
         val otpSent: Boolean = false,
-        val phoneNumber: String = ""
+        val phoneNumber: String = "",
+        val verificationId: String? = null
     )
 
     private val _ui = MutableStateFlow(UiState())
     val ui = _ui.asStateFlow()
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
     init {
         viewModelScope.launch {
-            // Restore session from DataStore on app launch
-            val snapshot = session.sessionFlow.first()
-            val token = snapshot.token
-
-            if (!token.isNullOrBlank()) {
-                // Token exists, restore it in API client
-                session.restoreIfAny()
-                // Fetch profile to validate session and get user info
+            // Check if user is already signed in with Firebase
+            val currentUser = auth.currentUser
+            if (currentUser != null) {
                 fetchProfile()
             } else {
-                // No token, we are ready for login
                 _ui.update { it.copy(isCheckingSession = false) }
             }
         }
@@ -65,47 +65,21 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _ui.update { it.copy(isAuthenticating = true, error = null) }
             try {
-                // 1. Exchange Google ID Token for App Token
-                val loginResponse = authApi.loginGoogle(GoogleLoginRequest(idToken, phone))
+                // 1. Sign in to Firebase with Google Credential
+                val credential = GoogleAuthProvider.getCredential(idToken, null)
+                val authResult = suspendCancellableCoroutine { cont ->
+                    auth.signInWithCredential(credential)
+                        .addOnSuccessListener { cont.resume(it) }
+                        .addOnFailureListener { cont.resumeWith(Result.failure(it)) }
+                }
 
-                if (loginResponse.isSuccessful) {
-                    val token = loginResponse.body()?.accessToken
-                    if (!token.isNullOrBlank()) {
-                        // 2. Set token in SessionManager (updates API client & DataStore)
-                        session.setAndPersist(token)
-
-                        // 3. Fetch Profile immediately to complete login
-                        val profileResponse = authApi.getProfile()
-
-                        if (profileResponse.isSuccessful) {
-                            val me = profileResponse.body()
-                            if (me != null) {
-                                _ui.update {
-                                    it.copy(
-                                        ok = true,
-                                        me = me,
-                                        isAuthenticating = false,
-                                        isCheckingSession = false,
-                                        error = null,
-                                        needsPhoneVerification = !me.phoneVerified
-                                    )
-                                }
-                                sendFcmTokenSafe()
-                            } else {
-                                throw Exception("Perfil de usuario vacío")
-                            }
-                        } else {
-                            throw Exception("Error al obtener perfil: ${profileResponse.code()}")
-                        }
-                    } else {
-                        throw Exception("Token de sesión inválido")
-                    }
+                if (authResult.user != null) {
+                    fetchProfile()
                 } else {
-                    val errorBody = loginResponse.errorBody()?.string()
-                    throw Exception("Falló autenticación: ${loginResponse.code()} $errorBody")
+                    throw Exception("El usuario de Firebase es nulo")
                 }
             } catch (e: Exception) {
-                session.clear() // Clean up if anything failed
+                auth.signOut()
                 _ui.update {
                     it.copy(
                         isAuthenticating = false,
@@ -116,56 +90,77 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    fun requestOtp(phone: String) {
-        viewModelScope.launch {
-            _ui.update { it.copy(isAuthenticating = true, error = null) }
-            val cleanPhone = phone.replace(" ", "").trim()
-            try {
-                val response = authApi.requestOtp(OtpRequest(cleanPhone))
-                if (response.isSuccessful) {
-                    _ui.update { it.copy(isAuthenticating = false, otpSent = true, phoneNumber = cleanPhone) }
-                } else {
-                     _ui.update { it.copy(isAuthenticating = false, error = "Error al solicitar código: ${response.code()}") }
+    fun startPhoneLogin(activity: Activity, phone: String) {
+        val cleanPhone = phone.replace(" ", "").trim()
+        _ui.update { it.copy(isAuthenticating = true, error = null, phoneNumber = cleanPhone) }
+
+        val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+            override fun onVerificationCompleted(credential: PhoneAuthCredential) {
+                // Auto-retrieval or instant verification
+                signInWithPhoneCredential(credential)
+            }
+
+            override fun onVerificationFailed(e: FirebaseException) {
+                _ui.update { 
+                    it.copy(isAuthenticating = false, error = e.message ?: "Error en verificación de teléfono") 
                 }
-            } catch (e: Exception) {
-                _ui.update { it.copy(isAuthenticating = false, error = e.message ?: "Error de conexión") }
+            }
+
+            override fun onCodeSent(verificationId: String, token: PhoneAuthProvider.ForceResendingToken) {
+                _ui.update {
+                    it.copy(
+                        isAuthenticating = false,
+                        otpSent = true,
+                        verificationId = verificationId
+                    )
+                }
             }
         }
+
+        val options = PhoneAuthOptions.newBuilder(auth)
+            .setPhoneNumber(cleanPhone)
+            .setTimeout(60L, TimeUnit.SECONDS)
+            .setActivity(activity)
+            .setCallbacks(callbacks)
+            .build()
+
+        PhoneAuthProvider.verifyPhoneNumber(options)
     }
 
-    fun loginWithOtp(code: String) {
-        viewModelScope.launch {
-            _ui.update { it.copy(isAuthenticating = true, error = null) }
-            try {
-                val currentPhone = _ui.value.phoneNumber
-                val response = authApi.verifyOtp(OtpVerifyRequest(phone = currentPhone, code = code))
-                
-                if (response.isSuccessful) {
-                    val token = response.body()?.accessToken
-                    if (!token.isNullOrBlank()) {
-                         session.setAndPersist(token)
-                         fetchProfile() // This will update state to ok=true if successful
-                    } else {
-                        _ui.update { it.copy(isAuthenticating = false, error = "Token inválido") }
-                    }
-                } else {
-                    _ui.update { it.copy(isAuthenticating = false, error = "Código incorrecto o expirado") }
-                }
-            } catch (e: Exception) {
-                _ui.update { it.copy(isAuthenticating = false, error = e.message ?: "Error al verificar código") }
-            }
+    fun verifyPhoneCode(code: String) {
+        val verificationId = _ui.value.verificationId
+        if (verificationId == null) {
+            _ui.update { it.copy(error = "Error: ID de verificación perdido. Intenta nuevamente.") }
+            return
         }
+        
+        _ui.update { it.copy(isAuthenticating = true, error = null) }
+        val credential = PhoneAuthProvider.getCredential(verificationId, code)
+        signInWithPhoneCredential(credential)
+    }
+
+    private fun signInWithPhoneCredential(credential: PhoneAuthCredential) {
+        auth.signInWithCredential(credential)
+            .addOnSuccessListener {
+                fetchProfile()
+            }
+            .addOnFailureListener { e ->
+                _ui.update { 
+                    it.copy(isAuthenticating = false, error = e.message ?: "Código inválido o error de autenticación") 
+                }
+            }
     }
 
     fun resetLoginState() {
-        _ui.update { it.copy(otpSent = false, phoneNumber = "", error = null, isAuthenticating = false) }
+        _ui.update { it.copy(otpSent = false, phoneNumber = "", error = null, isAuthenticating = false, verificationId = null) }
     }
 
     fun fetchProfile() {
         viewModelScope.launch {
             _ui.update { it.copy(isCheckingSession = true) }
             try {
-                val response = authApi.getProfile()
+                // Usamos firebaseAuth() para sincronizar el estado de Firebase con el backend
+                val response = authApi.firebaseAuth()
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body != null) {
@@ -180,7 +175,6 @@ class LoginViewModel @Inject constructor(
                         }
                         sendFcmTokenSafe()
                     } else {
-                        // Token might be stale or invalid if profile is null
                         handleSessionError("Sesión inválida")
                     }
                 } else {
@@ -193,13 +187,13 @@ class LoginViewModel @Inject constructor(
     }
 
     private suspend fun handleSessionError(message: String) {
+        auth.signOut()
         session.clear()
         _ui.update {
             it.copy(
                 ok = false,
                 me = null,
                 isCheckingSession = false,
-                // Only show error if we were explicitly authenticating, otherwise just logout silently
                 error = null,
             )
         }
@@ -207,6 +201,7 @@ class LoginViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
+            auth.signOut()
             session.clear()
             _ui.update { UiState(isCheckingSession = false) }
         }

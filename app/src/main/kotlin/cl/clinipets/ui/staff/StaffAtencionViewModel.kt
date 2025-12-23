@@ -4,14 +4,12 @@ import cl.clinipets.openapi.apis.GaleriaControllerApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.openapi.apis.FichaClinicaControllerApi
-import cl.clinipets.openapi.apis.IaControllerApi
 import cl.clinipets.openapi.apis.MascotaControllerApi
 import cl.clinipets.openapi.apis.ReservaControllerApi
 import cl.clinipets.openapi.models.CitaDetalladaResponse
 import cl.clinipets.openapi.models.FichaCreateRequest
 import cl.clinipets.openapi.models.FinalizarCitaRequest
 import cl.clinipets.openapi.models.MascotaClinicalUpdateRequest
-import cl.clinipets.openapi.models.ResumenAtencionRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,7 +29,6 @@ class StaffAtencionViewModel @Inject constructor(
     private val fichaApi: FichaClinicaControllerApi,
     private val reservaApi: ReservaControllerApi,
     private val mascotaApi: MascotaControllerApi,
-    private val iaApi: IaControllerApi,
     private val galeriaApi: GaleriaControllerApi
 ) : ViewModel() {
 
@@ -41,7 +38,6 @@ class StaffAtencionViewModel @Inject constructor(
         val success: Boolean = false,
         val cita: CitaDetalladaResponse? = null,
         val showPaymentDialog: Boolean = false,
-        val paymentLinkToShare: String? = null,
         
         // Campos del formulario
         val peso: String = "",
@@ -215,13 +211,8 @@ class StaffAtencionViewModel @Inject constructor(
                         
                         if (reservaResponse.isSuccessful) {
                             val citaUpdated = reservaResponse.body()
-                            if (metodoPago == FinalizarCitaRequest.MetodoPago.MERCADO_PAGO_LINK && !citaUpdated?.paymentUrl.isNullOrBlank()) {
-                                // Caso especial: Mostrar link
-                                _uiState.update { it.copy(isLoading = false, paymentLinkToShare = citaUpdated?.paymentUrl, success = false) }
-                            } else {
-                                // Caso normal: Cerrar
-                                _uiState.update { it.copy(isLoading = false, success = true, pendingMetodoPago = null) }
-                            }
+                            // Caso normal: Cerrar
+                            _uiState.update { it.copy(isLoading = false, success = true, pendingMetodoPago = null) }
                         } else {
                              _uiState.update { it.copy(isLoading = false, error = "Ficha guardada, pero error al finalizar cita: ${reservaResponse.code()}") }
                         }
@@ -275,23 +266,8 @@ class StaffAtencionViewModel @Inject constructor(
 
             val state = _uiState.value
             val nombreMascota = state.cita?.detalles?.firstOrNull()?.nombreMascota ?: "tu mascota"
-            val resumenRequest = ResumenAtencionRequest(
-                anamnesis = state.anamnesis.ifBlank { "Sin anamnesis" },
-                diagnostico = state.diagnostico.ifBlank { "Sin diagnóstico" },
-                tratamiento = state.tratamiento.ifBlank { "Sin tratamiento" },
-                nombreMascota = nombreMascota
-            )
-
-            val draft = try {
-                val response = iaApi.generarResumenAtencion(resumenRequest)
-                if (response.isSuccessful) {
-                    response.body()?.mensaje
-                } else {
-                    null
-                }
-            } catch (e: Exception) {
-                null
-            } ?: buildString {
+            
+            val draft = buildString {
                 appendLine("Hola! Te compartimos el resumen de la atención de $nombreMascota.")
                 appendLine("Diagnóstico: ${state.diagnostico.ifBlank { "Pendiente" }}")
                 appendLine("Tratamiento: ${state.tratamiento.ifBlank { "Pendiente" }}")

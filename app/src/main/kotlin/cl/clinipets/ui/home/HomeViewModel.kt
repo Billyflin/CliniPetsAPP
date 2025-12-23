@@ -2,11 +2,13 @@ package cl.clinipets.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cl.clinipets.openapi.apis.HomeControllerApi
+import cl.clinipets.openapi.apis.MascotaControllerApi
+import cl.clinipets.openapi.apis.ServicioMedicoControllerApi
 import cl.clinipets.openapi.models.MascotaResponse
 import cl.clinipets.openapi.models.ServicioMedicoDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -17,7 +19,6 @@ sealed class HomeUiState {
     object Loading : HomeUiState()
     data class Success(
         val saludo: String,
-        val mensajeIa: String,
         val mascotas: List<MascotaResponse>,
         val serviciosDestacados: List<ServicioMedicoDto>,
         val todosLosServicios: List<ServicioMedicoDto>
@@ -27,7 +28,8 @@ sealed class HomeUiState {
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val homeApi: HomeControllerApi
+    private val mascotaApi: MascotaControllerApi,
+    private val servicioApi: ServicioMedicoControllerApi
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
@@ -41,26 +43,24 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = HomeUiState.Loading
             try {
-                val dashboardResponse = withContext(Dispatchers.IO) { homeApi.obtenerDashboard() }
+                val mascotasDeferred = async(Dispatchers.IO) { mascotaApi.listarMascotas() }
+                val serviciosDeferred = async(Dispatchers.IO) { servicioApi.listarServicios() }
 
-                if (dashboardResponse.isSuccessful) {
-                    dashboardResponse.body()?.let { dashboard ->
-                        _uiState.value = HomeUiState.Success(
-                            saludo = dashboard.saludo,
-                            mensajeIa = dashboard.mensajeIa,
-                            mascotas = dashboard.mascotas,
-                            serviciosDestacados = dashboard.serviciosDestacados,
-                            todosLosServicios = dashboard.todosLosServicios
-                        )
-                    } ?: run {
-                        _uiState.value = HomeUiState.Error("Respuesta de dashboard vacía")
-                    }
+                val mascotasResponse = mascotasDeferred.await()
+                val serviciosResponse = serviciosDeferred.await()
+
+                if (mascotasResponse.isSuccessful && serviciosResponse.isSuccessful) {
+                    val mascotas = mascotasResponse.body() ?: emptyList()
+                    val servicios = serviciosResponse.body() ?: emptyList()
+                    
+                    _uiState.value = HomeUiState.Success(
+                        saludo = "Bienvenido a CliniPets",
+                        mascotas = mascotas,
+                        serviciosDestacados = servicios.take(3),
+                        todosLosServicios = servicios
+                    )
                 } else {
-                    val errorMsg = runCatching { dashboardResponse.errorBody()?.string() }
-                        .getOrNull()
-                        ?.takeIf { it.isNotBlank() }
-                        ?: "Error dashboard: ${dashboardResponse.code()}"
-                    _uiState.value = HomeUiState.Error(errorMsg)
+                    _uiState.value = HomeUiState.Error("Error al cargar datos")
                 }
             } catch (e: Exception) {
                 _uiState.value = HomeUiState.Error(e.message ?: "Error desconocido")

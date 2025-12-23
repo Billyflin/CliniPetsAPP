@@ -9,8 +9,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
 import cl.clinipets.openapi.models.ProfileResponse
-import cl.clinipets.ui.agenda.PaymentResultScreen
-import cl.clinipets.ui.agenda.PaymentScreen
 import cl.clinipets.ui.auth.LoginScreen
 import cl.clinipets.ui.auth.LoginViewModel
 import cl.clinipets.ui.staff.StaffAgendaScreen
@@ -136,11 +134,6 @@ fun AppNavGraph(
         composable<MyReservationsRoute> {
             cl.clinipets.ui.agenda.MyReservationsScreen(
                 onBack = { navController.popBackStack() },
-                onPay = { url ->
-                    val context = navController.context
-                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                    context.startActivity(intent)
-                },
                 onCancel = { }
             )
         }
@@ -184,43 +177,9 @@ fun AppNavGraph(
                 onBack = { navController.popBackStack() },
                 onAddPet = { navController.navigate(MascotaFormRoute()) },
                 onSuccess = { cita ->
-                    // Navigate with the new PaymentRoute that only needs the ID
-                    navController.navigate(PaymentRoute(citaId = cita.id.toString()))
-                }
-            )
-        }
-
-        composable<PaymentRoute> { backStackEntry ->
-            val route = backStackEntry.toRoute<PaymentRoute>()
-            PaymentScreen(
-                citaId = route.citaId,
-                citaResponse = null, // The ViewModel will fetch the details
-                onPaymentConfirmed = {
-                    navController.navigate(PaymentResultRoute(status = "success")) {
-                        popUpTo(HomeRoute) // Pop back to home after payment success
-                    }
-                },
-                onHomeClick = {
+                    // Navigate to Home on success
                     navController.navigate(HomeRoute) {
                         popUpTo(HomeRoute) { inclusive = true }
-                    }
-                }
-            )
-        }
-
-        composable<PaymentResultRoute>(
-            deepLinks = listOf(
-                navDeepLink {
-                    uriPattern = "clinipets://payment-result?status={status}"
-                }
-            )
-        ) { backStackEntry ->
-            val route = backStackEntry.toRoute<PaymentResultRoute>()
-            PaymentResultScreen(
-                status = route.status,
-                onHomeClick = {
-                    navController.navigate(HomeRoute) {
-                        popUpTo(0) { inclusive = true }
                     }
                 }
             )

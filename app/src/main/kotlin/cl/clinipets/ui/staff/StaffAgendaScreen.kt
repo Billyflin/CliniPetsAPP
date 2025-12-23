@@ -233,7 +233,6 @@ fun StatusChip(estado: CitaDetalladaResponse.Estado) {
     val (color, text) = when (estado) {
         CitaDetalladaResponse.Estado.EN_SALA, CitaDetalladaResponse.Estado.EN_ATENCION -> Color(0xFF4CAF50) to "En Atención"
         CitaDetalladaResponse.Estado.CONFIRMADA -> Color(0xFF2196F3) to "Confirmada"
-        CitaDetalladaResponse.Estado.PENDIENTE_PAGO -> Color(0xFFFF9800) to "Pendiente Pago"
         CitaDetalladaResponse.Estado.FINALIZADA -> Color.Gray to "Finalizada"
         CitaDetalladaResponse.Estado.CANCELADA -> Color.Gray to "Cancelada"
         else -> Color.Gray to estado.name
@@ -281,16 +280,6 @@ private fun DailySummaryCard(resumen: ResumenDiarioResponse) {
                     label = "Citas",
                     value = resumen.totalCitas.toString(),
                     highlight = false
-                )
-                SummaryItem(
-                    label = "Online",
-                    value = currencyFormat.format(resumen.recaudacionOnline),
-                    highlight = false
-                )
-                SummaryItem(
-                    label = "En Caja",
-                    value = currencyFormat.format(resumen.recaudacionMostrador),
-                    highlight = true
                 )
             }
         }

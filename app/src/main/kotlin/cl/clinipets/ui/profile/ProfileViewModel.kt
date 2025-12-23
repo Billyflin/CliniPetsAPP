@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.core.session.SessionManager
 import cl.clinipets.openapi.apis.AuthControllerApi
-import cl.clinipets.openapi.models.GoogleLoginRequest
+// import cl.clinipets.openapi.models.GoogleLoginRequest
 import cl.clinipets.openapi.models.ProfileResponse
 import cl.clinipets.openapi.models.UserUpdateRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -109,6 +109,7 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    /*
     fun linkGoogleAccount(idToken: String) {
         val currentState = _uiState.value
         if (currentState !is ProfileUiState.Success) return
@@ -149,4 +150,5 @@ class ProfileViewModel @Inject constructor(
             }
         }
     }
+    */
 }

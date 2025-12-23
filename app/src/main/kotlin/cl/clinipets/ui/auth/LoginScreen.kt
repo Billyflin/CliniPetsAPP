@@ -60,6 +60,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.platform.LocalContext
+import android.app.Activity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -78,6 +80,8 @@ fun LoginScreen(
     var showPhoneLogin by remember { mutableStateOf(false) }
     var phoneInput by remember { mutableStateOf("") }
     var codeInput by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val activity = context as? Activity
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Fondo con degradado dinámico
@@ -402,7 +406,11 @@ fun LoginScreen(
                                     )
 
                                     Button(
-                                        onClick = { viewModel.requestOtp(phoneInput) },
+                                        onClick = { 
+                                            if (activity != null) {
+                                                viewModel.startPhoneLogin(activity, phoneInput) 
+                                            }
+                                        },
                                         enabled = !busy && phoneInput.isNotBlank(),
                                         modifier = Modifier.fillMaxWidth().height(50.dp),
                                         shape = RoundedCornerShape(12.dp)
@@ -431,7 +439,7 @@ fun LoginScreen(
                                     )
 
                                     Button(
-                                        onClick = { viewModel.loginWithOtp(codeInput) },
+                                        onClick = { viewModel.verifyPhoneCode(codeInput) },
                                         enabled = !busy && codeInput.length >= 4,
                                         modifier = Modifier.fillMaxWidth().height(50.dp),
                                         shape = RoundedCornerShape(12.dp)

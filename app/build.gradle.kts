@@ -19,7 +19,11 @@ plugins {
 android {
 
     signingConfigs {
-        create("clinipets") {
+        getByName("debug") {
+            storeFile = file("/home/billy/.android/debug.keystore")
+            storePassword = "android"
+            keyAlias = "cliniKey" // EL NUEVO ALIAS
+            keyPassword = "android"
         }
     }
     namespace = "cl.clinipets"
@@ -186,6 +190,7 @@ dependencies {
     implementation(libs.firebase.crashlytics)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
+    implementation(libs.firebase.auth)
     kapt(libs.hilt.compiler)
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0") // TODO: Check for latest version
 

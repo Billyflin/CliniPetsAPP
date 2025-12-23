@@ -206,47 +206,6 @@ private fun Content(
                 }
             }
         }
-
-        // Financial Summary
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(2.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.AttachMoney, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Resumen Financiero",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                val isPendientePago = cita.estado == CitaDetalladaResponse.Estado.PENDIENTE_PAGO
-                
-                FinancialRow(label = "Precio Total", amount = cita.precioFinal)
-                
-                FinancialRow(
-                    label = if (isPendientePago) "Abono (No pagado)" else "Abonado", 
-                    amount = cita.montoAbono,
-                    color = if (isPendientePago) MaterialTheme.colorScheme.error else Color.Unspecified
-                )
-                
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                
-                val montoPorPagar = if (isPendientePago) cita.precioFinal else if (isFinalizada) 0 else cita.saldoPendiente
-                
-                FinancialRow(
-                    label = "Por Pagar", 
-                    amount = montoPorPagar, 
-                    isBold = true,
-                    color = if (montoPorPagar > 0) MaterialTheme.colorScheme.error else Color(0xFF2E7D32)
-                )
-            }
-        }
     }
 }
 
