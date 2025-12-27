@@ -184,7 +184,7 @@ fun ProfileScreen(
                                     OutlinedButton(
                                         onClick = {
                                             scope.launch {
-                                                val token = requestGoogleIdToken(context, context.getString(cl.clinipets.R.string.default_web_client_id))
+                                                val token = requestGoogleIdToken(context)
                                                 if (!token.isNullOrBlank()) {
                                                     profileViewModel.linkGoogleAccount(token)
                                                 }

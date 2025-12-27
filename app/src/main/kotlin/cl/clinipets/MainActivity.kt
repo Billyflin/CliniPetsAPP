@@ -17,6 +17,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import android.content.pm.PackageManager
+import java.security.MessageDigest
 import cl.clinipets.ui.ClinipetsApp
 import cl.clinipets.ui.settings.SettingsViewModel
 import cl.clinipets.ui.theme.ClinipetsTheme
@@ -30,6 +32,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        logAppSignatures()
         val settingsViewModel: SettingsViewModel by viewModels()
         handleDeepLinkIntent(intent)
 
@@ -65,6 +68,39 @@ class MainActivity : ComponentActivity() {
             deepLinkType = type
             deepLinkTargetId = citaId
         }
+    }
+
+    private fun logAppSignatures() {
+        try {
+            val packageName = packageName
+            val packageManager = packageManager
+            val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val info = packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+                info.signingInfo?.apkContentsSigners
+            } else {
+                @Suppress("DEPRECATION")
+                val info = packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNATURES)
+                info.signatures
+            }
+
+            signatures?.forEach { signature ->
+                val sha1 = getFingerprint(signature.toByteArray(), "SHA-1")
+                val sha256 = getFingerprint(signature.toByteArray(), "SHA-256")
+                Log.d("ClinipetsSignatures", "-----------------------------------------")
+                Log.d("ClinipetsSignatures", "Package: $packageName")
+                Log.d("ClinipetsSignatures", "SHA-1:   $sha1")
+                Log.d("ClinipetsSignatures", "SHA-256: $sha256")
+                Log.d("ClinipetsSignatures", "-----------------------------------------")
+            }
+        } catch (e: Exception) {
+            Log.e("ClinipetsSignatures", "Error al obtener firmas", e)
+        }
+    }
+
+    private fun getFingerprint(bytes: ByteArray, algorithm: String): String {
+        val md = MessageDigest.getInstance(algorithm)
+        val digest = md.digest(bytes)
+        return digest.joinToString(":") { String.format("%02X", it) }
     }
 }
 

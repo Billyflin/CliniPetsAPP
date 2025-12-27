@@ -63,22 +63,33 @@ class LoginViewModel @Inject constructor(
 
     fun loginWithGoogleIdToken(idToken: String, phone: String? = null) {
         viewModelScope.launch {
+            Log.d("ClinipetsAuth", ">>> INICIO: loginWithGoogleIdToken")
             _ui.update { it.copy(isAuthenticating = true, error = null) }
             try {
                 // 1. Sign in to Firebase with Google Credential
+                Log.d("ClinipetsAuth", "Paso 1: Iniciando sesión en Firebase con Google IdToken...")
                 val credential = GoogleAuthProvider.getCredential(idToken, null)
                 val authResult = suspendCancellableCoroutine { cont ->
                     auth.signInWithCredential(credential)
-                        .addOnSuccessListener { cont.resume(it) }
-                        .addOnFailureListener { cont.resumeWith(Result.failure(it)) }
+                        .addOnSuccessListener { 
+                            Log.d("ClinipetsAuth", "Firebase: signInWithCredential ÉXITO para UID: ${it.user?.uid}")
+                            cont.resume(it) 
+                        }
+                        .addOnFailureListener { 
+                            Log.e("ClinipetsAuth", "Firebase: signInWithCredential FALLÓ", it)
+                            cont.resumeWith(Result.failure(it)) 
+                        }
                 }
 
                 if (authResult.user != null) {
+                    Log.d("ClinipetsAuth", "Paso 2: Firebase OK. Llamando a fetchProfile para sincronizar con Backend...")
                     fetchProfile()
                 } else {
+                    Log.e("ClinipetsAuth", "Firebase devolvió un usuario nulo tras el login")
                     throw Exception("El usuario de Firebase es nulo")
                 }
             } catch (e: Exception) {
+                Log.e("ClinipetsAuth", "Error durante el flujo de login Google -> Firebase", e)
                 auth.signOut()
                 _ui.update {
                     it.copy(
@@ -157,13 +168,17 @@ class LoginViewModel @Inject constructor(
 
     fun fetchProfile() {
         viewModelScope.launch {
+            Log.d("ClinipetsAuth", ">>> INICIO: fetchProfile")
             _ui.update { it.copy(isCheckingSession = true) }
             try {
-                // Usamos firebaseAuth() para sincronizar el estado de Firebase con el backend
+                Log.d("ClinipetsAuth", "Llamando a authApi.firebaseAuth()...")
                 val response = authApi.firebaseAuth()
+                Log.d("ClinipetsAuth", "Backend: Respuesta recibida. Código: ${response.code()}")
+                
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body != null) {
+                        Log.d("ClinipetsAuth", "Backend: ÉXITO. Usuario: ${body.email}, Rol: ${body.role}")
                         _ui.update {
                             it.copy(
                                 ok = true,
@@ -175,13 +190,17 @@ class LoginViewModel @Inject constructor(
                         }
                         sendFcmTokenSafe()
                     } else {
-                        handleSessionError("Sesión inválida")
+                        Log.e("ClinipetsAuth", "Backend: Error - El cuerpo de la respuesta es nulo")
+                        handleSessionError("Sesión inválida (body nulo)")
                     }
                 } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("ClinipetsAuth", "Backend: Error HTTP ${response.code()}. Detalle: $errorBody")
                     handleSessionError("Error de sesión: ${response.code()}")
                 }
             } catch (e: Exception) {
-                handleSessionError("Error de conexión")
+                Log.e("ClinipetsAuth", "Backend: Excepción de conexión", e)
+                handleSessionError("Error de conexión: ${e.message}")
             }
         }
     }

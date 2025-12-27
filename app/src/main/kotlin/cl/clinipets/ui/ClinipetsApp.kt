@@ -56,14 +56,11 @@ fun ClinipetsApp(
                         scope.launch {
                             try {
                                 requestingGoogle = true
-                                val token = requestGoogleIdToken(
-                                    context = context,
-                                    serverClientId = context.getString(cl.clinipets.R.string.default_web_client_id)
-                                )
+                                val token = requestGoogleIdToken(context)
                                 if (!token.isNullOrBlank()) {
                                     vm.loginWithGoogleIdToken(token)
                                 } else {
-                                    vm.setError("No se obtuvieron credenciales")
+                                    vm.setError("No se pudieron obtener credenciales de Google")
                                 }
                             } finally {
                                 requestingGoogle = false

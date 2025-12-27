@@ -1,8 +1,11 @@
 package cl.clinipets.ui.agenda
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
@@ -11,11 +14,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.CitaDetalladaResponse
+import cl.clinipets.ui.util.toLocalDateStr
+import cl.clinipets.ui.util.toLocalHour
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,7 +66,6 @@ fun MyReservationsScreen(
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("No tienes reservas aún 📅")
-                    Text("(Endpoint 'listar' pendiente en backend)", style = MaterialTheme.typography.bodySmall)
                 }
             }
         } else {
@@ -96,87 +100,103 @@ fun ReservationCard(
     onCancel: (UUID) -> Unit,
     isBusy: Boolean,
 ) {
-    val isConfirmada = cita.estado.name == "CONFIRMADA"
-    val isCancelada = cita.estado.name == "CANCELADA"
-
-    val cardAlpha = if (isCancelada) 0.5f else 1f
+    val isConfirmada = cita.estado == CitaDetalladaResponse.Estado.CONFIRMADA
+    val isCancelada = cita.estado == CitaDetalladaResponse.Estado.CANCELADA
+    val isEnAtencion = cita.estado == CitaDetalladaResponse.Estado.EN_ATENCION
 
     Card(
-        modifier = Modifier.alpha(cardAlpha),
-        elevation = CardDefaults.cardElevation(4.dp)
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isCancelada) 0.dp else 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isEnAtencion) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+        )
     ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth()
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Event, null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Column {
                     Text(
-                        text = "Cita #${cita.id.toString().take(4)}",
+                        text = cita.fechaHoraInicio.toLocalDateStr(),
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.ExtraBold
                     )
                     Text(
-                        text = "Estado: ${cita.estado}",
+                        text = "${cita.fechaHoraInicio.toLocalHour()} hrs",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = when {
-                            isConfirmada -> MaterialTheme.colorScheme.primary
-                            isCancelada -> MaterialTheme.colorScheme.error
-                            else -> MaterialTheme.colorScheme.secondary
-                        }
+                        color = MaterialTheme.colorScheme.primary
                     )
+                }
+                StatusBadge(cita.estado)
+            }
+
+            Spacer(Modifier.height(16.dp))
+            
+            cita.detalles.forEach { detalle ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Event, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "Precio: $${cita.precioFinal}",
-                        style = MaterialTheme.typography.bodySmall
+                        text = "${detalle.nombreServicio} - ${detalle.nombreMascota}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
 
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
             Spacer(Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                when {
-                    isConfirmada -> {
-                        Text(
-                            text = "Pago en clínica",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                Text(
+                    text = "Total: $${cita.precioFinal}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black
+                )
 
-                    isCancelada -> {
-                        Text(
-                            text = "Cancelada",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-
-                    else -> {
-                        // Allow cancelling other states if needed, or just show state
-                        if (!isCancelada && !isConfirmada) { // Assuming simplistic logic
-                             IconButton(
-                                onClick = { onCancel(cita.id) },
-                                enabled = !isBusy
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Cancel,
-                                    contentDescription = "Cancelar",
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
+                if (isConfirmada && !isBusy) {
+                    TextButton(
+                        onClick = { onCancel(cita.id) },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(Icons.Default.Cancel, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Cancelar")
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun StatusBadge(estado: CitaDetalladaResponse.Estado) {
+    val color = when (estado) {
+        CitaDetalladaResponse.Estado.CONFIRMADA -> Color(0xFF2196F3)
+        CitaDetalladaResponse.Estado.EN_ATENCION -> Color(0xFFFF9800)
+        CitaDetalladaResponse.Estado.FINALIZADA -> Color(0xFF4CAF50)
+        CitaDetalladaResponse.Estado.CANCELADA -> Color.Gray
+        CitaDetalladaResponse.Estado.NO_ASISTIO -> Color.Red
+    }
+
+    Surface(
+        color = color.copy(alpha = 0.15f),
+        shape = CircleShape
+    ) {
+        Text(
+            text = estado.name,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
     }
 }

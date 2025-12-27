@@ -72,6 +72,12 @@ fun AppNavGraph(
                 },
                 onCitaClick = { citaId, mascotaId ->
                     navController.navigate(StaffCitaDetailRoute(citaId))
+                },
+                onServiciosClick = {
+                    navController.navigate(StaffServiciosRoute)
+                },
+                onInventarioClick = {
+                    navController.navigate(StaffInventarioRoute)
                 }
             )
         }
@@ -101,6 +107,29 @@ fun AppNavGraph(
                         popUpTo(StaffAgendaRoute) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        composable<StaffServiciosRoute> {
+            cl.clinipets.ui.staff.servicios.StaffServiciosScreen(
+                onBack = { navController.popBackStack() },
+                onServicioClick = { id -> 
+                    navController.navigate(StaffServicioDetailRoute(id))
+                }
+            )
+        }
+
+        composable<StaffServicioDetailRoute> { backStackEntry ->
+            val route = backStackEntry.toRoute<StaffServicioDetailRoute>()
+            cl.clinipets.ui.staff.servicios.StaffServicioDetailScreen(
+                servicioId = route.servicioId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable<StaffInventarioRoute> {
+            cl.clinipets.ui.staff.inventario.StaffInventarioScreen(
+                onBack = { navController.popBackStack() }
             )
         }
         

@@ -107,13 +107,7 @@ class PetDetailViewModel @Inject constructor(
                         emptyList()
                     }
                     val clinicalHistory = if (clinicalHistoryResponse.isSuccessful) {
-                        val body = clinicalHistoryResponse.body()
-                        if (body is List<*>) {
-                             @Suppress("UNCHECKED_CAST")
-                             (body as List<FichaResponse>).sortedByDescending { it.fechaAtencion }
-                        } else {
-                             emptyList()
-                        }
+                        clinicalHistoryResponse.body()?.content?.sortedByDescending { it.fechaAtencion } ?: emptyList()
                     } else {
                         emptyList()
                     }
@@ -151,7 +145,7 @@ class PetDetailViewModel @Inject constructor(
                 }
             }
             try {
-                val response = fichaApi.descargarPdf(fichaId)
+                val response = fichaApi.descargarFichaPdf(fichaId)
                 if (response.isSuccessful) {
                     val inputStream = response.body()?.byteStream()
                     if (inputStream != null) {
@@ -194,6 +188,3 @@ class PetDetailViewModel @Inject constructor(
         }
     }
 }
-
-private suspend fun FichaClinicaControllerApi.descargarPdf(fichaId: UUID) =
-    descargarFichaPdf(fichaId)

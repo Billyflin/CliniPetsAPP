@@ -4,6 +4,7 @@ import cl.clinipets.openapi.apis.GaleriaControllerApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.openapi.apis.FichaClinicaControllerApi
+import cl.clinipets.openapi.apis.GestinDeAgendaApi
 import cl.clinipets.openapi.apis.MascotaControllerApi
 import cl.clinipets.openapi.apis.ReservaControllerApi
 import cl.clinipets.openapi.models.CitaDetalladaResponse
@@ -30,7 +31,8 @@ class StaffAtencionViewModel @Inject constructor(
     private val fichaApi: FichaClinicaControllerApi,
     private val reservaApi: ReservaControllerApi,
     private val mascotaApi: MascotaControllerApi,
-    private val galeriaApi: GaleriaControllerApi
+    private val galeriaApi: GaleriaControllerApi,
+    private val gestionAgendaApi: GestinDeAgendaApi
 ) : ViewModel() {
 
     data class UiState(
@@ -45,7 +47,8 @@ class StaffAtencionViewModel @Inject constructor(
             mascotaId = UUID.randomUUID(),
             fechaAtencion = OffsetDateTime.now(),
             motivoConsulta = "",
-            esVacuna = false
+            esVacuna = false,
+            recetas = emptyList()
         ),
         
         // Seguimiento y estado adicional
@@ -94,7 +97,11 @@ class StaffAtencionViewModel @Inject constructor(
     fun onFrecuenciaRespiratoriaChanged(v: String) = _uiState.update { it.copy(form = it.form.copy(frecuenciaRespiratoria = v.toIntOrNull())) }
     
     fun onAnamnesisChanged(v: String) = _uiState.update { it.copy(form = it.form.copy(anamnesis = v)) }
-    fun onHallazgosObjetivosChanged(v: String) = _uiState.update { it.copy(form = it.form.copy(hallazgosObjetivos = v)) }
+    
+    fun updateExamenFisico(v: cl.clinipets.openapi.models.ExamenFisicoDto) {
+        _uiState.update { it.copy(form = it.form.copy(examenFisico = v)) }
+    }
+
     fun onAvaluoClinicoChanged(v: String) = _uiState.update { it.copy(form = it.form.copy(avaluoClinico = v)) }
     fun onPlanTratamientoChanged(v: String) = _uiState.update { it.copy(form = it.form.copy(planTratamiento = v)) }
     
@@ -111,18 +118,18 @@ class StaffAtencionViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                // Actualizar estado a LISTO_PARA_BOX
-                reservaApi.cambiarEstado(UUID.fromString(citaId), "LISTO_PARA_BOX")
+                // Actualizar estado a EN_ATENCION (Inicia la atención en box)
+                gestionAgendaApi.iniciarAtencion(UUID.fromString(citaId))
                 _uiState.update { it.copy(isLoading = false, success = true) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = "Error al guardar triaje: ${e.message}") }
+                _uiState.update { it.copy(isLoading = false, error = "Error al iniciar atención: ${e.message}") }
             }
         }
     }
 
     fun iniciarFinalizacion(citaId: String, mascotaId: String) {
-        val saldo = _uiState.value.cita?.saldoPendiente ?: 0
-        if (saldo > 0) {
+        val saldo = _uiState.value.cita?.saldoPendiente ?: java.math.BigDecimal.ZERO
+        if (saldo > java.math.BigDecimal.ZERO) {
             _uiState.update { it.copy(showPaymentDialog = true) }
         } else {
             prepararFicha(citaId, mascotaId, null)
@@ -201,12 +208,6 @@ class StaffAtencionViewModel @Inject constructor(
         } catch (e: Exception) {
             // Silently fail photo upload
         }
+        }
     }
-}
-
-private suspend fun ReservaControllerApi.cambiarEstado(id: UUID, estado: String) =
-    patchEstadoCita(id, estado)
-
-private suspend fun ReservaControllerApi.patchEstadoCita(id: UUID, estado: String): retrofit2.Response<cl.clinipets.openapi.models.CitaResponse> {
-    return retrofit2.Response.success(null)
-}
+    

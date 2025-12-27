@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -106,6 +107,11 @@ fun PetDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // Recargar datos al entrar o volver a esta pantalla
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
+    }
 
     LaunchedEffect(uiState.isDeleted) {
         if (uiState.isDeleted) {
@@ -204,7 +210,7 @@ fun PetDetailScreen(
                         PetHeader(pet)
                         
                         VitalSignsDashboard(
-                            peso = pet.pesoActual,
+                            peso = pet.pesoActual ?: 0.0,
                             temperatura = lastRecord?.temperatura,
                             frecuencia = lastRecord?.frecuenciaCardiaca
                         )
@@ -605,19 +611,16 @@ private fun PetHistory(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Historial de citas",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
+            text = "Historial de Citas",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.ExtraBold
         )
 
         if (history.isEmpty()) {
-            Text(
-                text = "Aún no hay atenciones registradas.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            EmptyStateCard("No hay citas registradas aún")
         } else {
             history.forEachIndexed { index, cita ->
                 TimelineItem(
@@ -631,6 +634,19 @@ private fun PetHistory(
 }
 
 @Composable
+private fun EmptyStateCard(text: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Box(Modifier.padding(32.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
 private fun ClinicalHistory(
     records: List<FichaResponse>,
     onDownload: (UUID) -> Unit,
@@ -638,19 +654,16 @@ private fun ClinicalHistory(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Fichas médicas",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
+            text = "Fichas Médicas",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.ExtraBold
         )
 
         if (records.isEmpty()) {
-            Text(
-                text = "Aún no hay fichas clínicas registradas.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            EmptyStateCard("No hay fichas médicas disponibles")
         } else {
             records.forEach { record ->
                 ClinicalRecordCard(
@@ -768,12 +781,25 @@ private fun ClinicalRecordCard(
                                 content = anamnesis
                             )
                         }
-                        record.hallazgosObjetivos?.takeIf { it.isNotBlank() }?.let { hallazgos ->
-                            ClinicalSection(
-                                icon = Icons.Default.Info,
-                                label = "Examen Físico",
-                                content = hallazgos
-                            )
+                        record.examenFisico?.let { examen ->
+                            val summary = listOfNotNull(
+                                examen.mucosas?.let { "Mucosas: $it" },
+                                examen.tllc?.let { "TLLC: $it" },
+                                examen.hidratacion?.let { "Hidratación: $it" },
+                                examen.linfonodos?.let { "Linfonodos: $it" },
+                                examen.pielAnexos?.let { "Piel/Anexos: $it" },
+                                examen.sistemaCardiovascular?.let { "Cardio: $it" },
+                                examen.sistemaRespiratorio?.let { "Resp: $it" },
+                                examen.sistemaDigestivo?.let { "Digest: $it" }
+                            ).joinToString("\n")
+                            
+                            if (summary.isNotBlank()) {
+                                ClinicalSection(
+                                    icon = Icons.Default.Info,
+                                    label = "Examen Físico",
+                                    content = summary
+                                )
+                            }
                         }
 
                         // Clinical Constants

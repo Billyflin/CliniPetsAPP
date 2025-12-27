@@ -6,10 +6,10 @@ import cl.clinipets.openapi.apis.DisponibilidadControllerApi
 import cl.clinipets.openapi.apis.MascotaControllerApi
 import cl.clinipets.openapi.apis.ReservaControllerApi
 import cl.clinipets.openapi.apis.ServicioMedicoControllerApi
-import cl.clinipets.openapi.models.CitaResponse
-import cl.clinipets.openapi.models.ItemReserva
-import cl.clinipets.openapi.models.MascotaResponse
+import cl.clinipets.openapi.models.ReservaItemRequest
 import cl.clinipets.openapi.models.ReservaCreateRequest
+import cl.clinipets.openapi.models.CitaResponse
+import cl.clinipets.openapi.models.MascotaResponse
 import cl.clinipets.openapi.models.ServicioMedicoDto
 import cl.clinipets.ui.features.booking.CartItem
 import cl.clinipets.ui.features.booking.CartManager
@@ -197,16 +197,17 @@ class BookingViewModel @Inject constructor(
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true) }
                 try {
-                    // Group cart items by pet for the new ItemReserva structure
-                    val items = cart.groupBy { it.mascota.id }.map { (mascotaId, cartItems) ->
-                        ItemReserva(
-                            mascotaId = mascotaId,
-                            serviciosIds = cartItems.map { it.servicio.id }
+                    // Flatten cart items to ReservaItemRequest
+                    val detalles = cart.map {
+                        ReservaItemRequest(
+                            mascotaId = it.mascota.id!!,
+                            servicioId = it.servicio.id,
+                            cantidad = 1
                         )
                     }
 
                     val request = ReservaCreateRequest(
-                        items = items,
+                        detalles = detalles,
                         fechaHoraInicio = selectedSlot,
                         origen = ReservaCreateRequest.Origen.APP,
                         tipoAtencion = currentState.tipoAtencion,

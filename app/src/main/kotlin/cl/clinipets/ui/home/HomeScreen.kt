@@ -24,7 +24,14 @@ import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Vaccines
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.Button
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,6 +41,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -59,6 +67,10 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.cargarDatosIniciales()
+    }
 
     Scaffold { padding ->
         Box(
@@ -124,7 +136,7 @@ private fun HomeContent(
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         item {
             HomeHeader(
@@ -134,14 +146,14 @@ private fun HomeContent(
                 onMyReservationsClick = onMyReservationsClick
             )
         }
-        if (state.mascotas.isNotEmpty()) {
-            item {
-                PetsSection(
-                    mascotas = state.mascotas,
-                    onMyPetsClick = onMyPetsClick
-                )
-            }
+
+        item {
+            PetsSection(
+                mascotas = state.mascotas,
+                onMyPetsClick = onMyPetsClick
+            )
         }
+
         if (state.serviciosDestacados.isNotEmpty()) {
             item {
                 FeaturedServicesSection(
@@ -150,21 +162,23 @@ private fun HomeContent(
                 )
             }
         }
+
         item {
             Text(
-                text = "Todos los Servicios",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(vertical = 4.dp)
+                text = "Nuestros Servicios",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
+
         items(state.todosLosServicios) { servicio ->
             ServiceCard(
                 servicio = servicio,
                 onClick = { onServiceClick(servicio.id.toString()) }
             )
         }
-        item { Spacer(modifier = Modifier.height(24.dp)) }
+        item { Spacer(modifier = Modifier.height(32.dp)) }
     }
 }
 
@@ -177,91 +191,85 @@ private fun HomeHeader(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Hola,",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Text(
                     text = saludo,
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Agenda, vacunas y bienestar de tus mascotas",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
-            Surface(
+            IconButton(
+                onClick = onProfileClick,
                 modifier = Modifier
-                    .size(52.dp)
-                    .clickable(onClick = onProfileClick),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer,
-                tonalElevation = 2.dp
+                    .size(48.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
             ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_google_logo),
-                        contentDescription = "Perfil",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.AccountCircle,
+                    contentDescription = "Perfil",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(32.dp)
+                )
             }
         }
+        
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth()
         ) {
-            QuickActionChip(
+            QuickActionCard(
                 icon = Icons.Default.Event,
-                label = "Reservas",
-                onClick = onMyReservationsClick
+                label = "Citas",
+                description = "Ver agenda",
+                modifier = Modifier.weight(1f),
+                onClick = onMyReservationsClick,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
             )
-            QuickActionChip(
+            QuickActionCard(
                 icon = Icons.Default.Pets,
-                label = "Mis Mascotas",
-                onClick = onMyPetsClick
+                label = "Mascotas",
+                description = "Mis peludos",
+                modifier = Modifier.weight(1f),
+                onClick = onMyPetsClick,
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer
             )
         }
     }
 }
 
 @Composable
-private fun QuickActionChip(
+private fun QuickActionCard(
     icon: ImageVector,
     label: String,
-    onClick: () -> Unit
+    description: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    containerColor: Color
 ) {
-    Surface(
-        modifier = Modifier.clickable(onClick = onClick),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(14.dp),
-        tonalElevation = 1.dp
+    Card(
+        onClick = onClick,
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        shape = RoundedCornerShape(20.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+        Column(modifier = Modifier.padding(16.dp)) {
+            Icon(icon, null, modifier = Modifier.size(28.dp))
+            Spacer(Modifier.height(8.dp))
+            Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(description, style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -279,24 +287,41 @@ private fun PetsSection(
         ) {
             Text(
                 text = "Tus Mascotas",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
-            Text(
-                text = "Ver todas",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .padding(horizontal = 4.dp)
-                    .clickable(onClick = onMyPetsClick)
-            )
+            TextButton(onClick = onMyPetsClick) {
+                Text("Gestionar")
+            }
         }
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(horizontal = 2.dp)
-        ) {
-            items(mascotas) { mascota ->
-                PetAvatar(mascota = mascota)
+
+        if (mascotas.isEmpty()) {
+            Card(
+                onClick = onMyPetsClick,
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.primary, CircleShape).padding(4.dp), tint = Color.White)
+                    Column {
+                        Text("Registra tu primera mascota", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Para agendar servicios necesitamos conocer a tu peludo", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        } else {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp)
+            ) {
+                items(mascotas) { mascota ->
+                    PetAvatar(mascota = mascota)
+                }
             }
         }
     }
@@ -306,31 +331,31 @@ private fun PetsSection(
 private fun PetAvatar(mascota: MascotaResponse) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.width(80.dp)
     ) {
         Surface(
-            modifier = Modifier.size(68.dp),
+            modifier = Modifier.size(72.dp),
             shape = CircleShape,
             color = MaterialTheme.colorScheme.secondaryContainer,
-            tonalElevation = 2.dp
+            tonalElevation = 4.dp,
+            shadowElevation = 2.dp
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 mascotaIconRes(mascota.especie)?.let { resId ->
                     Icon(
                         painter = painterResource(id = resId),
                         contentDescription = mascota.nombre,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(36.dp)
                     )
-                } ?: Icon(
-                    imageVector = Icons.Default.Pets,
-                    contentDescription = mascota.nombre,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer
-                )
+                }
             }
         }
         Text(
             text = mascota.nombre,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -344,13 +369,13 @@ private fun FeaturedServicesSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = "Recomendado para ti",
-            style = MaterialTheme.typography.titleMedium,
+            text = "Populares",
+            style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(horizontal = 2.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp)
         ) {
             items(servicios) { servicio ->
                 FeaturedServiceCard(
@@ -368,49 +393,46 @@ private fun FeaturedServiceCard(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.width(240.dp),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier.width(200.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         onClick = onClick
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "Destacado",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-            Text(
-                text = servicio.nombre,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = formatPrice(servicio.precioBase),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                color = Color.White.copy(alpha = 0.2f),
+                shape = CircleShape,
+                modifier = Modifier.size(40.dp)
             ) {
-                Icon(
-                    imageVector = servicioIcon(servicio.categoria),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = servicioIcon(servicio.categoria),
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+                }
+            }
+            
+            Column {
                 Text(
-                    text = servicio.categoria.name.lowercase().replaceFirstChar { it.uppercase() },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                    text = servicio.nombre,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 2,
+                    minLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = formatPrice(servicio.precioBase),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.ExtraBold
                 )
             }
         }
@@ -420,54 +442,61 @@ private fun FeaturedServiceCard(
 @Composable
 fun ServiceCard(servicio: ServicioMedicoDto, onClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Icon based on category
-            val icon = servicioIcon(servicio.categoria)
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(
+                modifier = Modifier.size(56.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = icon, 
+                        imageVector = servicioIcon(servicio.categoria),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = servicio.categoria.name,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        modifier = Modifier.size(28.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = servicio.categoria.name,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
                 Text(
                     text = servicio.nombre,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = formatPrice(servicio.precioBase),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.secondary,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Timer, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = "${servicio.duracionMinutos} min",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
+
+            Text(
+                text = formatPrice(servicio.precioBase),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.secondary,
+                fontWeight = FontWeight.ExtraBold
+            )
         }
     }
 }
@@ -486,5 +515,5 @@ private fun mascotaIconRes(especie: MascotaResponse.Especie?): Int? = when (espe
     else -> null
 }
 
-private fun formatPrice(precio: Int): String =
+private fun formatPrice(precio: Any): String =
     "$" + NumberFormat.getNumberInstance().format(precio)

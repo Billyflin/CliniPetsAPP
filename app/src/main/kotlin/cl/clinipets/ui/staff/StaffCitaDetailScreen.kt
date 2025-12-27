@@ -84,28 +84,7 @@ fun StaffCitaDetailScreen(
                                 enabled = !state.isCancelled && mascotaId != null,
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
                             ) {
-                                Text("Iniciar Triaje")
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-
-                        // Clinical flow buttons
-                        if (cita.estado != CitaDetalladaResponse.Estado.FINALIZADA) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Button(
-                                    onClick = { viewModel.cambiarEstado(CitaDetalladaResponse.Estado.EN_SEDACION) },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE91E63))
-                                ) {
-                                    Text("Sedación", style = MaterialTheme.typography.labelSmall)
-                                }
-                                Button(
-                                    onClick = { viewModel.cambiarEstado(CitaDetalladaResponse.Estado.PABELLON_ESPERA) },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF795548))
-                                ) {
-                                    Text("Pabellón", style = MaterialTheme.typography.labelSmall)
-                                }
+                                Text("Iniciar Atención")
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                         }
@@ -121,7 +100,7 @@ fun StaffCitaDetailScreen(
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !state.isCancelled && mascotaId != null
                         ) {
-                            Text(if (cita.estado == CitaDetalladaResponse.Estado.EN_SALA || cita.estado == CitaDetalladaResponse.Estado.LISTO_PARA_BOX) "Continuar Atención" else "Iniciar Atención")
+                            Text(if (cita.estado == CitaDetalladaResponse.Estado.EN_ATENCION) "Continuar Atención" else "Ir a Ficha")
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedButton(

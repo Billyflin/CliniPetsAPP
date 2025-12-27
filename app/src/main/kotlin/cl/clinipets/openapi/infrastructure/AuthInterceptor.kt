@@ -1,5 +1,6 @@
 package cl.clinipets.openapi.infrastructure
 
+import android.util.Log
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import okhttp3.Interceptor
@@ -24,17 +25,22 @@ class AuthInterceptor @Inject constructor() : Interceptor {
 
         val token = if (currentUser != null) {
             try {
-                // Force refresh false, await result (blocking)
+                Log.d("ClinipetsInterceptor", "Obteniendo IdToken de Firebase para: ${currentUser.email}")
                 val task = currentUser.getIdToken(false)
-                Tasks.await(task, 10, TimeUnit.SECONDS)?.token
+                val result = Tasks.await(task, 10, TimeUnit.SECONDS)
+                Log.d("ClinipetsInterceptor", "Token obtenido correctamente")
+                result?.token
             } catch (e: Exception) {
+                Log.e("ClinipetsInterceptor", "Error al obtener IdToken", e)
                 null
             }
         } else {
+            Log.w("ClinipetsInterceptor", "No hay usuario en Firebase, enviando petición sin token")
             null
         }
 
         return if (!token.isNullOrBlank()) {
+            Log.d("ClinipetsInterceptor", "Adjuntando cabecera Authorization Bearer")
             val newRequest = request.newBuilder()
                 .addHeader("Authorization", "Bearer $token")
                 .build()

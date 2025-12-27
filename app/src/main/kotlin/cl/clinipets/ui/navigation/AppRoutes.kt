@@ -34,3 +34,12 @@ object MyPetsRoute
 
 @Serializable
 data class PetDetailRoute(val petId: String)
+
+@Serializable
+object StaffServiciosRoute
+
+@Serializable
+data class StaffServicioDetailRoute(val servicioId: String)
+
+@Serializable
+object StaffInventarioRoute

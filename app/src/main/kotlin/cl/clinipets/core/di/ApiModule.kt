@@ -9,8 +9,13 @@ import cl.clinipets.openapi.apis.DeviceTokenControllerApi
 import cl.clinipets.openapi.apis.DisponibilidadControllerApi
 import cl.clinipets.openapi.apis.FichaClinicaControllerApi
 import cl.clinipets.openapi.apis.GaleriaControllerApi
+import cl.clinipets.openapi.apis.GestinDeAgendaApi
+import cl.clinipets.openapi.apis.HistorialClnicoApi
+import cl.clinipets.openapi.apis.InventarioControllerApi
 import cl.clinipets.openapi.apis.MaestrosControllerApi
 import cl.clinipets.openapi.apis.MascotaControllerApi
+import cl.clinipets.openapi.apis.PingControllerApi
+import cl.clinipets.openapi.apis.ReporteControllerApi
 import cl.clinipets.openapi.apis.ReservaControllerApi
 import cl.clinipets.openapi.apis.ServicioMedicoControllerApi
 import cl.clinipets.openapi.infrastructure.ApiClient
@@ -54,18 +59,24 @@ object ApiModule {
     fun provideApiClient(authInterceptor: AuthInterceptor): ApiClient {
         val baseUrl = resolveBaseUrl()
 
-        val apiClient = ApiClient(
-            baseUrl = baseUrl
-        )
-
-        // Add Bearer Token Interceptor
-        apiClient.addAuthorization("Bearer", authInterceptor)
+        // Creamos el cliente OkHttp con el interceptor global
+        val okHttpBuilder = OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)
 
         if (BuildConfig.DEBUG) {
-            apiClient.setLogger { message ->
+            val loggingInterceptor = HttpLoggingInterceptor { message ->
                 Log.d("OkHttp", message)
+            }.apply {
+                level = HttpLoggingInterceptor.Level.BODY
             }
+            okHttpBuilder.addInterceptor(loggingInterceptor)
         }
+
+        // Se lo pasamos al ApiClient generado
+        val apiClient = ApiClient(
+            baseUrl = baseUrl,
+            okHttpClientBuilder = okHttpBuilder
+        )
 
         return apiClient
     }
@@ -121,9 +132,29 @@ object ApiModule {
         apiClient.createService(GaleriaControllerApi::class.java)
 
     @Provides
-    @Named("GoogleClientId")
-    fun provideGoogleClientId(@ApplicationContext context: Context): String =
-        context.getString(cl.clinipets.R.string.default_web_client_id)
+    @Singleton
+    fun provideGestionAgendaApi(apiClient: ApiClient): GestinDeAgendaApi =
+        apiClient.createService(GestinDeAgendaApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideHistorialClinicoApi(apiClient: ApiClient): HistorialClnicoApi =
+        apiClient.createService(HistorialClnicoApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideInventarioApi(apiClient: ApiClient): InventarioControllerApi =
+        apiClient.createService(InventarioControllerApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideReporteApi(apiClient: ApiClient): ReporteControllerApi =
+        apiClient.createService(ReporteControllerApi::class.java)
+
+    @Provides
+    @Singleton
+    fun providePingApi(apiClient: ApiClient): PingControllerApi =
+        apiClient.createService(PingControllerApi::class.java)
 
     @Provides
     @Singleton

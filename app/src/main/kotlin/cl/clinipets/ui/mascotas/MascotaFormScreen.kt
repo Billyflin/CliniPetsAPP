@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -27,7 +28,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -84,7 +87,7 @@ fun MascotaFormScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (uiState.isEdit) "Editar Mascota" else "Agregar Mascota") },
+                title = { Text(if (uiState.isEdit) "Editar Mascota" else "Nueva Mascota") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
@@ -98,124 +101,144 @@ fun MascotaFormScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                OutlinedTextField(
-                    value = nombre,
-                    onValueChange = { nombre = it },
-                    label = { Text("Nombre") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Text("Especie:", style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(MascotaCreateRequest.Especie.PERRO, MascotaCreateRequest.Especie.GATO).forEach { option ->
-                        FilterChip(
-                            selected = especie == option,
-                            onClick = { 
-                                especie = option
-                                viewModel.cargarRazas(option)
-                            },
-                            label = { Text(option.name) },
-                            enabled = !uiState.isEdit
-                        )
-                    }
-                }
-
-                // Raza Dropdown
-                var expandedRaza by remember { mutableStateOf(false) }
-                LaunchedEffect(especie) {
-                    viewModel.cargarRazas(especie)
-                }
-                
-                ExposedDropdownMenuBox(
-                    expanded = expandedRaza,
-                    onExpandedChange = { expandedRaza = !expandedRaza }
-                ) {
+                // SECCIÓN 1: Identificación
+                FormSection(title = "Identificación") {
                     OutlinedTextField(
-                        value = raza,
-                        onValueChange = { raza = it },
-                        label = { Text("Raza") },
-                        modifier = Modifier.fillMaxWidth().menuAnchor(),
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedRaza) },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                        value = nombre,
+                        onValueChange = { nombre = it },
+                        label = { Text("Nombre") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
                     )
-                    if (uiState.razasDisponibles.isNotEmpty()) {
-                        ExposedDropdownMenu(
-                            expanded = expandedRaza,
-                            onDismissRequest = { expandedRaza = false }
-                        ) {
-                            uiState.razasDisponibles.forEach { opcion ->
-                                DropdownMenuItem(
-                                    text = { Text(opcion) },
-                                    onClick = {
-                                        raza = opcion
-                                        expandedRaza = false
-                                    }
-                                )
+
+                    Spacer(Modifier.height(8.dp))
+                    
+                    Text("Especie:", style = MaterialTheme.typography.labelMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(MascotaCreateRequest.Especie.PERRO, MascotaCreateRequest.Especie.GATO).forEach { option ->
+                            FilterChip(
+                                selected = especie == option,
+                                onClick = { 
+                                    especie = option
+                                    viewModel.cargarRazas(option)
+                                },
+                                label = { Text(option.name) },
+                                enabled = !uiState.isEdit,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Raza Dropdown
+                    var expandedRaza by remember { mutableStateOf(false) }
+                    LaunchedEffect(especie) {
+                        viewModel.cargarRazas(especie)
+                    }
+                    
+                    ExposedDropdownMenuBox(
+                        expanded = expandedRaza,
+                        onExpandedChange = { expandedRaza = !expandedRaza }
+                    ) {
+                        OutlinedTextField(
+                            value = raza,
+                            onValueChange = { raza = it },
+                            label = { Text("Raza") },
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedRaza) },
+                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        if (uiState.razasDisponibles.isNotEmpty()) {
+                            ExposedDropdownMenu(
+                                expanded = expandedRaza,
+                                onDismissRequest = { expandedRaza = false }
+                            ) {
+                                uiState.razasDisponibles.forEach { opcion ->
+                                    DropdownMenuItem(
+                                        text = { Text(opcion) },
+                                        onClick = {
+                                            raza = opcion
+                                            expandedRaza = false
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
                 }
 
-                Text("Sexo:", style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(MascotaCreateRequest.Sexo.MACHO, MascotaCreateRequest.Sexo.HEMBRA).forEach { option ->
-                        FilterChip(
-                            selected = sexo == option,
-                            onClick = { sexo = option },
-                            label = { Text(option.name) }
+                // SECCIÓN 2: Detalles Clínicos
+                FormSection(title = "Detalles Clínicos") {
+                    Text("Sexo:", style = MaterialTheme.typography.labelMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(MascotaCreateRequest.Sexo.MACHO, MascotaCreateRequest.Sexo.HEMBRA).forEach { option ->
+                            FilterChip(
+                                selected = sexo == option,
+                                onClick = { sexo = option },
+                                label = { Text(option.name) },
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                        }
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("¿Esterilizado?", style = MaterialTheme.typography.bodyLarge)
+                        Switch(
+                            checked = esterilizado,
+                            onCheckedChange = { esterilizado = it }
                         )
                     }
-                }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("¿Esterilizado?", style = MaterialTheme.typography.bodyLarge)
-                    Switch(
-                        checked = esterilizado,
-                        onCheckedChange = { esterilizado = it }
+                    OutlinedTextField(
+                        value = chip,
+                        onValueChange = { chip = it },
+                        label = { Text("Chip Identificador (Opcional)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
                     )
                 }
 
-                OutlinedTextField(
-                    value = chip,
-                    onValueChange = { chip = it },
-                    label = { Text("Chip Identificador (Opcional)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Text("Temperamento:", style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(
-                        MascotaCreateRequest.Temperamento.DOCIL,
-                        MascotaCreateRequest.Temperamento.NERVIOSO,
-                        MascotaCreateRequest.Temperamento.AGRESIVO
-                    ).forEach { option ->
-                        val color = when (option) {
-                            MascotaCreateRequest.Temperamento.DOCIL -> MaterialTheme.colorScheme.primary
-                            MascotaCreateRequest.Temperamento.NERVIOSO -> MaterialTheme.colorScheme.tertiary
-                            MascotaCreateRequest.Temperamento.AGRESIVO -> MaterialTheme.colorScheme.error
-                        }
-                        FilterChip(
-                            selected = temperamento == option,
-                            onClick = { temperamento = option },
-                            label = { Text(option.name) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = color,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                // SECCIÓN 3: Comportamiento
+                FormSection(title = "Comportamiento") {
+                    Text("Temperamento:", style = MaterialTheme.typography.labelMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(
+                            MascotaCreateRequest.Temperamento.DOCIL,
+                            MascotaCreateRequest.Temperamento.NERVIOSO,
+                            MascotaCreateRequest.Temperamento.AGRESIVO
+                        ).forEach { option ->
+                            val color = when (option) {
+                                MascotaCreateRequest.Temperamento.DOCIL -> Color(0xFF4CAF50)
+                                MascotaCreateRequest.Temperamento.NERVIOSO -> Color(0xFFFF9800)
+                                MascotaCreateRequest.Temperamento.AGRESIVO -> Color(0xFFF44336)
+                            }
+                            FilterChip(
+                                selected = temperamento == option,
+                                onClick = { temperamento = option },
+                                label = { Text(option.name) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = color.copy(alpha = 0.2f),
+                                    selectedLabelColor = color
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                border = if (temperamento == option) FilterChipDefaults.filterChipBorder(enabled = true, selected = true, borderColor = color) else null
                             )
-                        )
+                        }
                     }
                 }
             }
@@ -231,15 +254,33 @@ fun MascotaFormScreen(
                         Toast.makeText(context, "Completa todos los campos obligatorios", Toast.LENGTH_SHORT).show()
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isLoading
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                enabled = !uiState.isLoading,
+                shape = RoundedCornerShape(16.dp)
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                 } else {
-                    Text(if (uiState.isEdit) "Actualizar Mascota" else "Guardar Mascota")
+                    Text(if (uiState.isEdit) "Actualizar Información" else "Registrar Mascota", fontWeight = FontWeight.Bold)
                 }
             }
         }
+    }
+}
+
+@Composable
+fun FormSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = content
+        )
     }
 }

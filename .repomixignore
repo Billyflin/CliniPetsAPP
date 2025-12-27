@@ -1,0 +1,58 @@
+# --- REPOMIX GOD-MODE OPTIMIZATION ---
+
+# 1. EVITAR RECURSIVIDAD (CRÍTICO)
+# Esto evita que repomix incluya sus propios archivos de salida
+repomix-*.xml
+repomix-*.txt
+repomix-output.xml
+
+# 2. ELIMINAR VECTORES XML (EL ASESINO DE TOKENS)
+# En tus logs: logocompleto.xml y otros sumaban casi 100k tokens.
+# Los borramos todos, no sirven para lógica de programación.
+**/src/main/res/drawable*/*.xml
+**/src/main/res/mipmap*/*.xml
+**/src/main/res/values/*.xml
+# Excepto strings.xml (opcional, si quieres que la IA vea los textos)
+!**/src/main/res/values/strings.xml
+
+# 3. FILTRAR CÓDIGO GENERADO (LIMPIEZA FINA)
+# Mantenemos solo lo que importa de OpenAPI (Interfaces y DTOs)
+!app/build/generate-resources/main/src/main/kotlin/cl/clinipets/openapi/apis/
+!app/build/generate-resources/main/src/main/kotlin/cl/clinipets/openapi/models/
+
+# Ignorar el resto del ruido en build
+**/build/intermediates/
+**/build/outputs/
+**/build/tmp/
+**/build/kotlin/
+**/build/generated/
+
+# 4. LIMPIEZA DE TOOLS Y LOGS
+.gradle/
+.idea/
+.kotlin/
+**/errors-*.log
+gradlew
+gradlew.bat
+gradle/
+*.iml
+local.properties
+.DS_Store
+
+# 5. ASSETS BINARIOS
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.webp
+**/*.svg
+**/*.ico
+**/*.gif
+**/*.jar
+**/*.apk
+
+# 6. ARCHIVOS DE TEST/DOC SECUNDARIOS
+reaadme.md
+test.puml
+test-0.png
+.repomixignore
+.gitignore

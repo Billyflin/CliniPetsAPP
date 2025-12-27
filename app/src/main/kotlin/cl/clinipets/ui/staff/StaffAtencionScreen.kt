@@ -40,7 +40,24 @@ import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
+
+@Composable
+fun PaymentMethodButton(
+    text: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(12.dp)
+    ) {
+        Icon(icon, contentDescription = null)
+        Spacer(Modifier.width(12.dp))
+        Text(text, style = MaterialTheme.typography.bodyLarge)
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -259,67 +276,43 @@ fun StaffAtencionScreen(
                     0 -> { // Triaje
                         SectionHeader(title = "Constantes Vitales", icon = Icons.Default.MonitorWeight)
                         
+                        VitalSignInput(
+                            label = "Peso Registrado",
+                            value = state.form.pesoRegistrado?.toString() ?: "",
+                            onValueChange = viewModel::onPesoChanged,
+                            icon = Icons.Default.MonitorWeight,
+                            unit = "kg"
+                        )
+
                         val tempValue = state.form.temperatura
                         val isHighTemp = tempValue != null && tempValue > 39.5
                         
-                        OutlinedTextField(
-                            value = state.form.pesoRegistrado?.toString() ?: "",
-                            onValueChange = viewModel::onPesoChanged,
-                            label = { Text("Peso Actual (kg)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.fillMaxWidth(),
-                            leadingIcon = { Icon(Icons.Default.MonitorWeight, null) }
-                        )
-                        OutlinedTextField(
+                        VitalSignInput(
+                            label = "Temperatura",
                             value = state.form.temperatura?.toString() ?: "",
                             onValueChange = viewModel::onTemperaturaChanged,
-                            label = { Text("Temperatura (°C)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.fillMaxWidth(),
-                            leadingIcon = { 
-                                Icon(
-                                    imageVector = if (isHighTemp) Icons.Default.Warning else Icons.Default.Thermostat, 
-                                    contentDescription = null,
-                                    tint = if (isHighTemp) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                                ) 
-                            },
-                            colors = if (isHighTemp) {
-                                OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.error,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.error,
-                                    focusedLabelColor = MaterialTheme.colorScheme.error,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.error
-                                )
-                            } else OutlinedTextFieldDefaults.colors()
-                        )
-                        if (isHighTemp) {
-                            Text(
-                                text = "¡Alerta! Temperatura elevada",
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.padding(start = 16.dp)
-                            )
-                        }
-                        
-                        OutlinedTextField(
-                            value = state.form.frecuenciaCardiaca?.toString() ?: "",
-                            onValueChange = viewModel::onFrecuenciaCardiacaChanged,
-                            label = { Text("Frecuencia Cardíaca (lpm)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.fillMaxWidth(),
-                            leadingIcon = { Icon(Icons.Default.Favorite, null) }
-                        )
-                        OutlinedTextField(
-                            value = state.form.frecuenciaRespiratoria?.toString() ?: "",
-                            onValueChange = viewModel::onFrecuenciaRespiratoriaChanged,
-                            label = { Text("Frecuencia Respiratoria (rpm)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.fillMaxWidth(),
-                            leadingIcon = { Icon(Icons.Default.Air, null) }
+                            icon = if (isHighTemp) Icons.Default.Warning else Icons.Default.Thermostat,
+                            unit = "°C",
+                            isError = isHighTemp
                         )
 
-                        if (state.cita?.estado == cl.clinipets.openapi.models.CitaDetalladaResponse.Estado.EN_SALA || 
-                            state.cita?.estado == cl.clinipets.openapi.models.CitaDetalladaResponse.Estado.CONFIRMADA) {
+                        VitalSignInput(
+                            label = "Frecuencia Cardíaca",
+                            value = state.form.frecuenciaCardiaca?.toString() ?: "",
+                            onValueChange = viewModel::onFrecuenciaCardiacaChanged,
+                            icon = Icons.Default.Favorite,
+                            unit = "lpm"
+                        )
+
+                        VitalSignInput(
+                            label = "Frecuencia Respiratoria",
+                            value = state.form.frecuenciaRespiratoria?.toString() ?: "",
+                            onValueChange = viewModel::onFrecuenciaRespiratoriaChanged,
+                            icon = Icons.Default.Air,
+                            unit = "rpm"
+                        )
+
+                        if (state.cita?.estado == cl.clinipets.openapi.models.CitaDetalladaResponse.Estado.CONFIRMADA) {
                             Button(
                                 onClick = { viewModel.guardarTriaje(citaId) },
                                 modifier = Modifier.fillMaxWidth(),
@@ -331,27 +324,76 @@ fun StaffAtencionScreen(
                                 } else {
                                     Icon(Icons.Default.Save, null)
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Guardar Triaje y Notificar")
+                                    Text("Guardar Triaje e Iniciar Atención")
                                 }
                             }
                         }
                     }
                     1 -> { // Examen
-                        SectionHeader(title = "Examen Físico (S+O)", icon = Icons.Default.MedicalServices)
+                        SectionHeader(title = "Anamnesis", icon = Icons.Default.Info)
                         OutlinedTextField(
                             value = state.form.anamnesis ?: "",
                             onValueChange = viewModel::onAnamnesisChanged,
-                            label = { Text("Anamnesis (Subjetivo)") },
+                            label = { Text("Relato del tutor / Historia") },
                             modifier = Modifier.fillMaxWidth(),
-                            minLines = 4
+                            minLines = 3,
+                            shape = RoundedCornerShape(12.dp)
                         )
-                        OutlinedTextField(
-                            value = state.form.hallazgosObjetivos ?: "",
-                            onValueChange = viewModel::onHallazgosObjetivosChanged,
-                            label = { Text("Hallazgos Objetivos (Objetivo)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 4
-                        )
+
+                        SectionHeader(title = "Examen Físico Segmentario", icon = Icons.Default.MedicalServices)
+                        
+                        val ef = state.form.examenFisico ?: cl.clinipets.openapi.models.ExamenFisicoDto()
+                        
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(
+                                    value = ef.mucosas ?: "",
+                                    onValueChange = { viewModel.updateExamenFisico(ef.copy(mucosas = it)) },
+                                    label = { Text("Mucosas") },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                OutlinedTextField(
+                                    value = ef.tllc ?: "",
+                                    onValueChange = { viewModel.updateExamenFisico(ef.copy(tllc = it)) },
+                                    label = { Text("TLLC") },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                            }
+                            
+                            OutlinedTextField(
+                                value = ef.hidratacion ?: "",
+                                onValueChange = { viewModel.updateExamenFisico(ef.copy(hidratacion = it)) },
+                                label = { Text("Grado de Hidratación") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
+                            OutlinedTextField(
+                                value = ef.linfonodos ?: "",
+                                onValueChange = { viewModel.updateExamenFisico(ef.copy(linfonodos = it)) },
+                                label = { Text("Linfonodos") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
+                            OutlinedTextField(
+                                value = ef.pielAnexos ?: "",
+                                onValueChange = { viewModel.updateExamenFisico(ef.copy(pielAnexos = it)) },
+                                label = { Text("Piel y Anexos") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            
+                            OutlinedTextField(
+                                value = ef.sistemaCardiovascular ?: "",
+                                onValueChange = { viewModel.updateExamenFisico(ef.copy(sistemaCardiovascular = it)) },
+                                label = { Text("Sist. Cardiovascular") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                        }
                         
                         SectionHeader(title = "Evidencia Gráfica", icon = Icons.Default.AddAPhoto)
                         PhotoSelectionRow(
@@ -504,18 +546,26 @@ private fun shareToWhatsApp(context: Context, message: String, imageUri: Uri?) {
 }
 
 @Composable
-fun PaymentMethodButton(
-    text: String,
+fun VitalSignInput(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
     icon: ImageVector,
-    onClick: () -> Unit
+    unit: String,
+    isError: Boolean = false
 ) {
-    OutlinedButton(
-        onClick = onClick,
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        suffix = { Text(unit) },
+        leadingIcon = { Icon(icon, null, tint = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary) },
+        isError = isError,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(12.dp)
-    ) {
-        Icon(icon, contentDescription = null)
-        Spacer(Modifier.width(12.dp))
-        Text(text, style = MaterialTheme.typography.bodyLarge)
-    }
+        shape = RoundedCornerShape(12.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = if (isError) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f) else Color.Transparent
+        )
+    )
 }

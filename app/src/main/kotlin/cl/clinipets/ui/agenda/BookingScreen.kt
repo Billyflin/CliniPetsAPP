@@ -11,29 +11,26 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.RadioButtonChecked
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import java.time.format.DateTimeFormatter
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-import java.util.Locale
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import cl.clinipets.openapi.models.CitaResponse
+import cl.clinipets.openapi.models.MascotaResponse
 import cl.clinipets.ui.features.booking.CartItem
+import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun SectionTitle(text: String) {
@@ -58,12 +55,10 @@ fun BookingScreen(
     val context = LocalContext.current
     val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
     
-    // Initialize
     LaunchedEffect(Unit) {
         viewModel.loadInitialData()
     }
 
-    // Date Picker
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = System.currentTimeMillis())
 
@@ -118,42 +113,37 @@ fun BookingScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                // --- SECTION 1: SELECCIONAR MASCOTAS ---
                 SectionTitle("1. ¿A quién atenderemos?")
                 
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        uiState.pets.forEach { pet ->
-                            val isSelected = uiState.selectedPets.contains(pet.id)
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { viewModel.togglePetSelection(pet.id) }
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(
-                                    checked = isSelected,
-                                    onCheckedChange = { viewModel.togglePetSelection(pet.id) }
-                                )
-                                Text(pet.nombre, style = MaterialTheme.typography.bodyLarge)
-                                Spacer(Modifier.weight(1f))
-                                Text(pet.especie.name.lowercase().capitalize(), style = MaterialTheme.typography.labelMedium)
-                            }
-                        }
-                        
-                        TextButton(onClick = onAddPet, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Default.Add, null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Agregar otra mascota")
-                        }
+                    items(uiState.pets.size) { index ->
+                        val pet = uiState.pets[index]
+                        val isSelected = uiState.selectedPets.contains(pet.id)
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { viewModel.togglePetSelection(pet.id!!) },
+                            label = { Text(pet.nombre) },
+                            leadingIcon = if (isSelected) {
+                                { Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp)) }
+                            } else {
+                                { Icon(speciesIcon(pet.especie), null, modifier = Modifier.size(18.dp)) }
+                            },
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+                    item {
+                        AssistChip(
+                            onClick = onAddPet,
+                            label = { Text("Nueva") },
+                            leadingIcon = { Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp)) },
+                            shape = RoundedCornerShape(12.dp)
+                        )
                     }
                 }
 
-                // --- SECTION 2: SELECCIONAR SERVICIOS POR MASCOTA ---
                 if (uiState.selectedPets.isNotEmpty()) {
                     SectionTitle("2. Elige los servicios")
                     
@@ -168,7 +158,6 @@ fun BookingScreen(
                     }
                 }
 
-                // --- SECTION 3: AGENDA ---
                 if (uiState.cart.isNotEmpty()) {
                     HorizontalDivider()
                     SectionTitle("3. Agenda tu visita")
@@ -212,7 +201,6 @@ fun BookingScreen(
                         }
                     }
 
-                    // --- SUMMARY SECTION ---
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
                         modifier = Modifier.fillMaxWidth()
@@ -235,14 +223,6 @@ fun BookingScreen(
                             Text("Confirmar Cita")
                         }
                     }
-                } else if (uiState.selectedPets.isNotEmpty()) {
-                    Text(
-                        "Selecciona al menos un servicio para tus mascotas.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
                 }
             }
         }
@@ -252,7 +232,7 @@ fun BookingScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PetServiceSelection(
-    pet: cl.clinipets.openapi.models.MascotaResponse,
+    pet: MascotaResponse,
     availableServices: List<cl.clinipets.openapi.models.ServicioMedicoDto>,
     currentCart: List<CartItem>,
     onAddService: (cl.clinipets.openapi.models.ServicioMedicoDto) -> Unit,
@@ -267,7 +247,6 @@ fun PetServiceSelection(
             color = MaterialTheme.colorScheme.secondary
         )
         
-        // List already selected services for this pet
         currentCart.forEach { item ->
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -282,7 +261,6 @@ fun PetServiceSelection(
             }
         }
 
-        // Dropdown to add more
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = { expanded = !expanded }
@@ -311,25 +289,6 @@ fun PetServiceSelection(
     }
 }
 
-@Composable
-fun CartItemCard(item: CartItem, onRemove: () -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(item.servicio.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text("${item.mascota.nombre} (${item.mascota.especie})", style = MaterialTheme.typography.bodyMedium)
-                Text("$${item.precio}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            }
-            IconButton(onClick = onRemove) {
-                Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
-            }
-        }
-    }
+private fun speciesIcon(especie: MascotaResponse.Especie): ImageVector {
+    return Icons.Default.Pets
 }

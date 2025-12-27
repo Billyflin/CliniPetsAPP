@@ -3,6 +3,7 @@ package cl.clinipets.ui.staff
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.clinipets.openapi.apis.BloqueoControllerApi
+import cl.clinipets.openapi.apis.GestinDeAgendaApi
 import cl.clinipets.openapi.apis.ReservaControllerApi
 import cl.clinipets.openapi.models.BloqueoAgenda
 import cl.clinipets.openapi.models.BloqueoCreateRequest
@@ -39,7 +40,8 @@ data class ItemBloqueo(val data: BloqueoAgenda) : AgendaItem {
 @HiltViewModel
 class StaffAgendaViewModel @Inject constructor(
     private val reservaApi: ReservaControllerApi,
-    private val bloqueoApi: BloqueoControllerApi
+    private val bloqueoApi: BloqueoControllerApi,
+    private val gestionAgendaApi: GestinDeAgendaApi
 ) : ViewModel() {
 
     data class UiState(
@@ -56,17 +58,7 @@ class StaffAgendaViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
 
     companion object {
-        val VALID_STATES = setOf(
-            CitaDetalladaResponse.Estado.EN_SALA,
-            CitaDetalladaResponse.Estado.EN_ATENCION,
-            CitaDetalladaResponse.Estado.CONFIRMADA,
-            CitaDetalladaResponse.Estado.FINALIZADA,
-            CitaDetalladaResponse.Estado.CANCELADA,
-            CitaDetalladaResponse.Estado.LLEGADA,
-            CitaDetalladaResponse.Estado.EN_SEDACION,
-            CitaDetalladaResponse.Estado.PABELLON_ESPERA,
-            CitaDetalladaResponse.Estado.ATENDIENDO
-        )
+        val VALID_STATES = CitaDetalladaResponse.Estado.values().toSet()
     }
 
     init {
@@ -217,22 +209,29 @@ class StaffAgendaViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                // Delegamos totalmente a la API generada (Fuente de Verdad)
-                reservaApi.cambiarEstado(citaId, nuevoEstado.value)
-                cargarAgenda(_uiState.value.date)
+                val response = when (nuevoEstado) {
+                    CitaDetalladaResponse.Estado.CONFIRMADA -> reservaApi.confirmarReserva(citaId)
+                    CitaDetalladaResponse.Estado.EN_ATENCION -> gestionAgendaApi.iniciarAtencion(citaId)
+                    CitaDetalladaResponse.Estado.CANCELADA -> reservaApi.cancelarReservaPorStaff(citaId)
+                    CitaDetalladaResponse.Estado.FINALIZADA -> reservaApi.finalizarCita(citaId)
+                    CitaDetalladaResponse.Estado.NO_ASISTIO -> {
+                        // There is no specific NO_ASISTIO method yet, maybe it's just a state change 
+                        // but since we don't have a generic patch, we might need to wait or use cancel.
+                        // For now, let's treat it as a placeholder or use cancel.
+                        reservaApi.cancelarReservaPorStaff(citaId)
+                    }
+                }
+                
+                if (response.isSuccessful) {
+                    cargarAgenda(_uiState.value.date)
+                } else {
+                    _uiState.update { it.copy(isLoading = false, error = "Error al cambiar estado: ${response.code()}") }
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message) }
             }
         }
     }
-}
-
-private suspend fun ReservaControllerApi.cambiarEstado(id: UUID, estado: String) =
-    patchEstadoCita(id, estado)
-
-private suspend fun ReservaControllerApi.patchEstadoCita(id: UUID, estado: String): retrofit2.Response<cl.clinipets.openapi.models.CitaResponse> {
-    // Placeholder until the API generator includes the PATCH /estado endpoint
-    return retrofit2.Response.success(null)
 }
 
 

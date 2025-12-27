@@ -2,6 +2,7 @@ package cl.clinipets.ui.staff
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cl.clinipets.openapi.apis.GestinDeAgendaApi
 import cl.clinipets.openapi.apis.ReservaControllerApi
 import cl.clinipets.openapi.models.CitaDetalladaResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,7 +15,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class StaffCitaDetailViewModel @Inject constructor(
-    private val reservaApi: ReservaControllerApi
+    private val reservaApi: ReservaControllerApi,
+    private val gestionAgendaApi: GestinDeAgendaApi
 ) : ViewModel() {
 
     data class UiState(
@@ -77,8 +79,8 @@ class StaffCitaDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                // Actualizar estado a EN_SALA (equivale a iniciar triaje)
-                reservaApi.cambiarEstado(cita.id, "EN_SALA")
+                // Iniciar atención (Nueva transición de estado simplificada)
+                gestionAgendaApi.iniciarAtencion(cita.id)
                 _uiState.update { it.copy(isLoading = false) }
                 onNavigate(cita.id.toString(), mascotaId)
             } catch (e: Exception) {
@@ -92,19 +94,22 @@ class StaffCitaDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                reservaApi.cambiarEstado(cita.id, nuevoEstado.value)
-                cargarCita(cita.id.toString())
+                val response = when (nuevoEstado) {
+                    CitaDetalladaResponse.Estado.CONFIRMADA -> reservaApi.confirmarReserva(cita.id)
+                    CitaDetalladaResponse.Estado.EN_ATENCION -> gestionAgendaApi.iniciarAtencion(cita.id)
+                    CitaDetalladaResponse.Estado.CANCELADA -> reservaApi.cancelarReservaPorStaff(cita.id)
+                    CitaDetalladaResponse.Estado.FINALIZADA -> reservaApi.finalizarCita(cita.id)
+                    CitaDetalladaResponse.Estado.NO_ASISTIO -> reservaApi.cancelarReservaPorStaff(cita.id)
+                }
+                if (response.isSuccessful) {
+                    cargarCita(cita.id.toString())
+                } else {
+                    _uiState.update { it.copy(isLoading = false, error = "Error al cambiar estado: ${response.code()}") }
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message) }
             }
         }
     }
-}
-
-private suspend fun ReservaControllerApi.cambiarEstado(id: UUID, estado: String) =
-    patchEstadoCita(id, estado)
-
-private suspend fun ReservaControllerApi.patchEstadoCita(id: UUID, estado: String): retrofit2.Response<cl.clinipets.openapi.models.CitaResponse> {
-    return retrofit2.Response.success(null)
 }
 

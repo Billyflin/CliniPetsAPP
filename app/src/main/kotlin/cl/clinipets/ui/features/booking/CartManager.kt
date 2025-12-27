@@ -39,8 +39,8 @@ class CartManager @Inject constructor() {
 
         // Calculate Price
         var precio = service.precioBase
-        service.reglas?.let { reglas ->
-            val peso = pet.pesoActual
+        service.reglas.let { reglas ->
+            val peso = pet.pesoActual ?: 0.0
             val reglaAplicable = reglas.find { regla ->
                 peso >= regla.pesoMin && peso <= regla.pesoMax
             }
@@ -49,7 +49,7 @@ class CartManager @Inject constructor() {
             }
         }
 
-        val item = CartItem(mascota = pet, servicio = service, precio = precio)
+        val item = CartItem(mascota = pet, servicio = service, precio = precio.toInt())
         val newCart = _cartState.value.cart + item
 
         updateCartState(newCart)
@@ -67,7 +67,7 @@ class CartManager @Inject constructor() {
     private fun updateCartState(newCart: List<CartItem>) {
         val totalDuration = newCart.sumOf { it.servicio.duracionMinutos }
         val totalPrice = newCart.sumOf { it.precio }
-        val minDeposit = newCart.mapNotNull { it.servicio.precioAbono }.maxOrNull() ?: 0
+        val minDeposit = newCart.mapNotNull { it.servicio.precioAbono?.toInt() }.maxOrNull() ?: 0
 
         _cartState.update {
             it.copy(
